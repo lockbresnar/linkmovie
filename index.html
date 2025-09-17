@@ -2,9 +2,97 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Actor Chain Game</title>
+  <title>Link Movie Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+      background: #f4f4f4;
+    }
+    h1 { color: #333; }
+    #chain { margin-top: 20px; padding: 10px; background: #fff; border: 1px solid #ccc; }
+    input { padding: 10px; width: 250px; }
+    button { padding: 10px 20px; margin-left: 5px; }
+    .actor { font-weight: bold; color: #0070f3; }
+  </style>
 </head>
-<body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;">
-  <h1>🚀 Game Coming Soon!</h1>
+<body>
+  <h1>🎬 Link Movie Game</h1>
+  <p>Connect <span class="actor" id="actor1"></span> to <span class="actor" id="actor2"></span> using movies.</p>
+
+  <input id="movieInput" placeholder="Enter a movie title..." />
+  <button onclick="submitGuess()">Submit</button>
+
+  <div id="chain">
+    <h3>Current Chain:</h3>
+    <ul id="chainList"></ul>
+  </div>
+
+  <p id="status"></p>
+
+  <script>
+    // Small test dataset
+    const data = {
+      "Leonardo DiCaprio": ["Inception", "Titanic", "The Revenant", "The Wolf of Wall Street"],
+      "Margot Robbie": ["The Wolf of Wall Street", "I, Tonya", "Suicide Squad"],
+      "Vince Vaughn": ["Wedding Crashers", "Dodgeball", "The Break-Up"],
+      "Will Smith": ["Suicide Squad", "Men in Black", "I Am Legend"]
+    };
+
+    // Pick two random actors
+    const actors = Object.keys(data);
+    let startActor = actors[Math.floor(Math.random() * actors.length)];
+    let endActor = actors[Math.floor(Math.random() * actors.length)];
+    while (endActor === startActor) {
+      endActor = actors[Math.floor(Math.random() * actors.length)];
+    }
+
+    document.getElementById("actor1").textContent = startActor;
+    document.getElementById("actor2").textContent = endActor;
+
+    // Game state
+    let currentActor = startActor;
+    let chain = [startActor];
+
+    function submitGuess() {
+      const input = document.getElementById("movieInput").value.trim();
+      if (!input) return;
+
+      const movies = data[currentActor];
+      if (movies && movies.includes(input)) {
+        // Find actors also in this movie
+        const nextActors = Object.keys(data).filter(actor => data[actor].includes(input) && actor !== currentActor);
+
+        if (nextActors.length > 0) {
+          currentActor = nextActors[0]; // Take first match
+          chain.push(input, currentActor);
+          updateChain();
+
+          if (currentActor === endActor) {
+            document.getElementById("status").textContent = "🎉 You linked them!";
+          }
+        } else {
+          document.getElementById("status").textContent = "❌ Movie found, but no connection to next actor.";
+        }
+      } else {
+        document.getElementById("status").textContent = "❌ Invalid movie for current actor.";
+      }
+
+      document.getElementById("movieInput").value = "";
+    }
+
+    function updateChain() {
+      const list = document.getElementById("chainList");
+      list.innerHTML = "";
+      chain.forEach(step => {
+        const li = document.createElement("li");
+        li.textContent = step;
+        list.appendChild(li);
+      });
+    }
+
+    updateChain();
+  </script>
 </body>
 </html>
