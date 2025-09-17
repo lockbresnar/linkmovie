@@ -64,12 +64,12 @@
 
     let actor1, actor2, targetMovieId, guesses = 0, maxGuesses = 6;
 
-    // Pick a random movie first, then two actors from its cast
+    // Pick a random movie from the top 700 TMDb top rated list
     async function getActorPair() {
       try {
-        // 1. Pick a random movie from "popular"
-        let page = Math.floor(Math.random() * 50) + 1;
-        let res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&page=${page}`);
+        // 1. Pick a random page from top rated (1–35 = ~700 films)
+        let page = Math.floor(Math.random() * 35) + 1;
+        let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
         let data = await res.json();
         let movie = data.results[Math.floor(Math.random() * data.results.length)];
 
