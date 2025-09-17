@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎭 Actor Chain Game</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; margin: 0; padding: 20px; }
+    h1 { color: #333; }
+    .actors { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 20px 0; }
+    .actors img { border-radius: 12px; width: 150px; height: auto; }
+    #chain { margin-top: 20px; padding: 10px; background: #fff; border: 1px solid #ccc; border-radius: 8px; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 5px 0; padding: 5px; border-radius: 6px; }
+    .grey { background: #ddd; }
+    .blue { background: #d0e6ff; }
+    .orange { background: #ffd9b3; }
+    .green { background: #c8f7c5; }
+    #suggestions { border: 1px solid #ccc; max-width: 300px; margin: 10px auto; background: #fff; border-radius: 6px; }
+    #suggestions div { padding: 8px; cursor: pointer; }
+    #suggestions div:hover { background: #eee; }
+    input { padding: 10px; width: 250px; }
+    button { padding: 10px 20px; margin: 5px; }
+    footer { margin-top: 30px; font-size: 14px; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>🎭 Actor Chain Game</h1>
+  <p>Link the two actors through movies they starred in together.</p>
+
+  <div class="actors">
+    <div>
+      <img id="actor1Img" />
+      <p id="actor1"></p>
+    </div>
+    <div>
+      <img id="actor2Img" />
+      <p id="actor2"></p>
+    </div>
+  </div>
+
+  <input id="movieInput" placeholder="Enter a movie..." />
+  <div id="suggestions"></div>
+  <br>
+  <button onclick="submitGuess()">Submit</button>
+  <button onclick="resetGame()">Reset</button>
+
+  <div id="chain">
+    <h3>Current Chain:</h3>
+    <ul id="chainList"></ul>
+  </div>
+
+  <p id="status"></p>
+
+  <p><a href="index.html">👉 Play Chain Movie Game</a></p>
+
+  <footer>
+    This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
+    <img src="https://www.themoviedb.org/assets/2/v4/logos/293x302-powered-by-square-blue-9a1c5c84221cbd27e84dff527969b24d7d2d33f6b19a9072a3c20c1cfae6dce2.png" 
+         alt="TMDb Logo" width="100">
+  </footer>
+
+  <script>
+    const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; // ✅ Your TMDb key
+    const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
+
+    let startActor, endActor, activeActors = [], chain = [];
+
+    // Pick two random actors (they may or may not share movies)
+    async function getActorPair() {
+      let page = Math.floor(Math.random() * 10) + 1;
+      let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
+      let data = await res.json();
+      let shuffled = data.results.sort(() => 0.5 - Math.random());
+      startActor = shuffled[0];
+      endActor = shuffled[1];
+      activeActors = [startActor.id];
+      chain = [startActor.name];
+      displayActors();
+    }
+
+    function displayActors() {
+      document.getElementById("actor1Img").src = startActor.profile_path ? IMAGE_URL + startActor.profile_path : "";
+      document.getElementById("actor1").textContent = startActor.name;
+      document.getElementById("actor2Img").src = endActor.profile_path ? IMAGE_URL + endActor.profile_path : "";
+      document.getElementById("actor2").textContent = endActor.name;
+    }
+
+    // Autocomplete
+    document.getElementById("movieInput").addEventListener("input", e => {
+      const query = e.target.value;
+      if (query.length > 2) {
+        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`)
+          .then(res => res.json())
+          .then(data => {
+            const container = document.getElementById("suggestions");
+            container.innerHTML = "";
+            data.results.slice(0,5).forEach(movie => {
+              const div = document.createElement("div");
+              div.textContent = movie.title;
+              div.onclick = () => {
+                document.getElementById("movieInput").value = movie.title;
+                container.innerHTML = "";
+              };
+              container.appendChild(div);
+            });
+          });
+      }
+    });
+
+    async function submitGuess() {
+      const query = document.getElementById("movieInput").value.trim();
+      if (!query) return;
+
+      let res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`);
+      let data = await res.json();
+      if (data.results.length === 0) {
+        addToChain(query, "grey");
+        return;
+      }
+      let movie = data.results[0];
+      await checkGuess(movie);
+      document.getElementById("movieInput").value = "";
+      document.getElementById("suggestions").innerHTML = "";
+    }
+
+    async function checkGuess(movie) {
+      let res = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
+      let credits = await res.json();
+      let actorIds = credits.cast.map(a => a.id);
+
+      if (!actorIds.some(id => activeActors.includes(id))) {
+        addToChain(movie.title, "grey");
+      } else if (actorIds.includes(endActor.id)) {
+        addToChain(movie.title, "blue");
+        addToChain(endActor.name, "green");
+        document.getElementById("status").textContent = "🎉 You linked them!";
+      } else {
+        addToChain(movie.title, "blue");
+        // update active actors with all from this movie
+        activeActors = actorIds;
+        // pick a random new actor for the chain
+        let next = credits.cast.find(a => !activeActors.includes(a.id));
+        if (next) {
+          addToChain(next.name, "orange");
+          activeActors.push(next.id);
+        }
+      }
+    }
+
+    function addToChain(text, color) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      li.className = color;
+      document.getElementById("chainList").appendChild(li);
+      chain.push(text);
+    }
+
+    function resetGame() {
+      document.getElementById("chainList").innerHTML = "";
+      document.getElementById("status").textContent = "";
+      getActorPair();
+    }
+
+    getActorPair();
+  </script>
+</body>
+</html>
