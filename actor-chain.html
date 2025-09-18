@@ -60,13 +60,14 @@
 
   <p id="status"></p>
 
+  <!-- ✅ Popup only on win -->
   <div id="popup">
     <button onclick="closePopup()">X</button>
     <h2>🎉 You linked them!</h2>
     <p id="popupMsg"></p>
   </div>
 
-  <p><a href="index.html">👉 Play Main Game</a></p>
+  <p><a href="index.html">👉 Play Chain Movie Game</a></p>
 
   <footer>
     This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
@@ -75,12 +76,12 @@
   </footer>
 
   <script>
-    const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
+    const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Fetch two random popular actors
+    // Pick two random actors
     async function getActorPair() {
       let page = Math.floor(Math.random() * 10) + 1;
       let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
@@ -109,7 +110,7 @@
       document.getElementById("chainList").appendChild(li);
     }
 
-    // Autocomplete suggestions
+    // Autocomplete
     document.getElementById("movieInput").addEventListener("input", e => {
       const query = e.target.value;
       if (query.length > 2) {
@@ -128,8 +129,6 @@
               container.appendChild(div);
             });
           });
-      } else {
-        document.getElementById("suggestions").innerHTML = "";
       }
     });
 
@@ -160,7 +159,7 @@
         addToChain(movie.title, "blue");
         addToChain(endActor.name, "green");
         document.getElementById("status").textContent = "🎉 You linked them!";
-        showPopup(chain.length); // show popup when completed
+        showPopup(chain.length); // ✅ show popup on win
       } else {
         addToChain(movie.title, "blue");
         activeActors = actorIds;
@@ -179,7 +178,7 @@
       chain.push(text);
     }
 
-    // Reset keeps the same actors
+    // ✅ Reset keeps same actors
     function resetGame() {
       document.getElementById("status").textContent = "";
       chain = [startActor.name];
@@ -187,7 +186,7 @@
       initChainList();
     }
 
-    // Popup shows win steps
+    // ✅ Popup on win
     function showPopup(steps) {
       document.getElementById("popupMsg").innerHTML = `It took you <b>${steps - 1}</b> steps to link them!`;
       document.getElementById("popup").style.display = "block";
