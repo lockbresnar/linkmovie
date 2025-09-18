@@ -62,11 +62,10 @@
   <script>
     const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; // ✅ Your TMDb key
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
-    const MIN_POPULARITY = 18; // ✅ only allow actors with popularity ≥ 18
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Get a qualified actor from Top 200 films, with popularity ≥18
+    // Get a qualified actor from Top 200 films, with ≥10 credits and profile image
     async function getQualifiedActor() {
       let page = Math.floor(Math.random() * 10) + 1; // Top 200 films
       let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
@@ -83,9 +82,13 @@
       for (let actor of shuffled) {
         if (!actor.profile_path) continue;
         if (actor.known_for_department !== "Acting") continue;
-        if (actor.popularity < MIN_POPULARITY) continue;
 
-        return actor; // ✅ pass
+        // Check their filmography
+        let filmRes = await fetch(`https://api.themoviedb.org/3/person/${actor.id}/movie_credits?api_key=${API_KEY}`);
+        let filmData = await filmRes.json();
+        if (filmData.cast.length >= 10) {
+          return actor;
+        }
       }
       return getQualifiedActor(); // retry if none found
     }
