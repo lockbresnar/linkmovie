@@ -2,16 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🎬 Chain Movie Game</title>
+  <title>🎭 Actor Chain Game</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; margin: 0; padding: 20px; }
     h1 { color: #333; }
-    .actors { display: flex; justify-content: center; align-items: center; gap: 40px; margin: 20px 0; }
+    .actors { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 20px 0; }
     .actors img { border-radius: 12px; width: 150px; height: auto; }
     #chain { margin-top: 20px; padding: 10px; background: #fff; border: 1px solid #ccc; border-radius: 8px; }
     ul { list-style: none; padding: 0; }
     li { margin: 5px 0; padding: 5px; border-radius: 6px; }
     .grey { background: #ddd; }
+    .blue { background: #d0e6ff; }
     .orange { background: #ffd9b3; }
     .green { background: #c8f7c5; }
     #suggestions { border: 1px solid #ccc; max-width: 300px; margin: 10px auto; background: #fff; border-radius: 6px; }
@@ -32,8 +33,8 @@
   </style>
 </head>
 <body>
-  <h1>🎬 Chain Movie Game</h1>
-  <p>Guess the movie where these two actors starred together! You have 6 tries.</p>
+  <h1>🎭 Actor Chain Game</h1>
+  <p>Link the two actors through movies they starred in together.</p>
 
   <div class="actors">
     <div>
@@ -50,10 +51,10 @@
   <div id="suggestions"></div>
   <br>
   <button onclick="submitGuess()">Submit</button>
-  <button onclick="skipHint()">Skip</button>
+  <button onclick="resetGame()">Reset</button>
 
   <div id="chain">
-    <h3>Your Guesses:</h3>
+    <h3>Current Chain:</h3>
     <ul id="chainList"></ul>
   </div>
 
@@ -61,11 +62,11 @@
 
   <div id="popup">
     <button onclick="closePopup()">X</button>
-    <h2>❌ Out of Guesses</h2>
+    <h2>🎉 You linked them!</h2>
     <p id="popupMsg"></p>
   </div>
 
-  <p><a href="actor-chain.html">👉 Play Actor Chain Game</a></p>
+  <p><a href="index.html">👉 Play Main Game</a></p>
 
   <footer>
     This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
@@ -77,40 +78,38 @@
     const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
-    let actor1, actor2, targetMovie, targetCredits, guesses = 0, maxGuesses = 6;
+    let startActor, endActor, activeActors = [], chain = [];
 
+    // Fetch two random popular actors
     async function getActorPair() {
-      try {
-        let page = Math.floor(Math.random() * 35) + 1; // top 700 films
-        let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
-        let data = await res.json();
-        targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
-
-        let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
-        targetCredits = await creditsRes.json();
-
-        let cast = targetCredits.cast.filter(a => a.profile_path);
-        if (cast.length < 2) return getActorPair();
-
-        let shuffled = cast.sort(() => 0.5 - Math.random());
-        actor1 = shuffled[0];
-        actor2 = shuffled[1];
-
-        displayActors();
-      } catch (err) {
-        console.error("Error fetching actors:", err);
-        document.getElementById("status").textContent = "⚠️ Error loading game. Please refresh.";
-      }
+      let page = Math.floor(Math.random() * 10) + 1;
+      let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
+      let data = await res.json();
+      let shuffled = data.results.sort(() => 0.5 - Math.random());
+      startActor = shuffled[0];
+      endActor = shuffled[1];
+      activeActors = [startActor.id];
+      chain = [startActor.name];
+      displayActors();
+      initChainList();
     }
 
     function displayActors() {
-      document.getElementById("actor1Img").src = actor1.profile_path ? IMAGE_URL + actor1.profile_path : "";
-      document.getElementById("actor1").textContent = actor1.name;
-      document.getElementById("actor2Img").src = actor2.profile_path ? IMAGE_URL + actor2.profile_path : "";
-      document.getElementById("actor2").textContent = actor2.name;
+      document.getElementById("actor1Img").src = startActor.profile_path ? IMAGE_URL + startActor.profile_path : "";
+      document.getElementById("actor1").textContent = startActor.name;
+      document.getElementById("actor2Img").src = endActor.profile_path ? IMAGE_URL + endActor.profile_path : "";
+      document.getElementById("actor2").textContent = endActor.name;
     }
 
-    // Autocomplete
+    function initChainList() {
+      document.getElementById("chainList").innerHTML = "";
+      const li = document.createElement("li");
+      li.textContent = startActor.name;
+      li.className = "orange";
+      document.getElementById("chainList").appendChild(li);
+    }
+
+    // Autocomplete suggestions
     document.getElementById("movieInput").addEventListener("input", e => {
       const query = e.target.value;
       if (query.length > 2) {
@@ -129,11 +128,12 @@
               container.appendChild(div);
             });
           });
+      } else {
+        document.getElementById("suggestions").innerHTML = "";
       }
     });
 
     async function submitGuess() {
-      if (guesses >= maxGuesses) return;
       const query = document.getElementById("movieInput").value.trim();
       if (!query) return;
 
@@ -150,25 +150,24 @@
     }
 
     async function checkGuess(movie) {
-      guesses++;
       let res = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
       let credits = await res.json();
       let actorIds = credits.cast.map(a => a.id);
 
-      if (actorIds.includes(actor1.id) && actorIds.includes(actor2.id)) {
-        if (movie.id === targetMovie.id) {
-          addToChain(movie.title, "green");
-          document.getElementById("status").textContent = "🎉 Correct! You found the movie!";
-        } else {
-          addToChain(movie.title, "orange");
-          document.getElementById("status").textContent = "Valid shared movie, but not the one we were looking for.";
-        }
-      } else {
+      if (!actorIds.some(id => activeActors.includes(id))) {
         addToChain(movie.title, "grey");
-      }
-
-      if (guesses >= maxGuesses && !document.getElementById("status").textContent.includes("Correct!")) {
-        showPopup(`The correct answer was <b>${targetMovie.title}</b>.`);
+      } else if (actorIds.includes(endActor.id)) {
+        addToChain(movie.title, "blue");
+        addToChain(endActor.name, "green");
+        document.getElementById("status").textContent = "🎉 You linked them!";
+        showPopup(chain.length); // show popup when completed
+      } else {
+        addToChain(movie.title, "blue");
+        activeActors = actorIds;
+        let next = credits.cast.find(a => a.id !== startActor.id && a.id !== endActor.id);
+        if (next) {
+          addToChain(next.name, "orange");
+        }
       }
     }
 
@@ -177,34 +176,25 @@
       li.textContent = text;
       li.className = color;
       document.getElementById("chainList").appendChild(li);
+      chain.push(text);
     }
 
-    // ✅ Skip button now costs a try
-    function skipHint() {
-      if (guesses >= maxGuesses) return;
-      guesses++;
-      if (!targetCredits || !targetCredits.cast) return;
-      let unused = targetCredits.cast.filter(a => a.id !== actor1.id && a.id !== actor2.id && a.profile_path);
-      if (unused.length > 0) {
-        let randomActor = unused[Math.floor(Math.random() * unused.length)];
-        document.getElementById("status").textContent = `💡 Hint: Also in this movie → ${randomActor.name}`;
-      }
-      if (guesses >= maxGuesses && !document.getElementById("status").textContent.includes("Correct!")) {
-        showPopup(`The correct answer was <b>${targetMovie.title}</b>.`);
-      }
+    // Reset keeps the same actors
+    function resetGame() {
+      document.getElementById("status").textContent = "";
+      chain = [startActor.name];
+      activeActors = [startActor.id];
+      initChainList();
     }
 
-    function showPopup(msg) {
-      document.getElementById("popupMsg").innerHTML = msg;
+    // Popup shows win steps
+    function showPopup(steps) {
+      document.getElementById("popupMsg").innerHTML = `It took you <b>${steps - 1}</b> steps to link them!`;
       document.getElementById("popup").style.display = "block";
     }
 
     function closePopup() {
       document.getElementById("popup").style.display = "none";
-      document.getElementById("chainList").innerHTML = "";
-      document.getElementById("status").textContent = "";
-      guesses = 0;
-      getActorPair();
     }
 
     getActorPair();

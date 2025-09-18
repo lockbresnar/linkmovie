@@ -2,17 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🎬 Link Movie Game</title>
+  <title>🎬 Chain Movie Game</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; margin: 0; padding: 20px; }
     h1 { color: #333; }
-    .actors { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 20px 0; }
+    .actors { display: flex; justify-content: center; align-items: center; gap: 40px; margin: 20px 0; }
     .actors img { border-radius: 12px; width: 150px; height: auto; }
-    input { padding: 10px; width: 250px; }
-    button { padding: 10px 20px; margin: 5px; }
+    #chain { margin-top: 20px; padding: 10px; background: #fff; border: 1px solid #ccc; border-radius: 8px; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 5px 0; padding: 5px; border-radius: 6px; }
+    .grey { background: #ddd; }
+    .orange { background: #ffd9b3; }
+    .green { background: #c8f7c5; }
     #suggestions { border: 1px solid #ccc; max-width: 300px; margin: 10px auto; background: #fff; border-radius: 6px; }
     #suggestions div { padding: 8px; cursor: pointer; }
     #suggestions div:hover { background: #eee; }
+    input { padding: 10px; width: 250px; }
+    button { padding: 10px 20px; margin: 5px; }
     #popup {
       display: none;
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -22,11 +28,12 @@
     }
     #popup h2 { margin: 0 0 10px; }
     #popup button { background: red; color: white; border: none; padding: 5px 10px; float: right; }
+    footer { margin-top: 30px; font-size: 14px; color: #555; }
   </style>
 </head>
 <body>
-  <h1>🎬 Link Movie Game</h1>
-  <p>Guess the film these two actors starred in together.</p>
+  <h1>🎬 Chain Movie Game</h1>
+  <p>Guess the movie where these two actors starred together! You have 6 tries.</p>
 
   <div class="actors">
     <div>
@@ -43,14 +50,22 @@
   <div id="suggestions"></div>
   <br>
   <button onclick="submitGuess()">Submit</button>
+  <button onclick="skipHint()">Skip</button>
 
-  <p><a href="actor-chain.html">👉 Play Actor Chain Game</a></p>
+  <div id="chain">
+    <h3>Your Guesses:</h3>
+    <ul id="chainList"></ul>
+  </div>
+
+  <p id="status"></p>
 
   <div id="popup">
     <button onclick="closePopup()">X</button>
-    <h2 id="popupTitle"></h2>
+    <h2>❌ Out of Guesses</h2>
     <p id="popupMsg"></p>
   </div>
+
+  <p><a href="actor-chain.html">👉 Play Actor Chain Game</a></p>
 
   <footer>
     This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
@@ -62,54 +77,137 @@
     const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
-    let actor1, actor2, targetMovie, tries = 0;
+    let actor1, actor2, targetMovie, targetCredits, guesses = 0, maxGuesses = 6;
 
-    async function getGame() {
-      let page = Math.floor(Math.random() * 15) + 1; // Top 300 films
-      let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
-      let data = await res.json();
-      targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
+    async function getActorPair() {
+      try {
+        let page = Math.floor(Math.random() * 35) + 1; // top 700 films
+        let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
+        let data = await res.json();
+        targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
 
-      let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
-      let credits = await creditsRes.json();
-      let cast = credits.cast.filter(a => a.profile_path);
+        let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
+        targetCredits = await creditsRes.json();
 
-      let shuffled = cast.sort(() => 0.5 - Math.random());
-      actor1 = shuffled[0];
-      actor2 = shuffled[1];
+        let cast = targetCredits.cast.filter(a => a.profile_path);
+        if (cast.length < 2) return getActorPair();
 
-      document.getElementById("actor1Img").src = IMAGE_URL + actor1.profile_path;
+        let shuffled = cast.sort(() => 0.5 - Math.random());
+        actor1 = shuffled[0];
+        actor2 = shuffled[1];
+
+        displayActors();
+      } catch (err) {
+        console.error("Error fetching actors:", err);
+        document.getElementById("status").textContent = "⚠️ Error loading game. Please refresh.";
+      }
+    }
+
+    function displayActors() {
+      document.getElementById("actor1Img").src = actor1.profile_path ? IMAGE_URL + actor1.profile_path : "";
       document.getElementById("actor1").textContent = actor1.name;
-      document.getElementById("actor2Img").src = IMAGE_URL + actor2.profile_path;
+      document.getElementById("actor2Img").src = actor2.profile_path ? IMAGE_URL + actor2.profile_path : "";
       document.getElementById("actor2").textContent = actor2.name;
     }
 
-    async function submitGuess() {
-      const guess = document.getElementById("movieInput").value.trim().toLowerCase();
-      if (!guess) return;
-      tries++;
-
-      if (guess === targetMovie.title.toLowerCase()) {
-        showPopup("🎉 Correct!", `You got it in ${tries} tries!`);
-      } else {
-        showPopup("❌ Wrong!", `The correct answer was <b>${targetMovie.title}</b>.`);
+    // Autocomplete
+    document.getElementById("movieInput").addEventListener("input", e => {
+      const query = e.target.value;
+      if (query.length > 2) {
+        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`)
+          .then(res => res.json())
+          .then(data => {
+            const container = document.getElementById("suggestions");
+            container.innerHTML = "";
+            data.results.slice(0,5).forEach(movie => {
+              const div = document.createElement("div");
+              div.textContent = movie.title;
+              div.onclick = () => {
+                document.getElementById("movieInput").value = movie.title;
+                container.innerHTML = "";
+              };
+              container.appendChild(div);
+            });
+          });
       }
+    });
+
+    async function submitGuess() {
+      if (guesses >= maxGuesses) return;
+      const query = document.getElementById("movieInput").value.trim();
+      if (!query) return;
+
+      let res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`);
+      let data = await res.json();
+      if (data.results.length === 0) {
+        addToChain(query, "grey");
+        return;
+      }
+      let movie = data.results[0];
+      await checkGuess(movie);
       document.getElementById("movieInput").value = "";
+      document.getElementById("suggestions").innerHTML = "";
     }
 
-    function showPopup(title, msg) {
-      document.getElementById("popupTitle").innerHTML = title;
+    async function checkGuess(movie) {
+      guesses++;
+      let res = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
+      let credits = await res.json();
+      let actorIds = credits.cast.map(a => a.id);
+
+      if (actorIds.includes(actor1.id) && actorIds.includes(actor2.id)) {
+        if (movie.id === targetMovie.id) {
+          addToChain(movie.title, "green");
+          document.getElementById("status").textContent = "🎉 Correct! You found the movie!";
+        } else {
+          addToChain(movie.title, "orange");
+          document.getElementById("status").textContent = "Valid shared movie, but not the one we were looking for.";
+        }
+      } else {
+        addToChain(movie.title, "grey");
+      }
+
+      if (guesses >= maxGuesses && !document.getElementById("status").textContent.includes("Correct!")) {
+        showPopup(`The correct answer was <b>${targetMovie.title}</b>.`);
+      }
+    }
+
+    function addToChain(text, color) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      li.className = color;
+      document.getElementById("chainList").appendChild(li);
+    }
+
+    // ✅ Skip button now costs a try
+    function skipHint() {
+      if (guesses >= maxGuesses) return;
+      guesses++;
+      if (!targetCredits || !targetCredits.cast) return;
+      let unused = targetCredits.cast.filter(a => a.id !== actor1.id && a.id !== actor2.id && a.profile_path);
+      if (unused.length > 0) {
+        let randomActor = unused[Math.floor(Math.random() * unused.length)];
+        document.getElementById("status").textContent = `💡 Hint: Also in this movie → ${randomActor.name}`;
+      }
+      if (guesses >= maxGuesses && !document.getElementById("status").textContent.includes("Correct!")) {
+        showPopup(`The correct answer was <b>${targetMovie.title}</b>.`);
+      }
+    }
+
+    function showPopup(msg) {
       document.getElementById("popupMsg").innerHTML = msg;
       document.getElementById("popup").style.display = "block";
     }
 
     function closePopup() {
       document.getElementById("popup").style.display = "none";
-      getGame(); // start new round
-      tries = 0;
+      document.getElementById("chainList").innerHTML = "";
+      document.getElementById("status").textContent = "";
+      guesses = 0;
+      getActorPair();
     }
 
-    getGame();
+    getActorPair();
   </script>
 </body>
 </html>
