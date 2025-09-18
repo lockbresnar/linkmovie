@@ -51,7 +51,7 @@
 
   <p id="status"></p>
 
-  <p><a href="index.html">👉 Play Chain Movie Game</a></p>
+  <p><a href="index.html">👉 Play Main Game</a></p>
 
   <footer>
     This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
@@ -60,40 +60,36 @@
   </footer>
 
   <script>
-    const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; // ✅ Your TMDb key
+    const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Get a qualified actor from Top 200 films, with ≥10 credits and profile image
+    // Get a qualified actor from Top 150 films, with ≥15 credits
     async function getQualifiedActor() {
-      let page = Math.floor(Math.random() * 10) + 1; // Top 200 films
+      let page = Math.floor(Math.random() * 8) + 1; // Top 150 films
       let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
       let data = await res.json();
       let movie = data.results[Math.floor(Math.random() * data.results.length)];
 
-      // Fetch credits for this movie
       let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
-      let credits = await creditsRes.json();
+      let credits = await res.json();
 
-      // Shuffle cast
       let shuffled = credits.cast.sort(() => 0.5 - Math.random());
 
       for (let actor of shuffled) {
         if (!actor.profile_path) continue;
         if (actor.known_for_department !== "Acting") continue;
 
-        // Check their filmography
         let filmRes = await fetch(`https://api.themoviedb.org/3/person/${actor.id}/movie_credits?api_key=${API_KEY}`);
         let filmData = await filmRes.json();
-        if (filmData.cast.length >= 10) {
+        if (filmData.cast.length >= 15) {
           return actor;
         }
       }
-      return getQualifiedActor(); // retry if none found
+      return getQualifiedActor();
     }
 
-    // Get two random qualified actors
     async function getActorPair() {
       startActor = await getQualifiedActor();
       endActor = await getQualifiedActor();
@@ -103,36 +99,38 @@
       activeActors = [startActor.id];
       chain = [startActor.name];
       displayActors();
+      initChainList();
     }
 
     function displayActors() {
-      document.getElementById("actor1Img").src = startActor.profile_path ? IMAGE_URL + startActor.profile_path : "";
+      document.getElementById("actor1Img").src = IMAGE_URL + startActor.profile_path;
       document.getElementById("actor1").textContent = startActor.name;
-      document.getElementById("actor2Img").src = endActor.profile_path ? IMAGE_URL + endActor.profile_path : "";
+      document.getElementById("actor2Img").src = IMAGE_URL + endActor.profile_path;
       document.getElementById("actor2").textContent = endActor.name;
     }
 
-    // Autocomplete
-    document.getElementById("movieInput").addEventListener("input", e => {
-      const query = e.target.value;
-      if (query.length > 2) {
-        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`)
-          .then(res => res.json())
-          .then(data => {
-            const container = document.getElementById("suggestions");
-            container.innerHTML = "";
-            data.results.slice(0,5).forEach(movie => {
-              const div = document.createElement("div");
-              div.textContent = movie.title;
-              div.onclick = () => {
-                document.getElementById("movieInput").value = movie.title;
-                container.innerHTML = "";
-              };
-              container.appendChild(div);
-            });
-          });
-      }
-    });
+    function initChainList() {
+      document.getElementById("chainList").innerHTML = "";
+      const li = document.createElement("li");
+      li.textContent = startActor.name;
+      li.className = "orange";
+      document.getElementById("chainList").appendChild(li);
+    }
+
+    function resetGame() {
+      document.getElementById("status").textContent = "";
+      chain = [startActor.name];
+      activeActors = [startActor.id];
+      initChainList();
+    }
+
+    function addToChain(text, color) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      li.className = color;
+      document.getElementById("chainList").appendChild(li);
+      chain.push(text);
+    }
 
     async function submitGuess() {
       const query = document.getElementById("movieInput").value.trim();
@@ -163,28 +161,12 @@
         document.getElementById("status").textContent = "🎉 You linked them!";
       } else {
         addToChain(movie.title, "blue");
-        // update active actors with all from this movie
         activeActors = actorIds;
-        // also add one of them visibly to the chain
         let next = credits.cast.find(a => a.id !== startActor.id && a.id !== endActor.id);
         if (next) {
           addToChain(next.name, "orange");
         }
       }
-    }
-
-    function addToChain(text, color) {
-      const li = document.createElement("li");
-      li.textContent = text;
-      li.className = color;
-      document.getElementById("chainList").appendChild(li);
-      chain.push(text);
-    }
-
-    function resetGame() {
-      document.getElementById("chainList").innerHTML = "";
-      document.getElementById("status").textContent = "";
-      getActorPair();
     }
 
     getActorPair();
