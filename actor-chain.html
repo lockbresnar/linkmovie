@@ -65,14 +65,39 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Pick two random actors (they may or may not share movies)
-    async function getActorPair() {
-      let page = Math.floor(Math.random() * 10) + 1;
-      let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
+    // Build actor pool from top 300 films (pages 1–15), only keep actors with ≥ 7 credits
+    async function getQualifiedActor() {
+      let page = Math.floor(Math.random() * 15) + 1; // Top 300 movies
+      let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
       let data = await res.json();
-      let shuffled = data.results.sort(() => 0.5 - Math.random());
-      startActor = shuffled[0];
-      endActor = shuffled[1];
+      let movie = data.results[Math.floor(Math.random() * data.results.length)];
+
+      // Fetch credits for this movie
+      let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
+      let credits = await creditsRes.json();
+
+      // Shuffle cast
+      let shuffled = credits.cast.sort(() => 0.5 - Math.random());
+
+      for (let actor of shuffled) {
+        if (!actor.profile_path) continue;
+        // Check their filmography
+        let filmRes = await fetch(`https://api.themoviedb.org/3/person/${actor.id}/movie_credits?api_key=${API_KEY}`);
+        let filmData = await filmRes.json();
+        if (filmData.cast.length >= 7) {
+          return actor;
+        }
+      }
+      return getQualifiedActor(); // retry if none found
+    }
+
+    // Get two random qualified actors
+    async function getActorPair() {
+      startActor = await getQualifiedActor();
+      endActor = await getQualifiedActor();
+      while (endActor.id === startActor.id) {
+        endActor = await getQualifiedActor();
+      }
       activeActors = [startActor.id];
       chain = [startActor.name];
       displayActors();
@@ -138,11 +163,10 @@
         addToChain(movie.title, "blue");
         // update active actors with all from this movie
         activeActors = actorIds;
-        // pick a random new actor for the chain
-        let next = credits.cast.find(a => !activeActors.includes(a.id));
+        // also add one of them visibly to the chain
+        let next = credits.cast.find(a => a.id !== startActor.id && a.id !== endActor.id);
         if (next) {
           addToChain(next.name, "orange");
-          activeActors.push(next.id);
         }
       }
     }
