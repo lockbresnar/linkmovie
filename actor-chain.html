@@ -20,6 +20,15 @@
     #suggestions div:hover { background: #eee; }
     input { padding: 10px; width: 250px; }
     button { padding: 10px 20px; margin: 5px; }
+    #popup {
+      display: none;
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: white; padding: 20px; border: 2px solid #444; border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+    #popup h2 { margin: 0 0 10px; }
+    #popup button { background: red; color: white; border: none; padding: 5px 10px; float: right; }
     footer { margin-top: 30px; font-size: 14px; color: #555; }
   </style>
 </head>
@@ -51,6 +60,12 @@
 
   <p id="status"></p>
 
+  <div id="popup">
+    <button onclick="closePopup()">X</button>
+    <h2 id="popupTitle"></h2>
+    <p id="popupMsg"></p>
+  </div>
+
   <p><a href="index.html">👉 Play Main Game</a></p>
 
   <footer>
@@ -65,36 +80,14 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Get a qualified actor from Top 150 films, with ≥15 credits
-    async function getQualifiedActor() {
-      let page = Math.floor(Math.random() * 8) + 1; // Top 150 films
-      let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
-      let data = await res.json();
-      let movie = data.results[Math.floor(Math.random() * data.results.length)];
-
-      let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
-      let credits = await res.json();
-
-      let shuffled = credits.cast.sort(() => 0.5 - Math.random());
-
-      for (let actor of shuffled) {
-        if (!actor.profile_path) continue;
-        if (actor.known_for_department !== "Acting") continue;
-
-        let filmRes = await fetch(`https://api.themoviedb.org/3/person/${actor.id}/movie_credits?api_key=${API_KEY}`);
-        let filmData = await filmRes.json();
-        if (filmData.cast.length >= 15) {
-          return actor;
-        }
-      }
-      return getQualifiedActor();
-    }
-
+    // Original actor generation — simpler but reliable
     async function getActorPair() {
-      startActor = await getQualifiedActor();
-      endActor = await getQualifiedActor();
+      let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=1`);
+      let data = await res.json();
+      startActor = data.results[Math.floor(Math.random() * data.results.length)];
+      endActor = data.results[Math.floor(Math.random() * data.results.length)];
       while (endActor.id === startActor.id) {
-        endActor = await getQualifiedActor();
+        endActor = data.results[Math.floor(Math.random() * data.results.length)];
       }
       activeActors = [startActor.id];
       chain = [startActor.name];
@@ -140,6 +133,7 @@
       let data = await res.json();
       if (data.results.length === 0) {
         addToChain(query, "grey");
+        showPopup("Not Found", `❌ "${query}" wasn’t recognised.`);
         return;
       }
       let movie = data.results[0];
@@ -155,10 +149,12 @@
 
       if (!actorIds.some(id => activeActors.includes(id))) {
         addToChain(movie.title, "grey");
+        showPopup("Wrong", `❌ ${startActor.name} wasn’t in "${movie.title}"`);
       } else if (actorIds.includes(endActor.id)) {
         addToChain(movie.title, "blue");
         addToChain(endActor.name, "green");
         document.getElementById("status").textContent = "🎉 You linked them!";
+        showPopup("🎉 Success!", `You linked ${startActor.name} to ${endActor.name}!`);
       } else {
         addToChain(movie.title, "blue");
         activeActors = actorIds;
@@ -167,6 +163,16 @@
           addToChain(next.name, "orange");
         }
       }
+    }
+
+    function showPopup(title, msg) {
+      document.getElementById("popupTitle").innerHTML = title;
+      document.getElementById("popupMsg").innerHTML = msg;
+      document.getElementById("popup").style.display = "block";
+    }
+
+    function closePopup() {
+      document.getElementById("popup").style.display = "none";
     }
 
     getActorPair();
