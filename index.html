@@ -58,6 +58,7 @@
   </div>
 
   <p id="status"></p>
+  <p id="counter">Tries: 0 / 6</p>
 
   <div id="popup">
     <button onclick="closePopup()">X</button>
@@ -81,7 +82,7 @@
 
     async function getActorPair() {
       try {
-        let page = Math.floor(Math.random() * 35) + 1; // top 700 films
+        let page = Math.floor(Math.random() * 30) + 1; // top 600 films
         let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
         let data = await res.json();
         targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
@@ -140,7 +141,7 @@
       let res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`);
       let data = await res.json();
       if (data.results.length === 0) {
-        addToChain(query, "grey");
+        wrongAnswer(query);
         return;
       }
       let movie = data.results[0];
@@ -151,6 +152,8 @@
 
     async function checkGuess(movie) {
       guesses++;
+      updateCounter();
+
       let res = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
       let credits = await res.json();
       let actorIds = credits.cast.map(a => a.id);
@@ -159,17 +162,26 @@
         if (movie.id === targetMovie.id) {
           addToChain(movie.title, "green");
           document.getElementById("status").textContent = "🎉 Correct! You found the movie!";
+          return;
         } else {
           addToChain(movie.title, "orange");
-          document.getElementById("status").textContent = "Valid shared movie, but not the one we were looking for.";
         }
       } else {
-        addToChain(movie.title, "grey");
+        wrongAnswer(movie.title);
+        return;
       }
 
       if (guesses >= maxGuesses && !document.getElementById("status").textContent.includes("Correct!")) {
         showPopup(`The correct answer was <b>${targetMovie.title}</b>.`);
       }
+    }
+
+    // Handle wrong answers as skips
+    function wrongAnswer(entry) {
+      guesses++;
+      updateCounter();
+      addToChain(entry, "grey");
+      giveActorHint();
     }
 
     function addToChain(text, color) {
@@ -179,19 +191,28 @@
       document.getElementById("chainList").appendChild(li);
     }
 
-    // ✅ Skip button now costs a try
+    // Skip = adds an actor’s name as if it was a guess
     function skipHint() {
       if (guesses >= maxGuesses) return;
       guesses++;
+      updateCounter();
+      giveActorHint();
+    }
+
+    function giveActorHint() {
       if (!targetCredits || !targetCredits.cast) return;
       let unused = targetCredits.cast.filter(a => a.id !== actor1.id && a.id !== actor2.id && a.profile_path);
       if (unused.length > 0) {
         let randomActor = unused[Math.floor(Math.random() * unused.length)];
-        document.getElementById("status").textContent = `💡 Hint: Also in this movie → ${randomActor.name}`;
+        addToChain(randomActor.name, "grey");
       }
       if (guesses >= maxGuesses && !document.getElementById("status").textContent.includes("Correct!")) {
         showPopup(`The correct answer was <b>${targetMovie.title}</b>.`);
       }
+    }
+
+    function updateCounter() {
+      document.getElementById("counter").textContent = `Tries: ${guesses} / ${maxGuesses}`;
     }
 
     function showPopup(msg) {
@@ -204,10 +225,12 @@
       document.getElementById("chainList").innerHTML = "";
       document.getElementById("status").textContent = "";
       guesses = 0;
+      updateCounter();
       getActorPair();
     }
 
     getActorPair();
+    updateCounter();
   </script>
 </body>
 </html>
