@@ -20,15 +20,6 @@
     #suggestions div:hover { background: #eee; }
     input { padding: 10px; width: 250px; }
     button { padding: 10px 20px; margin: 5px; }
-    #popup {
-      display: none;
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: white; padding: 20px; border: 2px solid #444; border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      z-index: 1000;
-    }
-    #popup h2 { margin: 0 0 10px; }
-    #popup button { background: red; color: white; border: none; padding: 5px 10px; float: right; }
     footer { margin-top: 30px; font-size: 14px; color: #555; }
   </style>
 </head>
@@ -60,13 +51,6 @@
 
   <p id="status"></p>
 
-  <!-- ✅ Popup only on win -->
-  <div id="popup">
-    <button onclick="closePopup()">X</button>
-    <h2>🎉 You linked them!</h2>
-    <p id="popupMsg"></p>
-  </div>
-
   <p><a href="index.html">👉 Play Chain Movie Game</a></p>
 
   <footer>
@@ -76,12 +60,12 @@
   </footer>
 
   <script>
-    const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
+    const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; // ✅ Your TMDb key
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Pick two random actors
+    // Pick two random actors (they may or may not share movies)
     async function getActorPair() {
       let page = Math.floor(Math.random() * 10) + 1;
       let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
@@ -92,7 +76,6 @@
       activeActors = [startActor.id];
       chain = [startActor.name];
       displayActors();
-      initChainList();
     }
 
     function displayActors() {
@@ -100,14 +83,6 @@
       document.getElementById("actor1").textContent = startActor.name;
       document.getElementById("actor2Img").src = endActor.profile_path ? IMAGE_URL + endActor.profile_path : "";
       document.getElementById("actor2").textContent = endActor.name;
-    }
-
-    function initChainList() {
-      document.getElementById("chainList").innerHTML = "";
-      const li = document.createElement("li");
-      li.textContent = startActor.name;
-      li.className = "orange";
-      document.getElementById("chainList").appendChild(li);
     }
 
     // Autocomplete
@@ -159,13 +134,15 @@
         addToChain(movie.title, "blue");
         addToChain(endActor.name, "green");
         document.getElementById("status").textContent = "🎉 You linked them!";
-        showPopup(chain.length); // ✅ show popup on win
       } else {
         addToChain(movie.title, "blue");
+        // update active actors with all from this movie
         activeActors = actorIds;
-        let next = credits.cast.find(a => a.id !== startActor.id && a.id !== endActor.id);
+        // pick a random new actor for the chain
+        let next = credits.cast.find(a => !activeActors.includes(a.id));
         if (next) {
           addToChain(next.name, "orange");
+          activeActors.push(next.id);
         }
       }
     }
@@ -178,22 +155,10 @@
       chain.push(text);
     }
 
-    // ✅ Reset keeps same actors
     function resetGame() {
+      document.getElementById("chainList").innerHTML = "";
       document.getElementById("status").textContent = "";
-      chain = [startActor.name];
-      activeActors = [startActor.id];
-      initChainList();
-    }
-
-    // ✅ Popup on win
-    function showPopup(steps) {
-      document.getElementById("popupMsg").innerHTML = `It took you <b>${steps - 1}</b> steps to link them!`;
-      document.getElementById("popup").style.display = "block";
-    }
-
-    function closePopup() {
-      document.getElementById("popup").style.display = "none";
+      getActorPair();
     }
 
     getActorPair();
