@@ -81,12 +81,19 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Pick two random actors
+    // Pick two random actors with popularity > 21
     async function getActorPair() {
       let page = Math.floor(Math.random() * 10) + 1;
       let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
       let data = await res.json();
-      let shuffled = data.results.sort(() => 0.5 - Math.random());
+
+      // Filter popularity > 21
+      let filtered = data.results.filter(actor => actor.popularity > 21 && actor.profile_path);
+      if (filtered.length < 2) {
+        return getActorPair(); // try again if too few
+      }
+
+      let shuffled = filtered.sort(() => 0.5 - Math.random());
       startActor = shuffled[0];
       endActor = shuffled[1];
       activeActors = [startActor.id];
@@ -163,10 +170,9 @@
       } else {
         addToChain(movie.title, "blue");
         activeActors = actorIds;
-        let next = credits.cast.find(a => !activeActors.includes(a.id));
+        let next = credits.cast.find(a => a.id !== startActor.id && a.id !== endActor.id);
         if (next) {
           addToChain(next.name, "orange");
-          activeActors.push(next.id);
         }
       }
     }
@@ -179,7 +185,7 @@
       chain.push(text);
     }
 
-    // ✅ Reset clears chain only
+    // Reset clears only chain
     function resetGame() {
       document.getElementById("chainList").innerHTML = "";
       document.getElementById("status").textContent = "";
@@ -188,7 +194,7 @@
       initChainList();
     }
 
-    // ✅ Popup
+    // Popup
     function showPopup(steps) {
       document.getElementById("popupMsg").innerHTML = `It took you <b>${steps - 1}</b> steps to link them!`;
       document.getElementById("popup").style.display = "block";
