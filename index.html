@@ -80,7 +80,7 @@
     const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
-    let targetMovie, actor1, actor2, hints = [], shownHints = [], tries = 0, maxTries = 6;
+    let targetMovie, actor1, actor2, cast = [], tries = 0, maxTries = 6;
 
     async function initGame() {
       let page = Math.floor(Math.random() * 5) + 1;
@@ -91,13 +91,12 @@
       let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
       let credits = await creditsRes.json();
 
-      let topCast = credits.cast.slice(0, 6).filter(a => a.profile_path);
-      if (topCast.length < 2) return initGame();
+      cast = credits.cast.filter(a => a.profile_path); // full cast
+      if (cast.length < 2) return initGame();
 
-      let shuffled = topCast.sort(() => 0.5 - Math.random());
+      let shuffled = cast.sort(() => 0.5 - Math.random());
       actor1 = shuffled[0];
       actor2 = shuffled[1];
-      hints = topCast.filter(a => a.id !== actor1.id && a.id !== actor2.id);
 
       displayActors();
       updateTries();
@@ -181,13 +180,8 @@
     }
 
     function revealHint() {
-      const available = hints.filter(a => !shownHints.includes(a.id));
-      if (available.length === 0) {
-        addToChain("No more hints available", "grey");
-        return;
-      }
-      const randomHint = available[Math.floor(Math.random() * available.length)];
-      shownHints.push(randomHint.id);
+      if (cast.length === 0) return;
+      const randomHint = cast[Math.floor(Math.random() * cast.length)];
       addToChain(`Hint: ${randomHint.name}`, "blue");
     }
 
