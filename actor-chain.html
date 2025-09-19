@@ -172,10 +172,12 @@
         showPopup(chain.length); 
       } else {
         addToChain(movie.title, "blue");
-        activeActors = actorIds;
-        let next = credits.cast.find(a => a.id !== startActor.id && a.id !== endActor.id);
+
+        // ✅ pick next actor in chain
+        let next = credits.cast.find(a => !activeActors.includes(a.id) && a.id !== endActor.id);
         if (next) {
           addToChain(next.name, "orange");
+          activeActors = [next.id]; // move chain forward
         }
       }
     }
