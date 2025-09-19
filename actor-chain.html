@@ -81,28 +81,19 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Helper: check if actor is in at least 2 top-rated films
-    async function actorInTwoTopFilms(actorId) {
-      let count = 0;
-      for (let page = 1; page <= 13; page++) {
-        let res = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
-        let movies = await res.json();
-        for (let m of movies.results) {
-          let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${m.id}/credits?api_key=${API_KEY}`);
-          let credits = await creditsRes.json();
-          if (credits.cast.some(c => c.id === actorId)) {
-            count++;
-            if (count >= 2) return true;
-          }
-        }
-      }
-      return false;
+    // Helper: check if actor has at least 2 movies rated >7.5
+    async function actorInTwoGoodFilms(actorId) {
+      let res = await fetch(`https://api.themoviedb.org/3/person/${actorId}/movie_credits?api_key=${API_KEY}`);
+      let data = await res.json();
+      if (!data.cast) return false;
+      let good = data.cast.filter(m => m.vote_average && m.vote_average > 7.5);
+      return good.length >= 2;
     }
 
     // Pick actors
     async function getActorPair() {
-      let page = Math.floor(Math.random() * 13) + 1;
-      let movieRes = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
+      let page = Math.floor(Math.random() * 50) + 1; // pick from first ~1000 movies
+      let movieRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&sort_by=vote_count.desc&page=${page}`);
       let movieData = await movieRes.json();
       let movie = movieData.results[Math.floor(Math.random() * movieData.results.length)];
 
@@ -113,7 +104,7 @@
       for (let actor of credits.cast) {
         if (!actor.profile_path) continue;
         try {
-          if (await actorInTwoTopFilms(actor.id)) {
+          if (await actorInTwoGoodFilms(actor.id)) {
             eligible.push(actor);
           }
         } catch (e) {
