@@ -81,23 +81,22 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // ✅ Get two random popular actors with popularity > 20
+    // ✅ Pick actors from a random popular English-language film
     async function getActorPair() {
-      let page = Math.floor(Math.random() * 5) + 1; // top ~100
-      let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
-      let data = await res.json();
+      let page = Math.floor(Math.random() * 10) + 1; // explore first 10 pages (~200 films)
+      let movieRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=en&sort_by=vote_count.desc&page=${page}`);
+      let movieData = await movieRes.json();
+      let movie = movieData.results[Math.floor(Math.random() * movieData.results.length)];
 
-      let filtered = data.results.filter(p =>
-        p.popularity > 20 &&
-        p.known_for_department === "Acting" &&
-        p.profile_path // must have an image
-      );
+      let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
+      let credits = await creditsRes.json();
 
-      if (filtered.length < 2) {
-        return getActorPair(); // retry if not enough
+      let eligible = credits.cast.filter(a => a.profile_path);
+      if (eligible.length < 2) {
+        return getActorPair(); // retry if too few actors
       }
 
-      let shuffled = filtered.sort(() => 0.5 - Math.random());
+      let shuffled = eligible.sort(() => 0.5 - Math.random());
       startActor = shuffled[0];
       endActor = shuffled[1];
       activeActors = [startActor.id];
