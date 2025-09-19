@@ -13,7 +13,6 @@
     li { margin: 5px 0; padding: 5px; border-radius: 6px; }
     .grey { background: #ddd; }
     .blue { background: #d0e6ff; }
-    .orange { background: #ffd9b3; }
     .green { background: #c8f7c5; }
     #suggestions { border: 1px solid #ccc; max-width: 300px; margin: 10px auto; background: #fff; border-radius: 6px; }
     #suggestions div { padding: 8px; cursor: pointer; }
@@ -89,7 +88,7 @@
       let movie = movieData.results[Math.floor(Math.random() * movieData.results.length)];
 
       let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
-      let credits = await creditsRes.json();
+      let credits = await res.json();
 
       let eligible = credits.cast.filter(a => a.profile_path);
       if (eligible.length < 2) {
@@ -116,7 +115,7 @@
       document.getElementById("chainList").innerHTML = "";
       const li = document.createElement("li");
       li.textContent = startActor.name;
-      li.className = "orange";
+      li.className = "blue";
       document.getElementById("chainList").appendChild(li);
     }
 
@@ -163,23 +162,24 @@
       let credits = await res.json();
       let actorIds = credits.cast.map(a => a.id);
 
-      if (!actorIds.some(id => activeActors.includes(id))) {
+      // If current actor not in this movie → wrong guess
+      if (!actorIds.includes(activeActors[0])) {
         addToChain(movie.title, "grey");
-      } else if (actorIds.includes(endActor.id)) {
+        return;
+      }
+
+      // If this movie contains the end actor → win
+      if (actorIds.includes(endActor.id)) {
         addToChain(movie.title, "blue");
         addToChain(endActor.name, "green");
         document.getElementById("status").textContent = "🎉 You linked them!";
-        showPopup(chain.length); 
-      } else {
-        addToChain(movie.title, "blue");
-
-        // ✅ pick next actor in chain
-        let next = credits.cast.find(a => !activeActors.includes(a.id) && a.id !== endActor.id);
-        if (next) {
-          addToChain(next.name, "orange");
-          activeActors = [next.id]; // move chain forward
-        }
+        showPopup(chain.length);
+        return;
       }
+
+      // Otherwise just add the movie in blue, update activeActors
+      addToChain(movie.title, "blue");
+      activeActors = actorIds;
     }
 
     function addToChain(text, color) {
