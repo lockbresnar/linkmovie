@@ -81,19 +81,35 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Pick two random actors with popularity > 21
+    // Fetch one random top-250 film and pull eligible actors
     async function getActorPair() {
-      let page = Math.floor(Math.random() * 10) + 1;
-      let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
-      let data = await res.json();
+      let page = Math.floor(Math.random() * 13) + 1; // 13 pages ≈ 250 films
+      let movieRes = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`);
+      let movieData = await movieRes.json();
+      let movie = movieData.results[Math.floor(Math.random() * movieData.results.length)];
 
-      // Filter popularity > 21
-      let filtered = data.results.filter(actor => actor.popularity > 21 && actor.profile_path);
-      if (filtered.length < 2) {
-        return getActorPair(); // try again if too few
+      let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
+      let credits = await creditsRes.json();
+
+      let eligible = [];
+      for (let actor of credits.cast) {
+        if (!actor.profile_path) continue;
+        try {
+          let creditsRes = await fetch(`https://api.themoviedb.org/3/person/${actor.id}/movie_credits?api_key=${API_KEY}`);
+          let creditsData = await creditsRes.json();
+          if (creditsData.cast && creditsData.cast.length > 10) {
+            eligible.push(actor);
+          }
+        } catch (e) {
+          console.warn("Failed to fetch credits for", actor.name);
+        }
       }
 
-      let shuffled = filtered.sort(() => 0.5 - Math.random());
+      if (eligible.length < 2) {
+        return getActorPair(); // retry if not enough
+      }
+
+      let shuffled = eligible.sort(() => 0.5 - Math.random());
       startActor = shuffled[0];
       endActor = shuffled[1];
       activeActors = [startActor.id];
@@ -166,7 +182,7 @@
         addToChain(movie.title, "blue");
         addToChain(endActor.name, "green");
         document.getElementById("status").textContent = "🎉 You linked them!";
-        showPopup(chain.length); // ✅ popup on win
+        showPopup(chain.length); 
       } else {
         addToChain(movie.title, "blue");
         activeActors = actorIds;
@@ -185,7 +201,6 @@
       chain.push(text);
     }
 
-    // Reset clears only chain
     function resetGame() {
       document.getElementById("chainList").innerHTML = "";
       document.getElementById("status").textContent = "";
@@ -194,7 +209,6 @@
       initChainList();
     }
 
-    // Popup
     function showPopup(steps) {
       document.getElementById("popupMsg").innerHTML = `It took you <b>${steps - 1}</b> steps to link them!`;
       document.getElementById("popup").style.display = "block";
