@@ -81,37 +81,17 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Helper: check if actor has at least 2 movies rated >7.5
-    async function actorInTwoGoodFilms(actorId) {
-      let res = await fetch(`https://api.themoviedb.org/3/person/${actorId}/movie_credits?api_key=${API_KEY}`);
-      let data = await res.json();
-      if (!data.cast) return false;
-      let good = data.cast.filter(m => m.vote_average && m.vote_average > 7.5);
-      return good.length >= 2;
-    }
-
-    // Pick actors
+    // Pick two eligible actors
     async function getActorPair() {
-      let page = Math.floor(Math.random() * 50) + 1; // pick from first ~1000 movies
-      let movieRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&sort_by=vote_count.desc&page=${page}`);
+      let page = Math.floor(Math.random() * 30) + 1; // first ~600 movies
+      let movieRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=en&sort_by=vote_count.desc&page=${page}`);
       let movieData = await movieRes.json();
       let movie = movieData.results[Math.floor(Math.random() * movieData.results.length)];
 
       let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
       let credits = await creditsRes.json();
 
-      let eligible = [];
-      for (let actor of credits.cast) {
-        if (!actor.profile_path) continue;
-        try {
-          if (await actorInTwoGoodFilms(actor.id)) {
-            eligible.push(actor);
-          }
-        } catch (e) {
-          console.warn("Failed to fetch info for", actor.name);
-        }
-      }
-
+      let eligible = credits.cast.filter(a => a.profile_path && a.popularity > 20);
       if (eligible.length < 2) {
         return getActorPair(); // retry if not enough
       }
