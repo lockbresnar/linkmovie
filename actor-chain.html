@@ -81,17 +81,16 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // ✅ Get two random popular actors with popularity > 20 and English films
+    // ✅ Get two random popular actors with popularity > 20
     async function getActorPair() {
-      let page = Math.floor(Math.random() * 5) + 1; // first 5 pages = ~100 most popular
+      let page = Math.floor(Math.random() * 5) + 1; // top ~100
       let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
       let data = await res.json();
 
-      // Filter: popular, actors, and English-language films in known_for
       let filtered = data.results.filter(p =>
         p.popularity > 20 &&
         p.known_for_department === "Acting" &&
-        p.known_for.some(m => m.original_language === "en")
+        p.profile_path // must have an image
       );
 
       if (filtered.length < 2) {
@@ -166,11 +165,6 @@
       } else {
         addToChain(movie.title, "blue");
         activeActors = actorIds;
-        let next = credits.cast.find(a => !activeActors.includes(a.id));
-        if (next) {
-          addToChain(next.name, "orange");
-          activeActors.push(next.id);
-        }
       }
     }
 
