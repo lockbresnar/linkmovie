@@ -13,6 +13,7 @@
     li { margin: 5px 0; padding: 5px; border-radius: 6px; }
     .grey { background: #ddd; }
     .blue { background: #d0e6ff; }
+    .orange { background: #ffd9b3; }
     .green { background: #c8f7c5; }
     #suggestions { border: 1px solid #ccc; max-width: 300px; margin: 10px auto; background: #fff; border-radius: 6px; }
     #suggestions div { padding: 8px; cursor: pointer; }
@@ -66,7 +67,7 @@
     <p id="popupMsg"></p>
   </div>
 
-  <p><a href="index.html">👉 Play Main Movie Game</a></p>
+  <p><a href="index.html">👉 Play Chain Movie Game</a></p>
 
   <footer>
     This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
@@ -80,28 +81,17 @@
 
     let startActor, endActor, activeActors = [], chain = [];
 
-    // Pick two random actors from one random movie
+    // Pick two random actors (they may or may not share movies)
     async function getActorPair() {
-      let page = Math.floor(Math.random() * 30) + 1; // ~600 popular films
-      let movieRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&sort_by=vote_count.desc&page=${page}`);
-      let movieData = await movieRes.json();
-      let movie = movieData.results[Math.floor(Math.random() * movieData.results.length)];
-
-      let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
-      let credits = await res.json();
-
-      let eligible = credits.cast.filter(a => a.profile_path);
-      if (eligible.length < 2) {
-        return getActorPair(); // retry if not enough
-      }
-
-      let shuffled = eligible.sort(() => 0.5 - Math.random());
+      let page = Math.floor(Math.random() * 10) + 1;
+      let res = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${API_KEY}&page=${page}`);
+      let data = await res.json();
+      let shuffled = data.results.sort(() => 0.5 - Math.random());
       startActor = shuffled[0];
       endActor = shuffled[1];
       activeActors = [startActor.id];
       chain = [startActor.name];
       displayActors();
-      initChainList();
     }
 
     function displayActors() {
@@ -109,14 +99,6 @@
       document.getElementById("actor1").textContent = startActor.name;
       document.getElementById("actor2Img").src = endActor.profile_path ? IMAGE_URL + endActor.profile_path : "";
       document.getElementById("actor2").textContent = endActor.name;
-    }
-
-    function initChainList() {
-      document.getElementById("chainList").innerHTML = "";
-      const li = document.createElement("li");
-      li.textContent = startActor.name;
-      li.className = "blue";
-      document.getElementById("chainList").appendChild(li);
     }
 
     // Autocomplete
@@ -162,24 +144,22 @@
       let credits = await res.json();
       let actorIds = credits.cast.map(a => a.id);
 
-      // If current actor not in this movie → wrong guess
-      if (!actorIds.includes(activeActors[0])) {
+      if (!actorIds.some(id => activeActors.includes(id))) {
         addToChain(movie.title, "grey");
-        return;
-      }
-
-      // If this movie contains the end actor → win
-      if (actorIds.includes(endActor.id)) {
+      } else if (actorIds.includes(endActor.id)) {
         addToChain(movie.title, "blue");
         addToChain(endActor.name, "green");
         document.getElementById("status").textContent = "🎉 You linked them!";
         showPopup(chain.length);
-        return;
+      } else {
+        addToChain(movie.title, "blue");
+        activeActors = actorIds;
+        let next = credits.cast.find(a => !activeActors.includes(a.id));
+        if (next) {
+          addToChain(next.name, "orange");
+          activeActors.push(next.id);
+        }
       }
-
-      // Otherwise just add the movie in blue, update activeActors
-      addToChain(movie.title, "blue");
-      activeActors = actorIds;
     }
 
     function addToChain(text, color) {
@@ -190,14 +170,15 @@
       chain.push(text);
     }
 
+    // ✅ Reset only clears the chain, keeps same actors
     function resetGame() {
       document.getElementById("chainList").innerHTML = "";
       document.getElementById("status").textContent = "";
       chain = [startActor.name];
       activeActors = [startActor.id];
-      initChainList();
     }
 
+    // ✅ Popup when game is won
     function showPopup(steps) {
       document.getElementById("popupMsg").innerHTML = `It took you <b>${steps - 1}</b> steps to link them!`;
       document.getElementById("popup").style.display = "block";
