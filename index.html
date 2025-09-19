@@ -28,6 +28,7 @@
     }
     #popup h2 { margin: 0 0 10px; }
     #popup button { background: red; color: white; border: none; padding: 5px 10px; float: right; }
+    #tries { margin-top: 10px; font-weight: bold; }
     footer { margin-top: 30px; font-size: 14px; color: #555; }
   </style>
 </head>
@@ -57,6 +58,7 @@
     <ul id="chainList"></ul>
   </div>
 
+  <p id="tries">Tries: 0 / 6</p>
   <p id="status"></p>
 
   <!-- ✅ Popup -->
@@ -80,28 +82,25 @@
 
     let targetMovie, actor1, actor2, hints = [], shownHints = [], tries = 0, maxTries = 6;
 
-    // ✅ Pick a random popular English-language movie
     async function initGame() {
-      let page = Math.floor(Math.random() * 5) + 1; // top ~100 movies
+      let page = Math.floor(Math.random() * 5) + 1;
       let movieRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=en&sort_by=popularity.desc&page=${page}`);
       let movieData = await movieRes.json();
       targetMovie = movieData.results[Math.floor(Math.random() * movieData.results.length)];
 
-      // Get credits
       let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
       let credits = await creditsRes.json();
 
-      // Take top 6 actors
       let topCast = credits.cast.slice(0, 6).filter(a => a.profile_path);
-      if (topCast.length < 2) return initGame(); // retry if not enough
+      if (topCast.length < 2) return initGame();
 
-      // Pick 2 random actors
       let shuffled = topCast.sort(() => 0.5 - Math.random());
       actor1 = shuffled[0];
       actor2 = shuffled[1];
       hints = topCast.filter(a => a.id !== actor1.id && a.id !== actor2.id);
 
       displayActors();
+      updateTries();
     }
 
     function displayActors() {
@@ -111,7 +110,6 @@
       document.getElementById("actor2").textContent = actor2.name;
     }
 
-    // Autocomplete
     document.getElementById("movieInput").addEventListener("input", e => {
       const query = e.target.value;
       if (query.length > 2) {
@@ -138,6 +136,8 @@
       if (!query) return;
 
       tries++;
+      updateTries();
+
       let res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`);
       let data = await res.json();
 
@@ -166,6 +166,7 @@
 
     function skipTurn() {
       tries++;
+      updateTries();
       revealHint();
       if (tries >= maxTries) {
         showPopup(false);
@@ -181,10 +182,17 @@
 
     function revealHint() {
       const available = hints.filter(a => !shownHints.includes(a.id));
-      if (available.length === 0) return;
+      if (available.length === 0) {
+        addToChain("No more hints available", "grey");
+        return;
+      }
       const randomHint = available[Math.floor(Math.random() * available.length)];
       shownHints.push(randomHint.id);
       addToChain(`Hint: ${randomHint.name}`, "blue");
+    }
+
+    function updateTries() {
+      document.getElementById("tries").textContent = `Tries: ${tries} / ${maxTries}`;
     }
 
     function showPopup(win) {
