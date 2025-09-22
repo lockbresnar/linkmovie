@@ -61,7 +61,7 @@
   <p id="tries">Tries: 0 / 6</p>
   <p id="status"></p>
 
-  <!-- ✅ Popup -->
+  <!-- Popup -->
   <div id="popup">
     <button onclick="closePopup()">X</button>
     <h2 id="popupTitle"></h2>
@@ -76,25 +76,32 @@
          alt="TMDb Logo" width="100">
   </footer>
 
+  <!-- Load curated actor pool -->
+  <script src="actors.js"></script>
+
   <script>
-    const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
+    const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
     let targetMovie, actor1, actor2, cast = [], tries = 0, maxTries = 6;
 
     async function initGame() {
+      // Pick random movie
       let page = Math.floor(Math.random() * 5) + 1;
       let movieRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=en&sort_by=popularity.desc&page=${page}`);
       let movieData = await movieRes.json();
       targetMovie = movieData.results[Math.floor(Math.random() * movieData.results.length)];
 
+      // Get credits
       let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
       let credits = await creditsRes.json();
+      cast = credits.cast.filter(a => a.profile_path);
 
-      cast = credits.cast.filter(a => a.profile_path); // full cast
-      if (cast.length < 2) return initGame();
+      // Pick two random actors from ACTOR_POOL who are in this movie
+      let poolCast = cast.filter(a => ACTOR_POOL.includes(a.name));
+      if (poolCast.length < 2) return initGame(); // retry
 
-      let shuffled = cast.sort(() => 0.5 - Math.random());
+      let shuffled = poolCast.sort(() => 0.5 - Math.random());
       actor1 = shuffled[0];
       actor2 = shuffled[1];
 
