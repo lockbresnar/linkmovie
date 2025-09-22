@@ -34,7 +34,7 @@
 </head>
 <body>
   <h1>🎬 Actor Chain Game</h1>
-  <p>Link the two actors by finding movies that connect them!</p>
+  <p>Link the two actors by finding movies and actors that connect them!</p>
 
   <div class="actors">
     <div>
@@ -47,7 +47,7 @@
     </div>
   </div>
 
-  <input id="movieInput" placeholder="Enter a movie..." />
+  <input id="guessInput" placeholder="Enter a movie or actor..." />
   <div id="suggestions"></div>
   <br>
   <button onclick="submitGuess()">Submit</button>
@@ -82,9 +82,8 @@
     const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
-    let startActor, endActor, currentActor, chain = [];
+    let startActor, endActor, currentActor, lastMovieCast = [], chain = [];
 
-    // Pick two random actors from pool
     async function initGame() {
       let shuffled = ACTOR_POOL.sort(() => 0.5 - Math.random());
       let names = shuffled.slice(0,2);
@@ -118,71 +117,57 @@
       document.getElementById("actor2").textContent = endActor.name;
     }
 
-    document.getElementById("movieInput").addEventListener("input", e => {
-      const query = e.target.value;
-      if (query.length > 2) {
-        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`)
-          .then(res => res.json())
-          .then(data => {
-            const container = document.getElementById("suggestions");
-            container.innerHTML = "";
-            data.results.slice(0,5).forEach(movie => {
-              const div = document.createElement("div");
-              div.textContent = movie.title;
-              div.onclick = () => {
-                document.getElementById("movieInput").value = movie.title;
-                container.innerHTML = "";
-              };
-              container.appendChild(div);
-            });
-          });
-      }
-    });
-
-    function submitGuess() {
-      const query = document.getElementById("movieInput").value.trim();
+    async function submitGuess() {
+      const query = document.getElementById("guessInput").value.trim();
       if (!query) return;
 
-      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.results.length === 0) {
-            addToChain(query, "grey");
+      // First try movie
+      let movieRes = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`);
+      let movieData = await movieRes.json();
+
+      if (movieData.results.length > 0) {
+        let movie = movieData.results[0];
+        let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
+        let credits = await creditsRes.json();
+        let castIds = credits.cast.map(a => a.id);
+
+        if (castIds.includes(currentActor.id)) {
+          // If this movie has the end actor, win
+          if (castIds.includes(endActor.id)) {
+            addToChain(movie.title, "green");
+            showPopup(chain.length/2, movie.title);
             return;
           }
-          const movie = data.results[0];
-          checkGuess(movie.id, movie.title);
-        });
-
-      document.getElementById("movieInput").value = "";
-      document.getElementById("suggestions").innerHTML = "";
-    }
-
-    function checkGuess(movieId, movieTitle) {
-      fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${API_KEY}`)
-        .then(res => res.json())
-        .then(data => {
-          const actors = data.cast.map(a => a.id);
-
-          if (!actors.includes(currentActor.id)) {
-            addToChain(movieTitle, "grey");
-          } else if (actors.includes(endActor.id)) {
-            // Winning movie → mark green
-            addToChain(movieTitle, "green");
-            document.getElementById("status").textContent = "🎉 You linked them!";
-            showPopup(movieTitle);
-          } else {
-            // Progress forward: movie + new actor
-            const nextActor = data.cast.find(a => a.id !== currentActor.id);
-            if (nextActor) {
-              addToChain(movieTitle, "blue");
-              currentActor = { id: nextActor.id, name: nextActor.name };
-              addToChain(nextActor.name, "orange");
-            } else {
-              addToChain(movieTitle, "grey");
+          // Otherwise valid step
+          addToChain(movie.title, "blue");
+          lastMovieCast = credits.cast;
+        } else {
+          addToChain(movie.title, "grey");
+        }
+      } else {
+        // Try actor search
+        let actorRes = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${API_KEY}&query=${encodeURIComponent(query)}`);
+        let actorData = await actorRes.json();
+        if (actorData.results.length > 0) {
+          let actor = actorData.results[0];
+          if (lastMovieCast.find(a => a.id === actor.id)) {
+            if (actor.id === endActor.id) {
+              addToChain(actor.name, "green");
+              showPopup(Math.floor(chain.length/2), "via actor");
+              return;
             }
+            addToChain(actor.name, "orange");
+            currentActor = actor;
+          } else {
+            addToChain(actor.name, "grey");
           }
-        });
+        } else {
+          addToChain(query, "grey");
+        }
+      }
+
+      document.getElementById("guessInput").value = "";
+      document.getElementById("suggestions").innerHTML = "";
     }
 
     function resetChain() {
@@ -199,11 +184,10 @@
       chain.push(text);
     }
 
-    function showPopup(finalMovie) {
+    function showPopup(steps, finalThing) {
       document.getElementById("popup").style.display = "block";
       document.getElementById("popupTitle").textContent = "🎉 You Win!";
-      const steps = Math.floor((chain.length - 1) / 2);
-      document.getElementById("popupMsg").textContent = `It took you ${steps} steps to link them via "${finalMovie}".`;
+      document.getElementById("popupMsg").textContent = `It took you ${steps} steps to link them (last link: ${finalThing}).`;
     }
 
     function closePopup() {
