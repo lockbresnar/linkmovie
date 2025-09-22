@@ -167,16 +167,17 @@
           if (!actors.includes(currentActor.id)) {
             addToChain(movieTitle, "grey");
           } else if (actors.includes(endActor.id)) {
-            addToChain(movieTitle, "blue");
-            addToChain(endActor.name, "green");
+            // Winning movie → mark green
+            addToChain(movieTitle, "green");
             document.getElementById("status").textContent = "🎉 You linked them!";
-            showPopup();
+            showPopup(movieTitle);
           } else {
+            // Progress forward: movie + new actor
             const nextActor = data.cast.find(a => a.id !== currentActor.id);
             if (nextActor) {
               addToChain(movieTitle, "blue");
-              addToChain(nextActor.name, "orange");
               currentActor = { id: nextActor.id, name: nextActor.name };
+              addToChain(nextActor.name, "orange");
             } else {
               addToChain(movieTitle, "grey");
             }
@@ -198,10 +199,11 @@
       chain.push(text);
     }
 
-    function showPopup() {
+    function showPopup(finalMovie) {
       document.getElementById("popup").style.display = "block";
       document.getElementById("popupTitle").textContent = "🎉 You Win!";
-      document.getElementById("popupMsg").textContent = `It took you ${Math.floor((chain.length-1)/2)} steps to link them.`;
+      const steps = Math.floor((chain.length - 1) / 2);
+      document.getElementById("popupMsg").textContent = `It took you ${steps} steps to link them via "${finalMovie}".`;
     }
 
     function closePopup() {
