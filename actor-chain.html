@@ -117,7 +117,7 @@
       document.getElementById("actor2").textContent = endActor.name;
     }
 
-    // Autocomplete: movies only
+    // Autocomplete for movies
     document.getElementById("guessInput").addEventListener("input", async e => {
       const query = e.target.value.trim();
       const container = document.getElementById("suggestions");
@@ -151,16 +151,37 @@
         let credits = await creditsRes.json();
         let castIds = credits.cast.map(a => a.id);
 
-        if (castIds.includes(currentActor.id)) {
-          if (castIds.includes(endActor.id)) {
-            addToChain(movie.title, "green");
-            showPopup(Math.floor(chain.length/2), movie.title);
-            return;
+        if (lastMovieCast.length === 0) {
+          // First movie must contain the start actor
+          if (castIds.includes(startActor.id)) {
+            if (castIds.includes(endActor.id)) {
+              addToChain(movie.title, "green");
+              showPopup(1, movie.title);
+              return;
+            }
+            addToChain(movie.title, "blue");
+            lastMovieCast = credits.cast;
+          } else {
+            addToChain(movie.title, "grey");
           }
-          addToChain(movie.title, "blue");
-          lastMovieCast = credits.cast;
         } else {
-          addToChain(movie.title, "grey");
+          // Check overlap with last movie cast
+          const overlap = credits.cast.filter(a => lastMovieCast.some(b => b.id === a.id));
+          if (overlap.length > 0) {
+            if (castIds.includes(endActor.id)) {
+              addToChain(movie.title, "green");
+              showPopup(Math.floor(chain.length/2), movie.title);
+              return;
+            }
+            if (castIds.includes(startActor.id)) {
+              addToChain(movie.title, "blue");
+            } else {
+              addToChain(movie.title, "orange");
+            }
+            lastMovieCast = credits.cast;
+          } else {
+            addToChain(movie.title, "grey");
+          }
         }
       } else {
         addToChain(query, "grey");
