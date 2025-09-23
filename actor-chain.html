@@ -82,14 +82,13 @@
     const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
-    let startActor, endActor, currentActor, lastMovieCast = [], chain = [];
+    let startActor, endActor, lastMovieCast = [], chain = [];
 
     async function initGame() {
       let shuffled = ACTOR_POOL.sort(() => 0.5 - Math.random());
       let names = shuffled.slice(0,2);
       startActor = await fetchActor(names[0]);
       endActor = await fetchActor(names[1]);
-      currentActor = startActor;
       chain = [startActor.name];
       displayActors();
       document.getElementById("chainList").innerHTML = "";
@@ -154,11 +153,6 @@
         if (lastMovieCast.length === 0) {
           // First movie must contain the start actor
           if (castIds.includes(startActor.id)) {
-            if (castIds.includes(endActor.id)) {
-              addToChain(movie.title, "green");
-              showPopup(1, movie.title);
-              return;
-            }
             addToChain(movie.title, "blue");
             lastMovieCast = credits.cast;
           } else {
