@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>🎬 LinkMovie Game</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=1">
 </head>
 <body>
   <!-- Top Bar -->
@@ -50,11 +50,17 @@
 
   <p id="status"></p>
 
-  <!-- Popup -->
+  <!-- Popups -->
   <div id="popup">
     <button onclick="closePopup()">X</button>
     <h2 id="popupTitle"></h2>
     <p id="popupMsg"></p>
+  </div>
+
+  <div id="helpPopup">
+    <button onclick="closeHelp()">X</button>
+    <h2>ℹ️ How to Play</h2>
+    <p id="helpText"></p>
   </div>
 
   <!-- Footer -->
@@ -65,6 +71,6 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="main-game.js"></script>
+  <script src="main-game.js?v=1"></script>
 </body>
 </html>

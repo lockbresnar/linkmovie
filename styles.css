@@ -1,70 +1,156 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>🎬 Actor Chain Game</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <header>
-    <img src="assets/logo.svg" alt="LinkMovie Logo" class="logo">
-    <nav class="nav">
-      <a href="index.html">Main Game</a>
-      <img src="assets/help-icon.svg" alt="Help" class="help-icon">
-    </nav>
-  </header>
+/* Reset + base */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f4f4f4;
+  text-align: center;
+}
 
-  <h1>🎬 Actor Chain Game</h1>
-  <p>Link the two actors by entering movies that connect them!</p>
+/* Header */
+header {
+  background: #161616;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+}
+header .logo {
+  height: 40px;
+}
+header .nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+header .nav a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+}
+header .help-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
 
-  <div class="actors" id="actorsSection">
-    <div>
-      <img id="actor1Img" />
-      <p id="actor1"></p>
-    </div>
-    <div>
-      <img id="actor2Img" />
-      <p id="actor2"></p>
-    </div>
-  </div>
+/* Actors */
+.actors {
+  display: flex;
+  justify-content: space-around;
+  margin: 20px 0;
+}
+.actors img {
+  border-radius: 16px;
+  width: 150px;
+  height: auto;
+}
 
-  <input id="guessInput" placeholder="Enter a movie..." />
-  <div id="suggestions"></div>
-  <br>
-  <button class="submit" onclick="submitGuess()">Submit</button>
-  <button class="reset" onclick="resetChain()">Reset</button>
+/* Input + suggestions */
+input {
+  padding: 10px;
+  width: 250px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+#suggestions {
+  border: 1px solid #ccc;
+  max-width: 300px;
+  margin: 10px auto;
+  background: #fff;
+  border-radius: 6px;
+}
+#suggestions div {
+  padding: 8px;
+  cursor: pointer;
+}
+#suggestions div:hover {
+  background: #eee;
+}
 
-  <div id="timer">⏱️ Time: 0:00</div>
-  <div id="chainCounter">🔗 Steps: 0</div>
+/* Buttons */
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  color: #fff;
+}
+button.submit {
+  background: #fa8b48;
+}
+button.reset {
+  background: #cadf3d;
+  color: #000;
+}
+button.startBtn {
+  background: #4fa7ff;
+}
 
-  <div id="chain">
-    <h3>Current Chain:</h3>
-    <ul id="chainList"></ul>
-  </div>
+/* Chain */
+#chain {
+  margin: 20px auto;
+  padding: 10px;
+  max-width: 500px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+#chainList {
+  list-style: none;
+  padding: 0;
+}
+#chainList li {
+  margin: 5px 0;
+  padding: 5px;
+  border-radius: 50px;
+  color: #000;
+}
+#chainList li.grey { background: #c1c1c1; }
+#chainList li.blue { background: #4fa7ff; }
+#chainList li.orange { background: #fa8b48; }
+#chainList li.green { background: #4edd00; }
 
-  <p id="status"></p>
+/* Timer + Counter */
+#timer, #chainCounter {
+  font-weight: bold;
+  font-size: 22px;
+  margin: 10px;
+}
 
-  <!-- Win Popup -->
-  <div id="popup">
-    <button onclick="closePopup()">X</button>
-    <h2 id="popupTitle"></h2>
-    <p id="popupMsg"></p>
-  </div>
+/* Popups */
+#popup, #introPopup, #helpPopup {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  padding: 20px;
+  border: 2px solid #444;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 1000;
+  width: 320px;
+}
+#popup button, #introPopup button, #helpPopup button {
+  float: right;
+  background: red;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+#introPopup button.startBtn {
+  float: none;
+  margin-top: 15px;
+}
 
-  <!-- Intro Popup -->
-  <div id="introPopup">
-    <h2>🎬 Actor Chain Challenge</h2>
-    <p>Connect the two hidden actors through movies. Press Start to begin!</p>
-    <button class="startBtn" onclick="startGame()">Start</button>
-  </div>
-
-  <footer>
-    This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
-    <img src="https://www.themoviedb.org/assets/2/v4/logos/293x302-powered-by-square-blue-9a1c5c84221cbd27e84dff527969b24d7d2d33f6b19a9072a3c20c1cfae6dce2.png" 
-         alt="TMDb Logo" width="100">
-  </footer>
-
-  <script src="actors.js"></script>
-  <script src="actor-chain.js"></script>
-</body>
-</html>
+/* Footer */
+footer {
+  margin-top: 30px;
+  font-size: 12px;
+  color: #555;
+}
