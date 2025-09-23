@@ -6,7 +6,6 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Top Bar -->
   <header>
     <img src="assets/logo.svg" alt="LinkMovie Logo" class="logo">
     <nav class="nav">
@@ -15,11 +14,9 @@
     </nav>
   </header>
 
-  <!-- Game Title -->
   <h1>🎬 Actor Chain Game</h1>
   <p>Link the two actors by entering movies that connect them!</p>
 
-  <!-- Actors -->
   <div class="actors" id="actorsSection">
     <div>
       <img id="actor1Img" />
@@ -31,18 +28,15 @@
     </div>
   </div>
 
-  <!-- Input -->
   <input id="guessInput" placeholder="Enter a movie..." />
   <div id="suggestions"></div>
   <br>
   <button class="submit" onclick="submitGuess()">Submit</button>
   <button class="reset" onclick="resetChain()">Reset</button>
 
-  <!-- Counters -->
   <div id="timer">⏱️ Time: 0:00</div>
   <div id="chainCounter">🔗 Steps: 0</div>
 
-  <!-- Chain -->
   <div id="chain">
     <h3>Current Chain:</h3>
     <ul id="chainList"></ul>
@@ -64,14 +58,12 @@
     <button class="startBtn" onclick="startGame()">Start</button>
   </div>
 
-  <!-- Footer -->
   <footer>
     This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
     <img src="https://www.themoviedb.org/assets/2/v4/logos/293x302-powered-by-square-blue-9a1c5c84221cbd27e84dff527969b24d7d2d33f6b19a9072a3c20c1cfae6dce2.png" 
          alt="TMDb Logo" width="100">
   </footer>
 
-  <!-- Scripts -->
   <script src="actors.js"></script>
   <script src="actor-chain.js"></script>
 </body>
