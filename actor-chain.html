@@ -20,15 +20,18 @@
     #suggestions div:hover { background: #eee; }
     input { padding: 10px; width: 250px; }
     button { padding: 10px 20px; margin: 5px; }
-    #popup {
+    #popup, #introPopup {
       display: none;
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 2px solid #444; border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
       z-index: 1000;
+      width: 300px;
     }
-    #popup h2 { margin: 0 0 10px; }
-    #popup button { background: red; color: white; border: none; padding: 5px 10px; float: right; }
+    #popup h2, #introPopup h2 { margin: 0 0 10px; }
+    #popup button, #introPopup button { background: red; color: white; border: none; padding: 5px 10px; float: right; cursor: pointer; }
+    #introPopup button.startBtn { background: green; float: none; margin-top: 20px; }
+    #timer { font-size: 18px; font-weight: bold; margin-top: 15px; }
     footer { margin-top: 30px; font-size: 14px; color: #555; }
   </style>
 </head>
@@ -36,7 +39,7 @@
   <h1>🎬 Actor Chain Game</h1>
   <p>Link the two actors by entering movies that connect them!</p>
 
-  <div class="actors">
+  <div class="actors" id="actorsSection">
     <div>
       <img id="actor1Img" />
       <p id="actor1"></p>
@@ -53,6 +56,8 @@
   <button onclick="submitGuess()">Submit</button>
   <button onclick="resetChain()">Reset</button>
 
+  <div id="timer">⏱️ Time: 0:00</div>
+
   <div id="chain">
     <h3>Current Chain:</h3>
     <ul id="chainList"></ul>
@@ -60,11 +65,18 @@
 
   <p id="status"></p>
 
-  <!-- Popup -->
+  <!-- Win Popup -->
   <div id="popup">
     <button onclick="closePopup()">X</button>
     <h2 id="popupTitle"></h2>
     <p id="popupMsg"></p>
+  </div>
+
+  <!-- Intro Popup -->
+  <div id="introPopup">
+    <h2>🎬 Actor Chain Challenge</h2>
+    <p>Connect the two hidden actors through movies. Press Start to begin the challenge!</p>
+    <button class="startBtn" onclick="startGame()">Start</button>
   </div>
 
   <p><a href="index.html">👉 Back to Main Game</a></p>
@@ -75,14 +87,13 @@
          alt="TMDb Logo" width="100">
   </footer>
 
-  <!-- Load curated actor pool -->
   <script src="actors.js"></script>
-
   <script>
     const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
     const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
     let startActor, endActor, lastMovieCast = [], chain = [];
+    let startTime, timerInterval;
 
     async function initGame() {
       let shuffled = ACTOR_POOL.sort(() => 0.5 - Math.random());
@@ -93,6 +104,10 @@
       displayActors();
       document.getElementById("chainList").innerHTML = "";
       document.getElementById("status").textContent = "";
+
+      // Show intro popup before play starts
+      document.getElementById("introPopup").style.display = "block";
+      document.getElementById("actorsSection").style.visibility = "hidden"; // hide actors until start
     }
 
     async function fetchActor(name) {
@@ -114,6 +129,18 @@
         document.getElementById("actor2Img").src = IMAGE_URL + endActor.profile_path;
       }
       document.getElementById("actor2").textContent = endActor.name;
+    }
+
+    function startGame() {
+      document.getElementById("introPopup").style.display = "none";
+      document.getElementById("actorsSection").style.visibility = "visible";
+      startTime = Date.now();
+
+      // Start live timer
+      timerInterval = setInterval(() => {
+        let elapsed = formatTime(Date.now() - startTime);
+        document.getElementById("timer").textContent = "⏱️ Time: " + elapsed;
+      }, 1000);
     }
 
     // Autocomplete for movies
@@ -151,7 +178,6 @@
         let castIds = credits.cast.map(a => a.id);
 
         if (lastMovieCast.length === 0) {
-          // First movie must contain the start actor
           if (castIds.includes(startActor.id)) {
             addToChain(movie.title, "blue");
             lastMovieCast = credits.cast;
@@ -159,12 +185,13 @@
             addToChain(movie.title, "grey");
           }
         } else {
-          // Check overlap with last movie cast
           const overlap = credits.cast.filter(a => lastMovieCast.some(b => b.id === a.id));
           if (overlap.length > 0) {
             if (castIds.includes(endActor.id)) {
               addToChain(movie.title, "green");
-              showPopup(Math.floor(chain.length/2), movie.title);
+              clearInterval(timerInterval);
+              let elapsed = formatTime(Date.now() - startTime);
+              showPopup(Math.floor(chain.length/2), movie.title, elapsed);
               return;
             }
             if (castIds.includes(startActor.id)) {
@@ -199,14 +226,22 @@
       chain.push(text);
     }
 
-    function showPopup(steps, finalMovie) {
+    function showPopup(steps, finalMovie, elapsed) {
       document.getElementById("popup").style.display = "block";
       document.getElementById("popupTitle").textContent = "🎉 You Win!";
-      document.getElementById("popupMsg").textContent = `It took you ${steps} steps to link them via "${finalMovie}".`;
+      document.getElementById("popupMsg").textContent = 
+        `It took you ${steps} steps to link them via "${finalMovie}".\n\n⏱️ Time: ${elapsed}`;
     }
 
     function closePopup() {
       document.getElementById("popup").style.display = "none";
+    }
+
+    function formatTime(ms) {
+      let totalSec = Math.floor(ms / 1000);
+      let min = Math.floor(totalSec / 60);
+      let sec = totalSec % 60;
+      return `${min}:${sec.toString().padStart(2,'0')}`;
     }
 
     initGame();
