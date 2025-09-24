@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>🎬 Actor Chain Game</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
   <!-- Top Bar -->
@@ -11,29 +11,35 @@
     <img src="assets/logo.svg" alt="LinkMovie Logo" class="logo">
     <nav class="nav">
       <a href="index.html">Main Game</a>
-      <img src="assets/help-icon.svg" alt="Help" class="help-icon">
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()">
     </nav>
   </header>
 
   <!-- Stats -->
   <div class="stats">
-    <div id="timer">⏱️ Time: 0:00</div>
-    <div id="chainCounter">🔗 Steps: 0</div>
+    <h1>Actor Chain</h1>
+    <div id="chainCounter" class="counter-circle">0</div>
+    <div id="timer">00:00</div>
   </div>
 
-  <!-- Game Title -->
-  <h1>🎬 Actor Chain Game</h1>
-  <p>Link the two actors by entering movies that connect them!</p>
-
-  <!-- Actors -->
-  <div class="actors" id="actorsSection">
-    <div class="actor-card">
-      <img id="actor1Img" />
-      <p id="actor1"></p>
+  <!-- Game Area -->
+  <div class="game-area">
+    <!-- Actors -->
+    <div class="actors" id="actorsSection">
+      <div class="actor-card">
+        <img id="actor1Img" />
+        <p id="actor1"></p>
+      </div>
+      <div class="actor-card">
+        <img id="actor2Img" />
+        <p id="actor2"></p>
+      </div>
     </div>
-    <div class="actor-card">
-      <img id="actor2Img" />
-      <p id="actor2"></p>
+
+    <!-- Chain -->
+    <div class="chain-box">
+      <h3>Current Chain:</h3>
+      <ul id="chainList"></ul>
     </div>
   </div>
 
@@ -45,12 +51,6 @@
       <button class="submit" onclick="submitGuess()">Submit</button>
       <button class="reset" onclick="resetChain()">Reset</button>
     </div>
-  </div>
-
-  <!-- Chain -->
-  <div id="chain">
-    <h3>Current Chain:</h3>
-    <ul id="chainList"></ul>
   </div>
 
   <p id="status"></p>
@@ -71,7 +71,7 @@
   <div id="helpPopup">
     <button onclick="closeHelp()">X</button>
     <h2>ℹ️ How to Play</h2>
-    <p id="helpText"></p>
+    <p>Enter movies to connect the two actors. The counter increases for each valid link (blue, orange, green). Wrong guesses don’t count.</p>
   </div>
 
   <!-- Footer -->
@@ -82,7 +82,7 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="actors.js?v=2"></script>
-  <script src="actor-chain.js?v=2"></script>
+  <script src="actors.js?v=3"></script>
+  <script src="actor-chain.js?v=3"></script>
 </body>
 </html>
