@@ -9,11 +9,6 @@ let maxTries = 6;
 let timerInterval;
 let startTime;
 
-// normalize names for matching
-function normalize(name) {
-  return name.toLowerCase().replace(/\s+/g, " ").trim();
-}
-
 // initialize game
 async function startGame() {
   document.getElementById("introOverlay").classList.remove("visible");
@@ -35,38 +30,26 @@ function stopTimer() {
   clearInterval(timerInterval);
 }
 
-// setup game with top rated films & curated actors
+// setup game with top rated films
 async function setupGame() {
   document.getElementById("status").textContent = "🎬 Finding your actors...";
-  let valid = false;
 
-  while (!valid) {
-    // Pick a random page from top-rated (1–13 ~ top 250 movies)
-    const page = Math.floor(Math.random() * 13) + 1;
-    const res = await fetch(
-      `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&language=en-US&page=${page}`
-    );
-    const data = await res.json();
-    targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
+  // Pick a random page from top-rated (1–13 ~ top 250 movies)
+  const page = Math.floor(Math.random() * 13) + 1;
+  const res = await fetch(
+    `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&language=en-US&page=${page}`
+  );
+  const data = await res.json();
+  targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
 
-    // Fetch credits
-    const creditsRes = await fetch(
-      `https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`
-    );
-    const credits = await creditsRes.json();
+  // Fetch credits
+  const creditsRes = await fetch(
+    `https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`
+  );
+  const credits = await creditsRes.json();
 
-    // Take only top 6 billed cast
-    const topBilled = credits.cast.slice(0, 6);
-
-    // Filter actors: must be in curated pool
-    targetActors = topBilled.filter((c) =>
-      ACTORS.some((a) => normalize(a) === normalize(c.name))
-    );
-
-    if (targetActors.length >= 2) {
-      valid = true;
-    }
-  }
+  // Take only top 6 billed cast
+  targetActors = credits.cast.slice(0, 6);
 
   // Pick two random actors from the film
   const chosen = targetActors.sort(() => 0.5 - Math.random()).slice(0, 2);
