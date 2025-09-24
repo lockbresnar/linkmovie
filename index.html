@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>🎬 LinkMovie Game</title>
-  <link rel="stylesheet" href="styles.css?v=1">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <!-- Top Bar -->
@@ -15,32 +15,37 @@
     </nav>
   </header>
 
+  <!-- Stats (Timer + Counter) -->
+  <div class="stats">
+    <div id="timer">⏱️ Time: 0:00</div>
+    <div id="chainCounter">🔗 Steps: 0</div>
+  </div>
+
   <!-- Game Title -->
   <h1>🎬 Link Movie Game</h1>
   <p>Guess the movie that connects the two actors!</p>
 
   <!-- Actors -->
   <div class="actors">
-    <div>
+    <div class="actor-card">
       <img id="actor1Img" />
       <p id="actor1"></p>
     </div>
-    <div>
+    <div class="actor-card">
       <img id="actor2Img" />
       <p id="actor2"></p>
     </div>
   </div>
 
-  <!-- Input -->
-  <input id="movieInput" placeholder="Enter a movie..." />
-  <div id="suggestions"></div>
-  <br>
-  <button class="submit" onclick="submitGuess()">Submit</button>
-  <button onclick="skipTurn()">Skip</button>
-
-  <!-- Counters -->
-  <div id="timer">⏱️ Time: 0:00</div>
-  <div id="chainCounter">🔗 Steps: 0</div>
+  <!-- Input + Buttons -->
+  <div class="controls">
+    <input id="movieInput" placeholder="Enter a movie..." />
+    <div id="suggestions"></div>
+    <div class="buttons">
+      <button class="submit" onclick="submitGuess()">Submit</button>
+      <button class="skip" onclick="skipTurn()">Skip</button>
+    </div>
+  </div>
 
   <!-- Chain -->
   <div id="chain">
@@ -71,6 +76,6 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="main-game.js?v=1"></script>
+  <script src="main-game.js?v=2"></script>
 </body>
 </html>

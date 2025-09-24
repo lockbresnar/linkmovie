@@ -1,10 +1,11 @@
-/* Reset + base */
+/* Base */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
   background: #f4f4f4;
   text-align: center;
+  color: #161616;
 }
 
 /* Header */
@@ -34,24 +35,53 @@ header .help-icon {
   cursor: pointer;
 }
 
+/* Stats (Timer + Counter) */
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 20px 0;
+}
+#timer, #chainCounter {
+  font-family: "Helvetica Neue Condensed Bold", Arial, sans-serif;
+  font-size: 26px;
+  font-weight: bold;
+}
+
+/* Title */
+h1 {
+  font-family: "Helvetica Neue Condensed Bold", Arial, sans-serif;
+  font-size: 32px;
+  margin: 10px 0;
+}
+
 /* Actors */
 .actors {
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
+  gap: 60px;
   margin: 20px 0;
 }
-.actors img {
+.actor-card img {
   border-radius: 16px;
-  width: 150px;
+  width: 180px;
   height: auto;
 }
+.actor-card p {
+  margin-top: 8px;
+  font-weight: bold;
+}
 
-/* Input + suggestions */
+/* Controls */
+.controls {
+  margin: 20px 0;
+}
 input {
-  padding: 10px;
-  width: 250px;
+  padding: 12px;
+  width: 280px;
   border-radius: 8px;
   border: 1px solid #ccc;
+  font-size: 16px;
 }
 #suggestions {
   border: 1px solid #ccc;
@@ -67,26 +97,23 @@ input {
 #suggestions div:hover {
   background: #eee;
 }
-
-/* Buttons */
+.buttons {
+  margin-top: 10px;
+}
 button {
-  padding: 10px 20px;
+  padding: 12px 28px;
   margin: 5px;
   border: none;
   border-radius: 50px;
   cursor: pointer;
+  font-family: "Helvetica Neue Medium", Arial, sans-serif;
+  font-size: 16px;
   color: #fff;
 }
-button.submit {
-  background: #fa8b48;
-}
-button.reset {
-  background: #cadf3d;
-  color: #000;
-}
-button.startBtn {
-  background: #4fa7ff;
-}
+button.submit { background: #fa8b48; }
+button.reset { background: #cadf3d; color: #000; }
+button.skip { background: #6e6e6e; }
+button.startBtn { background: #4fa7ff; }
 
 /* Chain */
 #chain {
@@ -102,22 +129,15 @@ button.startBtn {
   padding: 0;
 }
 #chainList li {
-  margin: 5px 0;
-  padding: 5px;
+  margin: 8px 0;
+  padding: 8px 14px;
   border-radius: 50px;
-  color: #000;
+  font-size: 16px;
 }
 #chainList li.grey { background: #c1c1c1; }
 #chainList li.blue { background: #4fa7ff; }
 #chainList li.orange { background: #fa8b48; }
 #chainList li.green { background: #4edd00; }
-
-/* Timer + Counter */
-#timer, #chainCounter {
-  font-weight: bold;
-  font-size: 22px;
-  margin: 10px;
-}
 
 /* Popups */
 #popup, #introPopup, #helpPopup {
