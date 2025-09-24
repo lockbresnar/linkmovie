@@ -1,124 +1,193 @@
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 const IMAGE_URL = "https://image.tmdb.org/t/p/w200";
 
-let startActor, endActor, targetMovie, tries = 0, startTime, timerInterval;
+let targetMovie = null;
+let targetActors = [];
+let revealedActors = [];
+let tries = 0;
+let maxTries = 6;
+let timerInterval;
+let startTime;
 
-// Initialize game
-async function initGame() {
+// pick a random actor from your curated pool
+function randomActor() {
+  return ACTORS[Math.floor(Math.random() * ACTORS.length)];
+}
+
+// initialize game
+async function startGame() {
+  document.getElementById("introOverlay").classList.remove("visible");
+  startTimer();
+  await setupGame();
+}
+
+function startTimer() {
   startTime = Date.now();
-  timerInterval = setInterval(updateTimer, 1000);
-  tries = 0;
-  updateChainCounter();
+  timerInterval = setInterval(() => {
+    let diff = Date.now() - startTime;
+    let minutes = String(Math.floor(diff / 60000)).padStart(2, "0");
+    let seconds = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+    document.getElementById("timer").textContent = `${minutes}:${seconds}`;
+  }, 1000);
+}
 
+function stopTimer() {
+  clearInterval(timerInterval);
+}
+
+async function setupGame() {
   // Pick a random popular movie
-  let res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&page=1`);
-  let data = await res.json();
+  const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US&page=${Math.floor(Math.random()*10)+1}`);
+  const data = await res.json();
   targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
 
-  let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
-  let credits = await creditsRes.json();
-  let shuffled = credits.cast.sort(() => 0.5 - Math.random()).slice(0, 2);
+  // Fetch credits
+  const creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
+  const credits = await creditsRes.json();
 
-  startActor = shuffled[0];
-  endActor = shuffled[1];
+  // Filter actors: must be in curated pool
+  targetActors = credits.cast.filter(c => ACTORS.includes(c.name));
 
-  document.getElementById("actor1Img").src = IMAGE_URL + startActor.profile_path;
-  document.getElementById("actor1").textContent = startActor.name;
-  document.getElementById("actor2Img").src = IMAGE_URL + endActor.profile_path;
-  document.getElementById("actor2").textContent = endActor.name;
+  if (targetActors.length < 2) {
+    // retry setup if not enough curated actors
+    await setupGame();
+    return;
+  }
+
+  // Pick two random actors from the film
+  const chosen = targetActors.sort(() => 0.5 - Math.random()).slice(0, 2);
+  revealedActors = [...chosen];
+
+  // Display chosen actors
+  displayActor(chosen[0], "actor1Img", "actor1");
+  displayActor(chosen[1], "actor2Img", "actor2");
 }
 
-function updateTimer() {
-  let elapsed = formatTime(Date.now() - startTime);
-  document.getElementById("timer").textContent = "⏱️ Time: " + elapsed;
-}
-
-function formatTime(ms) {
-  let totalSec = Math.floor(ms / 1000);
-  let min = Math.floor(totalSec / 60);
-  let sec = totalSec % 60;
-  return `${min}:${sec.toString().padStart(2, "0")}`;
-}
-
-function getCounterColor(steps) {
-  let capped = Math.min(steps, 20);
-  let r = Math.min(255, capped * 12);
-  let g = Math.max(0, 200 - capped * 10);
-  return `rgb(${r}, ${g}, 60)`;
-}
-
-function updateChainCounter() {
-  const counter = document.getElementById("chainCounter");
-  counter.textContent = "🔗 Steps: " + tries;
-  counter.style.color = getCounterColor(tries);
+function displayActor(actor, imgId, nameId) {
+  document.getElementById(imgId).src = actor.profile_path ? IMAGE_URL + actor.profile_path : "assets/placeholder.png";
+  document.getElementById(nameId).textContent = actor.name;
 }
 
 // Autocomplete
-document.getElementById("movieInput").addEventListener("input", async e => {
+document.getElementById("movieInput").addEventListener("input", e => {
   const query = e.target.value;
-  const container = document.getElementById("suggestions");
-  container.innerHTML = "";
   if (query.length > 2) {
-    let res = await fetch(
-      `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`
-    );
-    let data = await res.json();
-    data.results.slice(0, 5).forEach(movie => {
-      const div = document.createElement("div");
-      div.textContent = movie.title;
-      div.onclick = () => {
-        document.getElementById("movieInput").value = movie.title;
+    fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`)
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById("suggestions");
         container.innerHTML = "";
-      };
-      container.appendChild(div);
-    });
+        data.results.slice(0,5).forEach(movie => {
+          const div = document.createElement("div");
+          div.textContent = movie.title;
+          div.onclick = () => {
+            document.getElementById("movieInput").value = movie.title;
+            container.innerHTML = "";
+          };
+          container.appendChild(div);
+        });
+      });
   }
 });
 
+// Submit guess
 async function submitGuess() {
-  const query = document.getElementById("movieInput").value.trim();
-  if (!query) return;
-  tries++;
-  updateChainCounter();
+  if (!targetMovie) return;
+  const guess = document.getElementById("movieInput").value.trim();
+  if (!guess) return;
 
-  let res = await fetch(
-    `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`
-  );
-  let data = await res.json();
+  incrementCounter();
 
-  if (data.results.length > 0 && data.results[0].id === targetMovie.id) {
-    showPopup("🎉 Correct!", `You guessed it in ${tries} tries!\nTime: ${formatTime(Date.now() - startTime)}`);
-  } else if (tries >= 6) {
-    showPopup("❌ Out of tries!", `The correct answer was: "${targetMovie.title}"`);
+  if (guess.toLowerCase() === targetMovie.title.toLowerCase()) {
+    addToChain(guess, "green");
+    stopTimer();
+    showWin();
+  } else {
+    addToChain(guess, "grey");
+    if (tries >= maxTries) {
+      stopTimer();
+      showLose();
+    }
   }
 
   document.getElementById("movieInput").value = "";
   document.getElementById("suggestions").innerHTML = "";
 }
 
-async function skipTurn() {
-  tries++;
-  updateChainCounter();
-  let creditsRes = await fetch(
-    `https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`
-  );
-  let credits = await creditsRes.json();
-  let randomActor = credits.cast[Math.floor(Math.random() * credits.cast.length)];
-  document.getElementById("status").textContent = `Hint: ${randomActor.name}`;
-  if (tries >= 6) {
-    showPopup("❌ Out of tries!", `The correct answer was: "${targetMovie.title}"`);
+function skipTurn() {
+  if (!targetMovie) return;
+  incrementCounter();
+
+  // reveal another actor from target film
+  const unrevealed = targetActors.filter(a => !revealedActors.includes(a));
+  if (unrevealed.length > 0) {
+    const nextActor = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+    revealedActors.push(nextActor);
+    addToChain(nextActor.name, "orange");
+  } else {
+    addToChain("No more hints", "grey");
+  }
+
+  if (tries >= maxTries) {
+    stopTimer();
+    showLose();
   }
 }
 
-function showPopup(title, msg) {
-  clearInterval(timerInterval);
+function incrementCounter() {
+  tries++;
+  const circle = document.getElementById("counterCircle");
+  circle.textContent = tries;
+
+  // Change color as tries increase
+  if (tries <= 2) circle.style.background = "#4edd00"; // green
+  else if (tries <= 4) circle.style.background = "#fa8b48"; // orange
+  else circle.style.background = "#e53935"; // red
+}
+
+function addToChain(text, color) {
+  const li = document.createElement("li");
+  li.textContent = text;
+  li.className = color;
+  document.getElementById("chainList").appendChild(li);
+}
+
+function showWin() {
+  document.getElementById("popupTitle").textContent = "🎉 You linked them!";
+  document.getElementById("popupMsg").textContent = `Film: ${targetMovie.title}\nTries: ${tries}\nTime: ${document.getElementById("timer").textContent}`;
+  document.getElementById("shareBtn").style.display = "block";
   document.getElementById("popup").style.display = "block";
-  document.getElementById("popupTitle").textContent = title;
-  document.getElementById("popupMsg").textContent = msg;
+  disableInput();
+}
+
+function showLose() {
+  document.getElementById("popupTitle").textContent = "Out of tries!";
+  document.getElementById("popupMsg").textContent = `The film was: ${targetMovie.title}`;
+  document.getElementById("shareBtn").style.display = "none";
+  document.getElementById("popup").style.display = "block";
+  disableInput();
+}
+
+function disableInput() {
+  document.getElementById("movieInput").disabled = true;
+  document.querySelector(".btn-submit").disabled = true;
+  document.querySelector(".btn-red").disabled = true;
 }
 
 function closePopup() {
   document.getElementById("popup").style.display = "none";
 }
 
-initGame();
+function openHelp() {
+  document.getElementById("helpPopup").style.display = "block";
+}
+function closeHelp() {
+  document.getElementById("helpPopup").style.display = "none";
+}
+
+function shareResult() {
+  const result = `🎬 LinkMovie — Movie Link\nFilm: ${targetMovie.title}\nTries: ${tries}\nTime: ${document.getElementById("timer").textContent}\nhttps://www.link.movie/`;
+  navigator.clipboard.writeText(result).then(() => {
+    alert("Result copied to clipboard!");
+  });
+}

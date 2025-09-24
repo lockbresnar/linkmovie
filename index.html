@@ -1,81 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>🎬 LinkMovie Game</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <meta charset="UTF-8" />
+  <title>LinkMovie — Movie Link</title>
+  <link rel="stylesheet" href="styles.css?v=alpha2" />
 </head>
 <body>
-  <!-- Top Bar -->
-  <header>
-    <img src="assets/logo.svg" alt="LinkMovie Logo" class="logo">
-    <nav class="nav">
-      <a href="actor-chain.html">Actor Chain</a>
-      <img src="assets/help-icon.svg" alt="Help" class="help-icon">
+  <!-- Header -->
+  <header class="topbar">
+    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+    <nav class="topbar-right">
+      <a href="actor-chain.html" class="nav-link">Actor Chain</a>
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
     </nav>
   </header>
 
-  <!-- Stats (Timer + Counter) -->
+  <!-- Stats -->
   <div class="stats">
-    <div id="timer">⏱️ Time: 0:00</div>
-    <div id="chainCounter">🔗 Steps: 0</div>
+    <h1 class="page-title condensed">Movie Link</h1>
+    <div id="counterCircle" class="counter-circle">0</div>
+    <div id="timer" class="timer condensed">00:00</div>
   </div>
-
-  <!-- Game Title -->
-  <h1>🎬 Link Movie Game</h1>
-  <p>Guess the movie that connects the two actors!</p>
 
   <!-- Actors -->
-  <div class="actors">
+  <div class="actors-row">
     <div class="actor-card">
-      <img id="actor1Img" />
-      <p id="actor1"></p>
+      <img id="actor1Img" alt="Actor 1" />
+      <p id="actor1" class="actor-name"></p>
     </div>
     <div class="actor-card">
-      <img id="actor2Img" />
-      <p id="actor2"></p>
+      <img id="actor2Img" alt="Actor 2" />
+      <p id="actor2" class="actor-name"></p>
     </div>
   </div>
 
-  <!-- Input + Buttons -->
+  <!-- Controls -->
   <div class="controls">
     <input id="movieInput" placeholder="Enter a movie..." />
-    <div id="suggestions"></div>
-    <div class="buttons">
-      <button class="submit" onclick="submitGuess()">Submit</button>
-      <button class="skip" onclick="skipTurn()">Skip</button>
+    <div id="suggestions" class="suggestions"></div>
+    <div class="button-row">
+      <button class="btn btn-submit" onclick="submitGuess()">Submit</button>
+      <button class="btn btn-red" onclick="skipTurn()">Skip</button>
     </div>
   </div>
 
-  <!-- Chain -->
-  <div id="chain">
-    <h3>Current Chain:</h3>
+  <!-- Chain / Tries -->
+  <div class="chain-box">
+    <h3>Your Answers:</h3>
     <ul id="chainList"></ul>
   </div>
 
-  <p id="status"></p>
+  <p id="status" class="status"></p>
 
-  <!-- Popups -->
-  <div id="popup">
-    <button onclick="closePopup()">X</button>
-    <h2 id="popupTitle"></h2>
-    <p id="popupMsg"></p>
+  <!-- Intro Overlay -->
+  <div id="introOverlay" class="overlay visible">
+    <div class="overlay-card">
+      <h2>🎬 Movie Link</h2>
+      <p>Two actors share a hidden film. Guess it in 6 tries or less. Press Start to begin!</p>
+      <button class="btn btn-submit" onclick="startGame()">Start</button>
+    </div>
   </div>
 
-  <div id="helpPopup">
-    <button onclick="closeHelp()">X</button>
-    <h2>ℹ️ How to Play</h2>
-    <p id="helpText"></p>
+  <!-- Popups -->
+  <div id="popup" class="popup">
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    <h2 id="popupTitle"></h2>
+    <p id="popupMsg"></p>
+    <button id="shareBtn" class="btn btn-submit" style="display:none;" onclick="shareResult()">Share</button>
+  </div>
+
+  <div id="helpPopup" class="popup">
+    <button class="popup-close" onclick="closeHelp()">✕</button>
+    <h2>How to Play</h2>
+    <p>
+      1) Two actors are shown from the same hidden film.<br/>
+      2) Enter the movie title you think they share.<br/>
+      3) You have 6 tries. Skip reveals another actor from the film.<br/>
+      4) Win by guessing the correct film!
+    </p>
   </div>
 
   <!-- Footer -->
-  <footer>
-    This product uses the TMDb API but is not endorsed or certified by TMDb.<br>
-    <img src="https://www.themoviedb.org/assets/2/v4/logos/293x302-powered-by-square-blue-9a1c5c84221cbd27e84dff527969b24d7d2d33f6b19a9072a3c20c1cfae6dce2.png" 
-         alt="TMDb Logo" width="100">
+  <footer class="footer">
+    This product uses the TMDb API but is not endorsed or certified by TMDb.<br/>
+    <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <!-- Scripts -->
-  <script src="main-game.js?v=2"></script>
+  <script src="actors.js?v=alpha2"></script>
+  <script src="main-game.js?v=alpha2"></script>
 </body>
 </html>
