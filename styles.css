@@ -157,8 +157,22 @@ button.reset { background: #cadf3d; color: #fff; }
 button.startBtn { background: #4fa7ff; }
 
 /* Popups */
-#popup, #introPopup, #helpPopup {
+#popup, #helpPopup {
   display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  padding: 20px;
+  border: 2px solid #444;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 1000;
+  width: 320px;
+}
+#introPopup {
+  display: block; /* show intro popup on page load */
   position: fixed;
   top: 50%;
   left: 50%;

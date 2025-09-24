@@ -10,12 +10,22 @@ let startTime;
 // Start game
 function startGame() {
   document.getElementById("introPopup").style.display = "none";
+
+  if (!actors || actors.length < 2) {
+    alert("Actor list not loaded. Please check actors.js");
+    return;
+  }
+
   startTime = Date.now();
   timerInterval = setInterval(updateTimer, 1000);
 
   // Pick two random actors from list
   startActor = actors[Math.floor(Math.random() * actors.length)];
   endActor = actors[Math.floor(Math.random() * actors.length)];
+  while (endActor.id === startActor.id) {
+    endActor = actors[Math.floor(Math.random() * actors.length)];
+  }
+
   currentActor = startActor;
   chain = [startActor.name];
 
@@ -36,7 +46,9 @@ function fetchActorImage(actor, elementId, nameId) {
   fetch(`https://api.themoviedb.org/3/person/${actor.id}?api_key=${API_KEY}`)
     .then(res => res.json())
     .then(data => {
-      document.getElementById(elementId).src = IMAGE_URL + data.profile_path;
+      if (data.profile_path) {
+        document.getElementById(elementId).src = IMAGE_URL + data.profile_path;
+      }
       document.getElementById(nameId).textContent = actor.name;
     });
 }
