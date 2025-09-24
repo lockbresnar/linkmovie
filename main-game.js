@@ -9,6 +9,11 @@ let maxTries = 6;
 let timerInterval;
 let startTime;
 
+// normalize names for matching
+function normalize(name) {
+  return name.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 // initialize game
 async function startGame() {
   document.getElementById("introOverlay").classList.remove("visible");
@@ -32,6 +37,7 @@ function stopTimer() {
 
 // setup game with top rated films & curated actors
 async function setupGame() {
+  document.getElementById("status").textContent = "🎬 Finding your actors...";
   let valid = false;
 
   while (!valid) {
@@ -53,7 +59,9 @@ async function setupGame() {
     const topBilled = credits.cast.slice(0, 6);
 
     // Filter actors: must be in curated pool
-    targetActors = topBilled.filter((c) => ACTORS.includes(c.name));
+    targetActors = topBilled.filter((c) =>
+      ACTORS.some((a) => normalize(a) === normalize(c.name))
+    );
 
     if (targetActors.length >= 2) {
       valid = true;
@@ -67,6 +75,8 @@ async function setupGame() {
   // Display chosen actors
   displayActor(chosen[0], "actor1Img", "actor1");
   displayActor(chosen[1], "actor2Img", "actor2");
+
+  document.getElementById("status").textContent = "";
 }
 
 function displayActor(actor, imgId, nameId) {
