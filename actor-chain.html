@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>LinkMovie — Actor Chain</title>
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=9" />
 </head>
 <body>
   <!-- Header -->
@@ -17,42 +17,47 @@
 
   <!-- Stats -->
   <div class="stats">
-    <h1 class="page-title">Actor Chain</h1>
+    <h1 class="page-title condensed">Actor Chain</h1>
     <div id="counterCircle" class="counter-circle">0</div>
-    <div id="timer" class="timer">00:00</div>
+    <div id="timer" class="timer condensed">00:00</div>
   </div>
 
-  <!-- Actors -->
-  <div class="actors-row">
-    <div class="actor-card">
-      <img id="actor1Img" alt="Start Actor" />
-      <p id="actor1" class="actor-name"></p>
+  <!-- Two-column layout -->
+  <div class="layout">
+    <!-- LEFT: actors + controls -->
+    <div class="left-col">
+      <div class="actors-row">
+        <div class="actor-card">
+          <img id="actor1Img" alt="Start Actor" />
+          <p id="actor1" class="actor-name"></p>
+        </div>
+        <div class="actor-card">
+          <img id="actor2Img" alt="Target Actor" />
+          <p id="actor2" class="actor-name"></p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <input id="movieInput" placeholder="Enter a movie..." />
+        <div id="suggestions" class="suggestions"></div>
+        <div class="button-row">
+          <button class="btn btn-submit">Submit</button>
+          <button class="btn btn-red">Reset</button>
+        </div>
+      </div>
     </div>
-    <div class="actor-card">
-      <img id="actor2Img" alt="Target Actor" />
-      <p id="actor2" class="actor-name"></p>
-    </div>
+
+    <!-- RIGHT: chain -->
+    <aside class="right-col">
+      <div class="chain-box">
+        <h3>Current Chain:</h3>
+        <ul id="chainList"></ul>
+      </div>
+      <p id="status" class="status"></p>
+    </aside>
   </div>
 
-  <!-- Controls -->
-  <div class="controls">
-    <input id="movieInput" placeholder="Enter a movie..." />
-    <div id="suggestions" class="suggestions"></div>
-    <div class="button-row">
-      <button class="btn btn-submit" onclick="submitGuess()">Submit</button>
-      <button class="btn btn-red" onclick="resetChain()">Reset</button>
-    </div>
-  </div>
-
-  <!-- Chain -->
-  <div class="chain-box">
-    <h3>Current Chain:</h3>
-    <ul id="chainList"></ul>
-  </div>
-
-  <p id="status" class="status"></p>
-
-  <!-- Intro Popup -->
+  <!-- Intro overlay -->
   <div id="introOverlay" class="overlay visible">
     <div class="overlay-card">
       <h2>🎬 Actor Chain Challenge</h2>
@@ -61,7 +66,7 @@
     </div>
   </div>
 
-  <!-- Win/Help Popups -->
+  <!-- Popups -->
   <div id="popup" class="popup">
     <button class="popup-close" onclick="closePopup()">✕</button>
     <h2 id="popupTitle"></h2>
@@ -71,7 +76,13 @@
   <div id="helpPopup" class="popup">
     <button class="popup-close" onclick="closeHelp()">✕</button>
     <h2>How to Play</h2>
-    <p>Enter movies that include your current actor. Reach the target actor to win.</p>
+    <p>
+      1) First movie must include the start actor (blue).<br/>
+      2) Each next movie must share any actor with the previous accepted movie (follows the chain).<br/>
+      3) If it also includes the target actor, you win (green).<br/>
+      4) If it follows the chain but has neither start nor target actor, it’s orange.<br/>
+      5) Wrong guesses (no link) are grey and don’t increment the counter.
+    </p>
   </div>
 
   <!-- Footer -->
@@ -80,7 +91,7 @@
     <img src="https://www.themoviedb.org/assets/2/v4/logos/293x302-powered-by-square-blue-9a1c5c84221cbd27e84dff527969b24d7d2d33f6b19a9072a3c20c1cfae6dce2.png" alt="TMDb" width="90" />
   </footer>
 
-  <script src="actors.js?v=8"></script>
-  <script src="actor-chain.js?v=8"></script>
+  <script src="actors.js?v=9"></script>
+  <script src="actor-chain.js?v=9"></script>
 </body>
 </html>
