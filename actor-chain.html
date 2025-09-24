@@ -1,166 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Actor Chain Game</title>
-  <link rel="stylesheet" href="styles.css?v=5">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-    header {
-      background: #000;
-      color: #fff;
-      padding: 10px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-    }
-    .stats {
-      margin: 10px 0;
-      font-size: 18px;
-      font-weight: bold;
-    }
-    .actors {
-      display: flex;
-      justify-content: space-around;
-      margin: 20px 0;
-    }
-    .actors img {
-      border-radius: 12px;
-      width: 150px;
-      height: auto;
-    }
-    #chain {
-      margin-top: 20px;
-      padding: 10px;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      text-align: left;
-      max-width: 400px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    ul { list-style: none; padding: 0; }
-    li { margin: 5px 0; padding: 5px; border-radius: 6px; }
-    .grey { background: #ddd; }
-    .blue { background: #d0e6ff; }
-    .orange { background: #ffd9b3; }
-    .green { background: #c8f7c5; }
-    #suggestions {
-      border: 1px solid #ccc;
-      max-width: 300px;
-      margin: 10px auto;
-      background: #fff;
-      border-radius: 6px;
-    }
-    #suggestions div {
-      padding: 8px;
-      cursor: pointer;
-    }
-    #suggestions div:hover { background: #eee; }
-    input { padding: 10px; width: 250px; }
-    button { padding: 10px 20px; margin: 5px; border-radius: 25px; border: none; cursor: pointer; }
-    .submitBtn { background: #fa8b48; color: white; }
-    .resetBtn { background: #cadf3d; color: white; }
-    .popup {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .popup-content {
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-      position: relative;
-    }
-    .popup-content .close {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 20px;
-      cursor: pointer;
-    }
-    #introPopup {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    #introPopup .popup-content {
-      background: #fff;
-      padding: 30px;
-      border-radius: 10px;
-      text-align: center;
-    }
-    .startBtn {
-      padding: 10px 30px;
-      background: #fa8b48;
-      border: none;
-      border-radius: 25px;
-      color: white;
-      font-size: 18px;
-      cursor: pointer;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <title>LinkMovie — Actor Chain</title>
+  <link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
-  <header>
-    <h1>🎬 Actor Chain Game</h1>
+  <!-- Header -->
+  <header class="topbar">
+    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+    <nav class="topbar-right">
+      <a href="index.html" class="nav-link">Main Game</a>
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
+    </nav>
   </header>
 
+  <!-- Stats Bar -->
   <div class="stats">
-    Steps: <span id="counter">0</span> | Time: <span id="timer">00:00</span>
+    <h1 class="page-title">Actor Chain</h1>
+    <div id="counterCircle" class="counter-circle">0</div>
+    <div id="timer" class="timer">00:00</div>
   </div>
 
-  <div class="actors">
-    <div>
+  <!-- Actors -->
+  <div class="actors-row" id="actorsSection">
+    <div class="actor-card">
       <img id="actor1Img" alt="Start Actor" />
-      <p id="actor1"></p>
+      <p id="actor1" class="actor-name"></p>
     </div>
-    <div>
-      <img id="actor2Img" alt="End Actor" />
-      <p id="actor2"></p>
+    <div class="actor-card">
+      <img id="actor2Img" alt="Target Actor" />
+      <p id="actor2" class="actor-name"></p>
     </div>
   </div>
 
-  <input id="movieInput" placeholder="Enter a movie..." />
-  <div id="suggestions"></div>
-  <br>
-  <button class="submitBtn" onclick="submitGuess()">Submit</button>
-  <button class="resetBtn" onclick="resetChain()">Reset</button>
+  <!-- Controls -->
+  <div class="controls">
+    <input id="movieInput" placeholder="Enter a movie..." />
+    <div id="suggestions" class="suggestions"></div>
+    <div class="button-row">
+      <button class="btn btn-submit" onclick="submitGuess()">Submit</button>
+      <button class="btn btn-red" onclick="resetChain()">Reset</button>
+    </div>
+  </div>
 
-  <div id="chain">
+  <!-- Chain -->
+  <div class="chain-box">
     <h3>Current Chain:</h3>
     <ul id="chainList"></ul>
   </div>
 
-  <p id="status"></p>
+  <p id="status" class="status"></p>
 
   <!-- Intro Popup -->
-  <div id="introPopup">
-    <div class="popup-content">
-      <h2>Welcome to Actor Chain!</h2>
-      <p>Link the two actors by movies they’ve starred in.</p>
-      <button class="startBtn" onclick="startGame()">Start</button>
+  <div id="introOverlay" class="overlay visible">
+    <div class="overlay-card">
+      <h2>🎬 Actor Chain Challenge</h2>
+      <p>Connect the two actors through movies. Press Start to begin.</p>
+      <button class="btn btn-submit" onclick="startGame()">Start</button>
     </div>
   </div>
 
-  <script src="actors.js?v=5"></script>
-  <script src="actor-chain.js?v=5"></script>
+  <!-- Popups -->
+  <div id="popup" class="popup">
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    <h2 id="popupTitle"></h2>
+    <p id="popupMsg"></p>
+  </div>
+
+  <div id="helpPopup" class="popup">
+    <button class="popup-close" onclick="closeHelp()">✕</button>
+    <h2>How to Play</h2>
+    <p>Enter movies that include your current actor.  
+       Valid movies (blue/orange/green) increase the counter.  
+       Wrong ones (grey) don’t. Reach the target actor to win.</p>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    This product uses the TMDb API but is not endorsed or certified by TMDb.<br/>
+    <img src="https://www.themoviedb.org/assets/2/v4/logos/293x302-powered-by-square-blue-9a1c5c84221cbd27e84dff527969b24d7d2d33f6b19a9072a3c20c1cfae6dce2.png" alt="TMDb" width="90" />
+  </footer>
+
+  <script src="actors.js?v=7"></script>
+  <script src="actor-chain.js?v=7"></script>
 </body>
 </html>
