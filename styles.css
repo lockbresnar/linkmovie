@@ -1,42 +1,22 @@
-/* Base */
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 0;
-  background: #f4f4f4;
-  text-align: center;
-  color: #161616;
-}
-
 /* Header */
-header {
-  background: #161616;
+.topbar {
+  background: #000;
+  padding: 10px 20px;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px 20px;
   position: relative;
 }
-header .logo {
-  height: 40px;
-}
-header .nav {
+.logo { height: 40px; }
+.topbar-right {
   position: absolute;
   right: 20px;
   display: flex;
+  gap: 16px;
   align-items: center;
-  gap: 20px;
 }
-header .nav a {
-  color: #fff;
-  text-decoration: none;
-  font-weight: bold;
-}
-header .help-icon {
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-}
+.nav-link { color: #fff; text-decoration: none; font-weight: 600; }
+.help-icon { width: 24px; cursor: pointer; }
 
 /* Stats */
 .stats {
@@ -45,163 +25,70 @@ header .help-icon {
   align-items: center;
   gap: 20px;
   margin: 20px 0;
-  font-family: "Helvetica Neue Condensed Bold", Arial, sans-serif;
-  letter-spacing: -0.05em;
 }
-.stats h1 {
-  margin: 0;
-  font-size: 28px;
-}
-#timer {
-  font-size: 24px;
-  font-weight: bold;
-}
+.page-title { margin: 0; font-size: 24px; }
 .counter-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  color: #fff;
-  background: #4edd00; /* starts green */
-  transition: background 0.3s;
+  width: 36px; height: 36px;
+  border-radius: 50%; background: #4edd00;
+  display: grid; place-items: center;
+  color: #fff; font-weight: 700;
 }
+.timer { font-weight: 700; }
 
-/* Game Area (Actors + Chain side by side) */
-.game-area {
+/* Actors side by side */
+.actors-row {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  gap: 60px;
+  gap: 80px;
   margin: 20px 0;
-}
-.actors {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
 }
 .actor-card img {
-  border-radius: 16px;
-  width: 180px;
-  height: auto;
+  width: 180px; border-radius: 12px;
 }
-.actor-card p {
-  margin-top: 8px;
-  font-weight: bold;
-}
-.chain-box {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 15px;
-  width: 300px;
-  text-align: left;
-}
-#chainList {
-  list-style: none;
-  padding: 0;
-}
-#chainList li {
-  margin: 6px 0;
-  padding: 8px 12px;
-  border-radius: 50px;
-  font-size: 16px;
-}
-#chainList li.grey { background: #c1c1c1; }
-#chainList li.blue { background: #4fa7ff; }
-#chainList li.orange { background: #fa8b48; }
-#chainList li.green { background: #4edd00; }
+.actor-name { margin: 8px 0 0; font-weight: 600; }
 
 /* Controls */
-.controls {
-  margin: 20px 0;
+.controls input {
+  width: 300px; padding: 10px; border-radius: 8px; border: 1px solid #ccc;
 }
-input {
-  padding: 12px;
-  width: 280px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 16px;
+.suggestions { width: 300px; margin: 5px auto; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
+.suggestions div { padding: 8px; cursor: pointer; }
+.suggestions div:hover { background: #eee; }
+.button-row { margin-top: 10px; }
+
+/* Buttons */
+.btn { border: none; border-radius: 999px; padding: 10px 24px; color: #fff; cursor: pointer; font-weight: 600; }
+.btn-submit { background: #fa8b48; }
+.btn-red { background: #e53935; }
+
+/* Chain */
+.chain-box {
+  max-width: 500px; margin: 20px auto;
+  background: #fff; border: 1px solid #ccc; border-radius: 10px;
+  padding: 10px;
 }
-#suggestions {
-  border: 1px solid #ccc;
-  max-width: 300px;
-  margin: 10px auto;
-  background: #fff;
-  border-radius: 6px;
-}
-#suggestions div {
-  padding: 8px;
-  cursor: pointer;
-}
-#suggestions div:hover {
-  background: #eee;
-}
-.buttons {
-  margin-top: 10px;
-}
-button {
-  padding: 12px 28px;
-  margin: 5px;
-  border: none;
-  border-radius: 50px;
-  cursor: pointer;
-  font-family: "Helvetica Neue Medium", Arial, sans-serif;
-  font-size: 16px;
-  color: #fff;
-}
-button.submit { background: #fa8b48; }
-button.reset { background: #cadf3d; color: #fff; }
-button.startBtn { background: #4fa7ff; }
+#chainList { list-style: none; padding: 0; margin: 0; }
+#chainList li { margin: 5px 0; padding: 6px 12px; border-radius: 999px; font-weight: 600; }
+#chainList li.grey { background: #c1c1c1; }
+#chainList li.blue { background: #4fa7ff; color: #fff; }
+#chainList li.orange { background: #fa8b48; color: #fff; }
+#chainList li.green { background: #4edd00; }
 
 /* Popups */
-#popup, #helpPopup {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #fff;
-  padding: 20px;
-  border: 2px solid #444;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  z-index: 1000;
-  width: 320px;
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: none; justify-content: center; align-items: center;
 }
-#introPopup {
-  display: block; /* show intro popup on page load */
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #fff;
-  padding: 20px;
-  border: 2px solid #444;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  z-index: 1000;
-  width: 320px;
-}
-#popup button, #introPopup button, #helpPopup button {
-  float: right;
-  background: red;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-  padding: 4px 8px;
-}
-#introPopup button.startBtn {
-  float: none;
-  margin-top: 15px;
-}
+.overlay.visible { display: flex; }
+.overlay-card { background: #fff; padding: 20px; border-radius: 10px; width: 300px; text-align: center; }
 
-/* Footer */
-footer {
-  margin-top: 30px;
-  font-size: 12px;
-  color: #555;
+.popup {
+  display: none; position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff; border: 2px solid #444; border-radius: 10px;
+  width: 320px; padding: 16px;
+}
+.popup-close {
+  position: absolute; top: 8px; right: 10px; border: none; background: none;
+  font-size: 20px; cursor: pointer;
 }
