@@ -30,16 +30,15 @@ function stopTimer() {
   clearInterval(timerInterval);
 }
 
-// setup game with valid film & curated actors
+// setup game with top rated films & curated actors
 async function setupGame() {
   let valid = false;
 
   while (!valid) {
-    // Pick a random popular movie
+    // Pick a random page from top-rated (1–13 ~ top 250 movies)
+    const page = Math.floor(Math.random() * 13) + 1;
     const res = await fetch(
-      `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US&page=${
-        Math.floor(Math.random() * 10) + 1
-      }`
+      `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&language=en-US&page=${page}`
     );
     const data = await res.json();
     targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
@@ -50,8 +49,11 @@ async function setupGame() {
     );
     const credits = await creditsRes.json();
 
+    // Take only top 6 billed cast
+    const topBilled = credits.cast.slice(0, 6);
+
     // Filter actors: must be in curated pool
-    targetActors = credits.cast.filter((c) => ACTORS.includes(c.name));
+    targetActors = topBilled.filter((c) => ACTORS.includes(c.name));
 
     if (targetActors.length >= 2) {
       valid = true;
