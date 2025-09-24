@@ -30,14 +30,14 @@ function stopTimer() {
   clearInterval(timerInterval);
 }
 
-// setup game with top rated films
+// setup game with top English-language films
 async function setupGame() {
   document.getElementById("status").textContent = "🎬 Finding your actors...";
 
-  // Pick a random page from top-rated (1–13 ~ top 250 movies)
-  const page = Math.floor(Math.random() * 13) + 1;
+  // Pick a random page from discover (English-language, highly rated films)
+  const page = Math.floor(Math.random() * 10) + 1;
   const res = await fetch(
-    `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&language=en-US&page=${page}`
+    `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&language=en-US&with_original_language=en&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`
   );
   const data = await res.json();
   targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
