@@ -1,4 +1,4 @@
-/* Movie Link Game Logic */
+/* Movie Link Game Logic (error-hardened) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; // ✅ Your TMDb key
 const IMG_BASE = "https://image.tmdb.org/t/p/w300";
@@ -68,10 +68,10 @@ function stopTimer() {
 }
 
 // ---------- Popups ----------
-window.openHelp = function openHelp() {
+window.openHelp = function () {
   document.getElementById("helpPopup").style.display = "block";
 };
-window.closeHelp = function closeHelp() {
+window.closeHelp = function () {
   document.getElementById("helpPopup").style.display = "none";
 };
 function showPopup(title, msg) {
@@ -79,7 +79,7 @@ function showPopup(title, msg) {
   els.popupMsg.innerHTML = msg;
   els.popup.style.display = "block";
 }
-window.closePopup = function closePopup() {
+window.closePopup = function () {
   els.popup.style.display = "none";
 };
 
@@ -122,10 +122,12 @@ function normalizeActor(o) {
 function renderActors(a1, a2) {
   els.actor1Name.textContent = a1.name;
   els.actor2Name.textContent = a2.name;
+
   els.actor1Img.src = a1.profile_path ? (IMG_BASE + a1.profile_path) : "assets/avatar.svg";
   els.actor2Img.src = a2.profile_path ? (IMG_BASE + a2.profile_path) : "assets/avatar.svg";
-  els.actor1Img.alt = a1.name;
-  els.actor2Img.alt = a2.name;
+
+  els.actor1Img.onerror = () => { els.actor1Img.src = "assets/avatar.svg"; };
+  els.actor2Img.onerror = () => { els.actor2Img.src = "assets/avatar.svg"; };
 }
 
 // ---------- TMDb data ----------
@@ -174,25 +176,30 @@ async function buildHints(movieId, excludedActorIds) {
   return [...new Set(hints)].slice(0, 8);
 }
 
+// ---------- Fallback answer ----------
+function fallbackAnswer() {
+  game.answerMovie = { id: 27205, title: "Inception" };
+  game.hintsPool = ["Released in 2010","Directed by Christopher Nolan","Stars Leonardo DiCaprio"];
+}
+
 // ---------- Game flow ----------
 async function initRound() {
-  const [aRaw, bRaw] = pickActorsFromGlobals();
-  const a = normalizeActor(aRaw), b = normalizeActor(bRaw);
-  game.actor1 = a; game.actor2 = b;
-  renderActors(a, b);
-
   try {
+    const [aRaw, bRaw] = pickActorsFromGlobals();
+    const a = normalizeActor(aRaw), b = normalizeActor(bRaw);
+    game.actor1 = a; game.actor2 = b;
+    renderActors(a, b);
+
     const common = await findCommonMovie(a.id, b.id);
     if (common) {
       game.answerMovie = { id: common.id, title: common.title || common.original_title };
       game.hintsPool = await buildHints(common.id, [a.id, b.id]);
     } else {
-      game.answerMovie = { id: 27205, title: "Inception" };
-      game.hintsPool = ["Released in 2010","Directed by Christopher Nolan","Stars Leonardo DiCaprio"];
+      fallbackAnswer();
     }
-  } catch (e) {
-    game.answerMovie = { id: 27205, title: "Inception" };
-    game.hintsPool = ["Released in 2010","Directed by Christopher Nolan","Stars Leonardo DiCaprio"];
+  } catch (err) {
+    console.error("initRound failed:", err);
+    fallbackAnswer();
   }
   els.status.textContent = "";
 }
