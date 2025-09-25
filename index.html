@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Movie Link</title>
+  <title>🎬 Movie Link</title>
   <link rel="stylesheet" href="main-game.css">
 </head>
 <body>
@@ -14,37 +14,29 @@
     </div>
   </header>
 
-  <div class="layout">
-    <!-- Left column -->
-    <div class="left-col">
-      <div class="actors">
-        <div>
-          <img id="actor1Img" alt="Actor 1">
-          <p id="actor1"></p>
-        </div>
-        <div>
-          <img id="actor2Img" alt="Actor 2">
-          <p id="actor2"></p>
-        </div>
-      </div>
-
-      <div class="input-section">
-        <input id="movieInput" placeholder="Enter a movie...">
-        <div id="suggestions"></div>
-        <div class="buttons">
-          <button class="btn-submit" onclick="submitGuess()">Submit</button>
-          <button class="btn-red" onclick="skipTurn()">Skip</button>
-        </div>
-      </div>
+  <div class="actors">
+    <div>
+      <img id="actor1Img" alt="Actor 1">
+      <p id="actor1"></p>
     </div>
-
-    <!-- Right column -->
-    <div class="right-col">
-      <div id="chain">
-        <h3>Current Chain:</h3>
-        <ul id="chainList"></ul>
-      </div>
+    <div>
+      <img id="actor2Img" alt="Actor 2">
+      <p id="actor2"></p>
     </div>
+  </div>
+
+  <div class="input-section">
+    <input id="movieInput" placeholder="Enter a movie...">
+    <div id="suggestions"></div>
+    <div class="buttons">
+      <button class="btn-submit" onclick="submitGuess()">Submit</button>
+      <button class="btn-red" onclick="skipTurn()">Skip</button>
+    </div>
+  </div>
+
+  <div id="chain">
+    <h3>Current Chain:</h3>
+    <ul id="chainList"></ul>
   </div>
 
   <!-- Popup -->
