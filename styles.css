@@ -97,7 +97,7 @@ header h1 {
   font-weight: bold;
 }
 
-/* Input + buttons section */
+/* Input + buttons */
 .input-section {
   margin: 20px 0;
   text-align: center;
@@ -154,7 +154,7 @@ header h1 {
 #chain {
   margin-top: 20px;
   padding: 10px;
-  background: #c1c1c1; /* checkpoint alpha grey */
+  background: #c1c1c1; /* Checkpoint Alpha grey */
   border-radius: 8px;
   max-width: 400px;
   margin-left: auto;
