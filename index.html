@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>LinkMovie — Movie Link</title>
-  <link rel="stylesheet" href="main-game.css?v=alpha2" />
+  <link rel="stylesheet" href="main-game.css?v=1" />
 </head>
 <body>
   <!-- Header -->
@@ -92,12 +92,10 @@
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <!-- Your actor pool (same file Actor Chain uses) -->
-  <script src="actors.js?v=alpha1"></script>
-  <script>
-    // Optional: expose your TMDb key via a global (or set in actors.js)
-    window.TMDB_API_KEY = window.TMDB_API_KEY || ""; // <-- set if not already set
-  </script>
-  <script src="main-game.js?v=alpha2"></script>
+  <!-- Actor pool -->
+  <script src="actors.js?v=1"></script>
+  <!-- ✅ Your TMDb API key -->
+  <script>window.TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";</script>
+  <script src="main-game.js?v=1"></script>
 </body>
 </html>
