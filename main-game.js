@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (fixed Start overlay issue) */
+/* Movie Link Game Logic (final: Start button fixed) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -127,7 +127,7 @@ async function buildHints(movieId, excludedActorIds) {
 }
 
 // ---------- Game flow ----------
-function startGame() {
+function doStartGame() {
   if (started) return;
   started = true;
   els.overlay.classList.remove("visible");
@@ -190,13 +190,17 @@ els.movieInput.addEventListener("keydown", (e) => {
 });
 
 // ---------- Init ----------
-window.startGame = function() {
-  startGame(); // ✅ only start timer & hide overlay
+window.startGame = async function() {
+  // preload actors only once before Start button
+  if (!targetMovie) {
+    await initRound();
+  }
+  doStartGame();
 };
 
-// preload actors once for overlay screen
+// preload actors once behind overlay
 (async function bootstrap() {
   updateCounter();
   els.timer.textContent = "00:00";
-  await initRound(); // ✅ load actors but don’t start game
+  await initRound(); // actors visible behind overlay
 })();
