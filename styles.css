@@ -154,7 +154,7 @@ header h1 {
 #chain {
   margin-top: 20px;
   padding: 10px;
-  background: #cdcdcd; /* lighter grey */
+  background: #c1c1c1; /* checkpoint alpha grey */
   border-radius: 8px;
   max-width: 400px;
   margin-left: auto;
@@ -220,13 +220,10 @@ li {
 /* Footer attribution */
 footer {
   background: #111;
-  color: #fff;
   padding: 10px;
-  font-size: 12px;
   text-align: center;
 }
 
 footer img {
-  height: 20px;
-  vertical-align: middle;
+  height: 24px;
 }
