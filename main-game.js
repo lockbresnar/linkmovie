@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (final: Start button fixed) */
+/* Movie Link Game Logic (actors from top 5 billed + counter color shift) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -39,7 +39,16 @@ function addListItem(text, color) {
   els.chainList.appendChild(li);
 }
 function updateCounter() {
-  els.counter.textContent = 6 - triesLeft;
+  const used = 6 - triesLeft;
+  els.counter.textContent = used;
+
+  // color gradient: green → orange → red
+  let color;
+  if (used <= 2) color = "#2ecc71";     // green
+  else if (used <= 4) color = "#f39c12"; // orange
+  else color = "#e74c3c";               // red
+
+  els.counter.style.backgroundColor = color;
 }
 function formatTime(secTotal) {
   const m = Math.floor(secTotal / 60);
@@ -75,7 +84,8 @@ async function initRound() {
     let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
     let credits = await creditsRes.json();
 
-    let actorsWithPhotos = credits.cast.filter(c => c.profile_path);
+    // ✅ only top 5 billed actors with images
+    let actorsWithPhotos = credits.cast.filter(c => c.profile_path).slice(0, 5);
     if (actorsWithPhotos.length < 2) {
       els.status.textContent = "Could not load actors. Refresh to try again.";
       return;
@@ -191,7 +201,6 @@ els.movieInput.addEventListener("keydown", (e) => {
 
 // ---------- Init ----------
 window.startGame = async function() {
-  // preload actors only once before Start button
   if (!targetMovie) {
     await initRound();
   }
