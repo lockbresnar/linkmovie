@@ -2,59 +2,102 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Movie Link</title>
-  <link rel="stylesheet" href="main-game.css" />
+  <title>LinkMovie — Movie Link</title>
+  <link rel="stylesheet" href="main-game.css?v=alpha2" />
 </head>
 <body>
-  <nav>
-    <a href="actor-chain.html">Actor Chain</a>
-    <span> | </span>
-    <strong>Movie Link</strong>
-  </nav>
-
-  <header>
-    <h1>Movie Link</h1>
+  <!-- Header -->
+  <header class="topbar">
+    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+    <nav class="topbar-right">
+      <a href="actor-chain.html" class="nav-link">Actor Chain</a>
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
+    </nav>
   </header>
 
-  <div class="status-bar">
-    <p>Tries left: <span id="tries-left">6</span></p>
-    <p>Time: <span id="timer">0</span> s</p>
+  <!-- Stats -->
+  <div class="stats">
+    <h1 class="page-title condensed">Movie Link</h1>
+    <div id="counterCircle" class="counter-circle">0</div>
+    <div id="timer" class="timer condensed">00:00</div>
   </div>
 
-  <div class="controls">
-    <button id="start-btn">Start</button>
-    <input type="text" id="guess-input" placeholder="Enter a movie title..." />
-    <button id="submit-btn">Submit</button>
-    <button id="skip-btn">Skip</button>
-    <button id="hint-btn">Hint</button>
+  <!-- Two-column layout -->
+  <div class="layout">
+    <!-- LEFT: actors + controls -->
+    <div class="left-col">
+      <div class="actors-row">
+        <div class="actor-card">
+          <img id="actor1Img" alt="Start Actor" />
+          <p id="actor1" class="actor-name"></p>
+        </div>
+        <div class="actor-card">
+          <img id="actor2Img" alt="Target Actor" />
+          <p id="actor2" class="actor-name"></p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <input id="movieInput" placeholder="Enter a movie..." />
+        <div id="suggestions" class="suggestions" style="display:none"></div>
+        <div class="button-row">
+          <button id="submitBtn" class="btn btn-submit">Submit</button>
+          <button id="skipBtn" class="btn btn-blue">Skip</button>
+          <button id="hintBtn" class="btn btn-submit">Hint</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: guesses -->
+    <aside class="right-col">
+      <div class="chain-box">
+        <h3>Guesses:</h3>
+        <ul id="chainList"></ul>
+      </div>
+      <p id="status" class="status"></p>
+    </aside>
   </div>
 
-  <section class="chain-section">
-    <h2>Current Chain:</h2>
-    <div id="chain" class="chain"></div>
-  </section>
+  <!-- Intro overlay -->
+  <div id="introOverlay" class="overlay visible">
+    <div class="overlay-card">
+      <h2>🎬 Movie Link</h2>
+      <p>Guess the movie that features <strong>both</strong> actors. You have 6 total tries. Hints cost a try.</p>
+      <button class="btn btn-submit" onclick="startGame()">Start</button>
+    </div>
+  </div>
 
-  <section class="how-to-play">
-    <h3>How to Play</h3>
-    <ol>
-      <li>First movie must include ...</li>
-      <li>Each next movie must share an actor with previous …</li>
-      <li>If it includes the target, you win …</li>
-      <li>Hints are orange, correct in green …</li>
-    </ol>
-  </section>
+  <!-- Popups -->
+  <div id="popup" class="popup">
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    <h2 id="popupTitle"></h2>
+    <p id="popupMsg"></p>
+  </div>
 
-  <footer>
-    <p>This product uses the TMDb API but is not endorsed or certified by TMDb.</p>
-    <img src="tmdb-logo.png" alt="TMDb Logo" class="tmdb-logo" />
+  <div id="helpPopup" class="popup">
+    <button class="popup-close" onclick="closeHelp()">✕</button>
+    <h2>How to Play</h2>
+    <p>
+      • 6 tries total. Submit, Skip, and Hint each use 1 try.<br/>
+      • Hints are unique and shown in orange.<br/>
+      • Correct movie shows in green and ends the game with a win popup.<br/>
+      • If you run out of tries, you'll see the correct answer.<br/>
+      • Timer starts on Start and stops on win/lose. Inputs lock when the game ends.
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    This product uses the TMDb API but is not endorsed or certified by TMDb.<br/>
+    <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <!-- Popups / overlays, e.g. win / lose -->
-  <div id="result-popup" class="overlay hidden">
-    <div class="overlay-content" id="popup-content"></div>
-  </div>
-
-  <script src="main-game.js"></script>
+  <!-- Your actor pool (same file Actor Chain uses) -->
+  <script src="actors.js?v=alpha1"></script>
+  <script>
+    // Optional: expose your TMDb key via a global (or set in actors.js)
+    window.TMDB_API_KEY = window.TMDB_API_KEY || ""; // <-- set if not already set
+  </script>
+  <script src="main-game.js?v=alpha2"></script>
 </body>
 </html>

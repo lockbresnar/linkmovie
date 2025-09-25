@@ -1,198 +1,68 @@
-/* Reset + base */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+:root{
+  --bg:#f4f4f4; --black:#161616; --grey:#cdcdcd;
+  --blue:#4fa7ff; --orange:#fa8b48; --green:#4edd00; --red:#e53935;
 }
-
-body {
-  font-family: Arial, sans-serif;
-  background-color: #111;
-  color: #eee;
-  line-height: 1.5;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* Navigation */
-nav {
-  background-color: #222;
-  padding: 12px 20px;
-  text-align: center;
-}
-
-nav a, nav strong, nav span {
-  color: #eee;
-  text-decoration: none;
-  font-weight: bold;
-  margin: 0 8px;
-}
-
-nav a:hover {
-  color: #1db954;
-}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--black);font-family:Arial, sans-serif}
 
 /* Header */
-header {
-  text-align: center;
-  margin: 20px 0;
-}
+.topbar{background:#000;padding:10px 20px;display:flex;justify-content:center;align-items:center;position:relative}
+.logo{height:40px}
+.topbar-right{position:absolute;right:20px;display:flex;gap:16px;align-items:center}
+.nav-link{color:#fff;text-decoration:none;font-weight:700}
+.help-icon{width:24px;height:24px;cursor:pointer}
 
-header h1 {
-  font-size: 2rem;
-  color: #fff;
-}
+/* Stats */
+.stats{display:flex;justify-content:center;align-items:center;gap:18px;margin:18px 0 8px}
+.condensed{font-family:"Helvetica Neue", "Arial Narrow", Arial, sans-serif;letter-spacing:-0.05em}
+.page-title{margin:0;font-weight:800;font-size:28px}
+.counter-circle{width:36px;height:36px;border-radius:999px;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:800}
+.timer{font-weight:800;font-size:22px}
 
-/* Status bar */
-.status-bar {
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  margin-bottom: 20px;
-  font-size: 1rem;
-}
+/* Two-column layout */
+.layout{max-width:1000px;margin:0 auto;padding:0 16px;display:grid;grid-template-columns:1fr 360px;gap:40px}
+.left-col{display:flex;flex-direction:column;align-items:center}
+.right-col{display:flex;flex-direction:column;align-items:stretch}
 
-/* Controls */
-.controls {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 10px 0 20px;
-}
+/* Actors */
+.actors-row{display:flex;justify-content:center;align-items:flex-start;gap:60px;margin:12px 0 8px}
+.actor-card img{width:180px;border-radius:16px;object-fit:cover}
+.actor-name{margin:8px 0 0;font-weight:700}
 
-.controls input {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  width: 250px;
-}
+/* Controls under actors */
+.controls{width:100%;max-width:520px}
+.controls input{width:100%;padding:12px;border-radius:10px;border:1px solid #ccc;font-size:16px}
+.suggestions{background:#fff;border:1px solid #ccc;border-radius:8px;margin-top:8px;max-height:220px;overflow:auto}
+.suggestions div{padding:8px 10px;cursor:pointer}
+.suggestions div:hover{background:#eee}
+.button-row{margin-top:10px;display:flex;gap:10px;justify-content:center}
 
-.controls button {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 8px;
-  background-color: #3498db;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.2s;
-}
+/* Buttons */
+.btn{border:none;border-radius:999px;padding:12px 28px;color:#fff;cursor:pointer;font-family:"Helvetica Neue", Arial, sans-serif;font-weight:600;font-size:16px}
+.btn-submit{background:var(--orange)}
+.btn-red{background:var(--red)}
+.btn-blue{background:var(--blue)} /* for Skip */
 
-.controls button:hover {
-  background-color: #2980b9;
-}
+/* Chain (Guesses) to the right */
+.chain-box{background:var(--grey);border-radius:12px;padding:12px 14px}
+.chain-box h3{margin:6px 0 10px}
+#chainList{list-style:none;margin:0;padding:0}
+#chainList li{margin:8px 0;padding:8px 14px;border-radius:999px;font-weight:600}
+#chainList li.grey{background:#ddd}              /* wrong/skip */
+#chainList li.blue{background:var(--blue);color:#fff}
+#chainList li.orange{background:var(--orange);color:#fff}  /* hints */
+#chainList li.green{background:var(--green)}     /* correct */
 
-/* Chain section */
-.chain-section {
-  text-align: center;
-  margin: 20px auto;
-  width: 90%;
-  max-width: 800px;
-}
+/* Status text under chain box */
+.status{min-height:22px}
 
-.chain-section h2 {
-  margin-bottom: 12px;
-}
+/* Overlay + Popups */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;justify-content:center;align-items:center;z-index:1000}
+.overlay.visible{display:flex}
+.overlay-card{background:#fff;border:2px solid #444;border-radius:10px;width:320px;padding:20px;text-align:center}
+.popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #444;border-radius:10px;width:320px;padding:16px;z-index:1000}
+.popup-close{position:absolute;top:6px;right:8px;border:none;background:transparent;font-size:18px;cursor:pointer}
 
-.chain {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-.chain-item {
-  padding: 8px 14px;
-  border-radius: 20px;
-  background: #444;
-  color: #fff;
-  font-size: 0.9rem;
-}
-
-.chain-item.correct {
-  background: #2ecc71;
-}
-
-.chain-item.hint {
-  background: #e67e22;
-}
-
-/* How to play */
-.how-to-play {
-  width: 90%;
-  max-width: 800px;
-  margin: 30px auto;
-  padding: 20px;
-  background-color: #1a1a1a;
-  border-radius: 12px;
-}
-
-.how-to-play h3 {
-  margin-bottom: 10px;
-  color: #1db954;
-}
-
-.how-to-play ol {
-  padding-left: 20px;
-}
-
-.how-to-play li {
-  margin-bottom: 8px;
-}
-
-/* Footer */
-footer {
-  text-align: center;
-  margin: 30px 0 20px;
-  font-size: 0.85rem;
-  color: #aaa;
-}
-
-footer img.tmdb-logo {
-  display: block;
-  margin: 10px auto 0;
-  height: 40px;
-}
-
-/* Overlay popups */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-}
-
-.overlay.hidden {
-  display: none;
-}
-
-.overlay-content {
-  background: #222;
-  padding: 30px;
-  border-radius: 12px;
-  text-align: center;
-  max-width: 400px;
-  width: 90%;
-}
-
-.overlay-content h1,
-.overlay-content h2 {
-  margin-bottom: 20px;
-}
-
-.overlay-content button {
-  padding: 10px 20px;
-  background: #27ae60;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-}
-
-.overlay-content button:hover {
-  background: #1e8449;
-}
+/* Footer centered */
+.footer { margin: 28px 0; font-size: 12px; color: #555; text-align: center; }
+.footer img { display: block; margin: 8px auto 0; }
