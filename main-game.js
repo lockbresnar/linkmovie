@@ -1,14 +1,6 @@
-/* Movie Link game logic
-   - 6 tries total
-   - Submit, Skip, Hint each consume 1 try
-   - Hints are unique (orange)
-   - Correct movie is green + win popup
-   - Lose after 6 tries shows answer popup
-   - Timer starts on Start overlay; stops on end
-   - Inputs lock after end
-*/
+/* Movie Link Game Logic */
 
-const API_KEY = window.TMDB_API_KEY || ""; // set in actors.js or inline
+const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; // ✅ Your TMDb key
 const IMG_BASE = "https://image.tmdb.org/t/p/w300";
 
 const els = {
@@ -39,16 +31,16 @@ let game = {
   timerId: null,
   actor1: null,
   actor2: null,
-  answerMovie: null,   // { id, title }
+  answerMovie: null,
   usedHints: new Set(),
-  hintsPool: [],       // strings
+  hintsPool: [],
 };
 
-// ---------- UI helpers ----------
+// ---------- Helpers ----------
 function addListItem(text, colorClass) {
   const li = document.createElement("li");
   li.textContent = text;
-  li.classList.add(colorClass); // grey | orange | green | blue (if needed)
+  li.classList.add(colorClass);
   els.chainList.appendChild(li);
 }
 
@@ -75,14 +67,12 @@ function stopTimer() {
   game.timerId = null;
 }
 
-// ---------- overlays / popups ----------
+// ---------- Popups ----------
 window.openHelp = function openHelp() {
-  const help = document.getElementById("helpPopup");
-  help.style.display = "block";
+  document.getElementById("helpPopup").style.display = "block";
 };
 window.closeHelp = function closeHelp() {
-  const help = document.getElementById("helpPopup");
-  help.style.display = "none";
+  document.getElementById("helpPopup").style.display = "none";
 };
 function showPopup(title, msg) {
   els.popupTitle.textContent = title;
@@ -93,11 +83,10 @@ window.closePopup = function closePopup() {
   els.popup.style.display = "none";
 };
 
-// ---------- actor loading ----------
+// ---------- Actor setup ----------
 function randomOf(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
 
 function pickActorsFromGlobals() {
-  // Try common global names that your actors.js might export
   const candidates = [
     window.ACTOR_PAIRS, window.actorPairs, window.PAIRS,
     window.ACTORS, window.actors, window.actorList
@@ -106,10 +95,7 @@ function pickActorsFromGlobals() {
   if (candidates.length) {
     const src = randomOf(candidates);
     const item = randomOf(src);
-    // If item is a pair {a:{id,name,profile_path}, b:{...}}
     if (item && item.a && item.b) return [item.a, item.b];
-
-    // If it's a flat actor pool array -> pick two distinct
     if (item && (item.id || item.tmdb_id || item.personId)) {
       const pool = src;
       let a = randomOf(pool), b = randomOf(pool);
@@ -118,7 +104,7 @@ function pickActorsFromGlobals() {
     }
   }
 
-  // Fallback hardcoded pair (IDs for DiCaprio & Gordon-Levitt)
+  // fallback pair
   return [
     { id: 6193, name: "Leonardo DiCaprio", profile_path: "/wo2hJpn04vbtmh0B9utCFdsQhxM.jpg" },
     { id: 24045, name: "Joseph Gordon-Levitt", profile_path: "/4U9G4YwTlIEbBvQe5o6mXSHtYvC.jpg" },
@@ -150,8 +136,6 @@ async function tmdbJson(url) {
 }
 
 async function findCommonMovie(actorId1, actorId2) {
-  if (!API_KEY) return null;
-
   const [c1, c2] = await Promise.all([
     tmdbJson(`https://api.themoviedb.org/3/person/${actorId1}/movie_credits?api_key=${API_KEY}`),
     tmdbJson(`https://api.themoviedb.org/3/person/${actorId2}/movie_credits?api_key=${API_KEY}`)
@@ -161,13 +145,11 @@ async function findCommonMovie(actorId1, actorId2) {
   const commons = c2.cast.filter(m => set1.has(m.id));
   if (!commons.length) return null;
 
-  // Prefer higher popularity
   commons.sort((a,b)=> (b.popularity||0)-(a.popularity||0));
-  return commons[0]; // { id, title, release_date, ... }
+  return commons[0];
 }
 
 async function buildHints(movieId, excludedActorIds) {
-  if (!API_KEY) return [];
   const [details, credits] = await Promise.all([
     tmdbJson(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${API_KEY}`),
     tmdbJson(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${API_KEY}`)
@@ -189,31 +171,26 @@ async function buildHints(movieId, excludedActorIds) {
     .slice(0,3).map(c=>c.name);
   if (castNames.length) hints.push(`Also stars: ${castNames.join(", ")}`);
 
-  // De-dupe and cap
   return [...new Set(hints)].slice(0, 8);
 }
 
-// ---------- game flow ----------
+// ---------- Game flow ----------
 async function initRound() {
-  // Pick actors
   const [aRaw, bRaw] = pickActorsFromGlobals();
   const a = normalizeActor(aRaw), b = normalizeActor(bRaw);
   game.actor1 = a; game.actor2 = b;
   renderActors(a, b);
 
-  // Get answer movie
   try {
     const common = await findCommonMovie(a.id, b.id);
     if (common) {
       game.answerMovie = { id: common.id, title: common.title || common.original_title };
       game.hintsPool = await buildHints(common.id, [a.id, b.id]);
     } else {
-      // Fallback if no API key or no common movie found
       game.answerMovie = { id: 27205, title: "Inception" };
       game.hintsPool = ["Released in 2010","Directed by Christopher Nolan","Stars Leonardo DiCaprio"];
     }
   } catch (e) {
-    // Graceful fallback
     game.answerMovie = { id: 27205, title: "Inception" };
     game.hintsPool = ["Released in 2010","Directed by Christopher Nolan","Stars Leonardo DiCaprio"];
   }
@@ -234,7 +211,6 @@ function endGame(win) {
   game.ended = true;
   stopTimer();
 
-  // lock inputs
   els.movieInput.disabled = true;
   els.submitBtn.disabled = true;
   els.skipBtn.disabled = true;
@@ -260,7 +236,7 @@ function consumeTry() {
   if (game.triesLeft <= 0) endGame(false);
 }
 
-// submit guess
+// ---------- Events ----------
 els.submitBtn.addEventListener("click", () => {
   if (game.ended || !game.started) return;
   const guess = (els.movieInput.value || "").trim();
@@ -277,14 +253,12 @@ els.submitBtn.addEventListener("click", () => {
   els.movieInput.focus();
 });
 
-// skip
 els.skipBtn.addEventListener("click", () => {
   if (game.ended || !game.started) return;
   addListItem("Skipped", "grey");
   consumeTry();
 });
 
-// hint
 els.hintBtn.addEventListener("click", () => {
   if (game.ended || !game.started) return;
   const remaining = game.hintsPool.filter(h => !game.usedHints.has(h));
@@ -298,20 +272,18 @@ els.hintBtn.addEventListener("click", () => {
   consumeTry();
 });
 
-// enter key submits
 els.movieInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") els.submitBtn.click();
 });
 
-// expose start for overlay button
+// ---------- Init ----------
 window.startGame = async function() {
   await initRound();
   startGame();
 };
 
-// init (but keep overlay visible until Start)
 (async function bootstrap(){
-  updateCounter();                  // 0 used
-  els.timer.textContent = "00:00";  // reset
-  await initRound();                // preload actors/answer/hints so images show
+  updateCounter();
+  els.timer.textContent = "00:00";
+  await initRound();
 })();
