@@ -1,11 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>🎬 Movie Link</title>
-  <link rel="stylesheet" href="main-game.css">
+  <!-- IMPORTANT: use the same stylesheet as Actor page -->
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+  <!-- Intro overlay (starts timer on Start) -->
+  <div id="introOverlay" class="overlay visible">
+    <div class="overlay-content">
+      <h2>🎬 Movie Link</h2>
+      <p>Two actors share a hidden movie. Guess it in 6 tries. Skips reveal a new co-star and also use a try.</p>
+      <button onclick="startGame()">Start</button>
+    </div>
+  </div>
+
+  <!-- Header -->
   <header>
     <h1>🎬 Movie Link</h1>
     <div class="status-bar">
@@ -14,42 +26,52 @@
     </div>
   </header>
 
-  <div class="actors">
-    <div>
-      <img id="actor1Img" alt="Actor 1">
-      <p id="actor1"></p>
+  <!-- Same two-column layout used by Actor page -->
+  <div class="layout">
+    <!-- Left column -->
+    <div class="left-col">
+      <div class="actors">
+        <div>
+          <img id="actor1Img" alt="Actor 1"/>
+          <p id="actor1"></p>
+        </div>
+        <div>
+          <img id="actor2Img" alt="Actor 2"/>
+          <p id="actor2"></p>
+        </div>
+      </div>
+
+      <div class="input-section">
+        <input id="movieInput" placeholder="Enter a movie..." />
+        <div id="suggestions"></div>
+        <div class="buttons">
+          <button class="btn-submit" onclick="submitGuess()">Submit</button>
+          <button class="btn-red" onclick="skipTurn()">Skip</button>
+        </div>
+      </div>
     </div>
-    <div>
-      <img id="actor2Img" alt="Actor 2">
-      <p id="actor2"></p>
+
+    <!-- Right column -->
+    <div class="right-col">
+      <div id="chain">
+        <h3>Current Chain:</h3>
+        <ul id="chainList"></ul>
+      </div>
     </div>
   </div>
 
-  <div class="input-section">
-    <input id="movieInput" placeholder="Enter a movie...">
-    <div id="suggestions"></div>
-    <div class="buttons">
-      <button class="btn-submit" onclick="submitGuess()">Submit</button>
-      <button class="btn-red" onclick="skipTurn()">Skip</button>
-    </div>
-  </div>
-
-  <div id="chain">
-    <h3>Current Chain:</h3>
-    <ul id="chainList"></ul>
-  </div>
-
-  <!-- Popup -->
+  <!-- Popup (win/lose) -->
   <div id="popup" class="popup">
     <div class="popup-content">
-      <h2 id="popupMessage"></h2>
+      <h2 id="popupTitle"></h2>
+      <p id="popupMsg"></p>
       <button onclick="closePopup()">Close</button>
     </div>
   </div>
 
-  <!-- Footer -->
+  <!-- Footer (uses your centred custom logo via styles.css) -->
   <footer>
-    <img src="assets/tmdb-logo.svg" alt="TMDb Logo">
+    <img src="assets/tmdb-logo.svg" alt="TMDb Logo" />
   </footer>
 
   <script src="main-game.js"></script>
