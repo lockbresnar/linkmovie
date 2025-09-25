@@ -7,48 +7,50 @@
   <link rel="stylesheet" href="main-game.css" />
 </head>
 <body>
-  <!-- Start overlay -->
-  <div id="start-overlay" class="overlay">
-    <div class="overlay-content">
-      <h1>Movie Link</h1>
-      <button id="start-btn">Start</button>
-    </div>
+  <nav>
+    <a href="actor-chain.html">Actor Chain</a>
+    <span> | </span>
+    <strong>Movie Link</strong>
+  </nav>
+
+  <header>
+    <h1>Movie Link</h1>
+  </header>
+
+  <div class="status-bar">
+    <p>Tries left: <span id="tries-left">6</span></p>
+    <p>Time: <span id="timer">0</span> s</p>
   </div>
 
-  <!-- Main container -->
-  <div class="game-container">
-    <header>
-      <h1>Movie Link</h1>
-    </header>
+  <div class="controls">
+    <button id="start-btn">Start</button>
+    <input type="text" id="guess-input" placeholder="Enter a movie title..." />
+    <button id="submit-btn">Submit</button>
+    <button id="skip-btn">Skip</button>
+    <button id="hint-btn">Hint</button>
+  </div>
 
-    <!-- Chain display -->
+  <section class="chain-section">
+    <h2>Current Chain:</h2>
     <div id="chain" class="chain"></div>
+  </section>
 
-    <!-- Input + buttons -->
-    <div class="controls">
-      <input
-        type="text"
-        id="guess-input"
-        placeholder="Enter a movie title..."
-      />
-      <button id="submit-btn">Submit</button>
-      <button id="skip-btn">Skip</button>
-      <button id="hint-btn">Hint</button>
-    </div>
+  <section class="how-to-play">
+    <h3>How to Play</h3>
+    <ol>
+      <li>First movie must include ...</li>
+      <li>Each next movie must share an actor with previous …</li>
+      <li>If it includes the target, you win …</li>
+      <li>Hints are orange, correct in green …</li>
+    </ol>
+  </section>
 
-    <!-- Status -->
-    <div class="status">
-      <p>Tries left: <span id="tries-left">6</span></p>
-      <p>Time: <span id="timer">0</span>s</p>
-    </div>
-  </div>
-
-  <!-- Footer -->
   <footer>
+    <p>This product uses the TMDb API but is not endorsed or certified by TMDb.</p>
     <img src="tmdb-logo.png" alt="TMDb Logo" class="tmdb-logo" />
   </footer>
 
-  <!-- Win/Lose popup -->
+  <!-- Popups / overlays, e.g. win / lose -->
   <div id="result-popup" class="overlay hidden">
     <div class="overlay-content" id="popup-content"></div>
   </div>
