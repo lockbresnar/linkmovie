@@ -42,8 +42,7 @@
         <div id="suggestions" class="suggestions" style="display:none"></div>
         <div class="button-row">
           <button id="submitBtn" class="btn btn-submit">Submit</button>
-          <button id="skipBtn" class="btn btn-blue">Skip</button>
-          <button id="hintBtn" class="btn btn-submit">Hint</button>
+          <button id="hintSkipBtn" class="btn btn-blue">Hint / Skip</button>
         </div>
       </div>
     </div>
@@ -62,7 +61,8 @@
   <div id="introOverlay" class="overlay visible">
     <div class="overlay-card">
       <h2>🎬 Movie Link</h2>
-      <p>Guess the movie that features <strong>both</strong> actors. You have 6 total tries. Hints cost a try.</p>
+      <p>Guess the movie that features <strong>both</strong> actors.  
+      You have 6 total tries. Each Submit and Hint/Skip uses 1 try.</p>
       <button class="btn btn-submit" onclick="startGame()">Start</button>
     </div>
   </div>
@@ -78,11 +78,12 @@
     <button class="popup-close" onclick="closeHelp()">✕</button>
     <h2>How to Play</h2>
     <p>
-      • 6 tries total. Submit, Skip, and Hint each use 1 try.<br/>
+      • 6 tries total. Submit and Hint/Skip each use 1 try.<br/>
       • Hints are unique and shown in orange.<br/>
-      • Correct movie shows in green and ends the game with a win popup.<br/>
-      • If you run out of tries, you'll see the correct answer.<br/>
-      • Timer starts on Start and stops on win/lose. Inputs lock when the game ends.
+      • When hints run out, Hint/Skip acts like Skip.<br/>
+      • Correct movie shows in green with a win popup.<br/>
+      • Run out of tries → lose popup with correct answer.<br/>
+      • Timer starts on Start, stops on win/lose.
     </p>
   </div>
 
@@ -94,9 +95,7 @@
 
   <!-- Actor pool -->
   <script src="actors.js?v=1"></script>
-  <!-- ✅ Your TMDb API key -->
-  <script>window.TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";</script>
-  <!-- ✅ New JS (no fallback actors/movies) -->
-  <script src="main-game.js?v=3"></script>
+  <!-- JS -->
+  <script src="main-game.js?v=5"></script>
 </body>
 </html>

@@ -1,51 +1,45 @@
-/* Movie Link Game Logic (no fallback actors or movies) */
+/* Movie Link Game Logic (Hint/Skip button only) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
-const IMG_BASE = "https://image.tmdb.org/t/p/w300";
+const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
 
+let startActor, endActor, targetMovie;
+let triesLeft = 6;
+let usedHints = new Set();
+let hintsPool = [];
+let started = false;
+let ended = false;
+let seconds = 0;
+let timerId = null;
+
+// Elements
 const els = {
   overlay: document.getElementById("introOverlay"),
-  movieInput: document.getElementById("movieInput"),
-  submitBtn: document.getElementById("submitBtn"),
-  skipBtn: document.getElementById("skipBtn"),
-  hintBtn: document.getElementById("hintBtn"),
-  chainList: document.getElementById("chainList"),
-  counter: document.getElementById("counterCircle"),
-  timer: document.getElementById("timer"),
   actor1Img: document.getElementById("actor1Img"),
   actor2Img: document.getElementById("actor2Img"),
   actor1Name: document.getElementById("actor1"),
   actor2Name: document.getElementById("actor2"),
+  movieInput: document.getElementById("movieInput"),
+  submitBtn: document.getElementById("submitBtn"),
+  hintSkipBtn: document.getElementById("hintSkipBtn"),
+  chainList: document.getElementById("chainList"),
+  counter: document.getElementById("counterCircle"),
+  timer: document.getElementById("timer"),
   popup: document.getElementById("popup"),
   popupTitle: document.getElementById("popupTitle"),
   popupMsg: document.getElementById("popupMsg"),
   status: document.getElementById("status"),
 };
 
-let game = {
-  maxTries: 6,
-  triesLeft: 6,
-  started: false,
-  ended: false,
-  sec: 0,
-  timerId: null,
-  actor1: null,
-  actor2: null,
-  answerMovie: null,
-  usedHints: new Set(),
-  hintsPool: [],
-};
-
 // ---------- Helpers ----------
-function addListItem(text, colorClass) {
+function addListItem(text, color) {
   const li = document.createElement("li");
   li.textContent = text;
-  li.classList.add(colorClass);
+  li.classList.add(color);
   els.chainList.appendChild(li);
 }
 function updateCounter() {
-  const used = game.maxTries - game.triesLeft;
-  els.counter.textContent = used;
+  els.counter.textContent = 6 - triesLeft;
 }
 function formatTime(secTotal) {
   const m = Math.floor(secTotal / 60);
@@ -53,17 +47,15 @@ function formatTime(secTotal) {
   return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 function startTimer() {
-  game.timerId = setInterval(() => {
-    game.sec += 1;
-    els.timer.textContent = formatTime(game.sec);
+  timerId = setInterval(() => {
+    seconds++;
+    els.timer.textContent = formatTime(seconds);
   }, 1000);
 }
 function stopTimer() {
-  if (game.timerId) clearInterval(game.timerId);
-  game.timerId = null;
+  if (timerId) clearInterval(timerId);
+  timerId = null;
 }
-
-// ---------- Popups ----------
 function showPopup(title, msg) {
   els.popupTitle.textContent = title;
   els.popupMsg.innerHTML = msg;
@@ -73,150 +65,104 @@ window.closePopup = () => { els.popup.style.display = "none"; };
 window.openHelp = () => { document.getElementById("helpPopup").style.display = "block"; };
 window.closeHelp = () => { document.getElementById("helpPopup").style.display = "none"; };
 
-// ---------- Actor setup ----------
-function randomOf(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+// ---------- Load Actors ----------
+async function initRound() {
+  try {
+    let res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&page=1`);
+    let data = await res.json();
+    targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
 
-function pickActorsFromGlobals() {
-  const candidates = [
-    window.ACTOR_PAIRS, window.actorPairs, window.PAIRS,
-    window.ACTORS, window.actors, window.actorList
-  ].filter(a => Array.isArray(a) && a.length);
+    let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
+    let credits = await creditsRes.json();
 
-  if (candidates.length) {
-    const src = randomOf(candidates);
-    const item = randomOf(src);
-    if (item && item.a && item.b) return [item.a, item.b];
-    if (item && (item.id || item.tmdb_id || item.personId)) {
-      const pool = src;
-      let a = randomOf(pool), b = randomOf(pool);
-      while (b === a && pool.length > 1) b = randomOf(pool);
-      return [a, b];
+    let actorsWithPhotos = credits.cast.filter(c => c.profile_path);
+    if (actorsWithPhotos.length < 2) {
+      els.status.textContent = "Could not load actors. Refresh to try again.";
+      return;
     }
+
+    let shuffled = actorsWithPhotos.sort(() => 0.5 - Math.random()).slice(0, 2);
+    startActor = shuffled[0];
+    endActor = shuffled[1];
+
+    els.actor1Img.src = IMAGE_URL + startActor.profile_path;
+    els.actor1Name.textContent = startActor.name;
+    els.actor2Img.src = IMAGE_URL + endActor.profile_path;
+    els.actor2Name.textContent = endActor.name;
+
+    await buildHints(targetMovie.id, [startActor.id, endActor.id]);
+
+  } catch (err) {
+    console.error("initRound failed:", err);
+    els.status.textContent = "Error loading game. Please refresh.";
   }
-  return null; // no fallback
 }
 
-function normalizeActor(o) {
-  return {
-    id: o.id || o.tmdb_id || o.personId,
-    name: o.name || o.title || "Unknown",
-    profile_path: o.profile_path || o.profile || o.img || null,
-  };
-}
-function renderActors(a1, a2) {
-  els.actor1Name.textContent = a1.name;
-  els.actor2Name.textContent = a2.name;
-  els.actor1Img.src = a1.profile_path ? (IMG_BASE + a1.profile_path) : "";
-  els.actor2Img.src = a2.profile_path ? (IMG_BASE + a2.profile_path) : "";
-  els.actor1Img.alt = a1.name;
-  els.actor2Img.alt = a2.name;
-}
-
-// ---------- TMDb ----------
-async function tmdbJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`TMDb error ${res.status}`);
-  return res.json();
-}
-async function findCommonMovie(actorId1, actorId2) {
-  const [c1, c2] = await Promise.all([
-    tmdbJson(`https://api.themoviedb.org/3/person/${actorId1}/movie_credits?api_key=${API_KEY}`),
-    tmdbJson(`https://api.themoviedb.org/3/person/${actorId2}/movie_credits?api_key=${API_KEY}`)
-  ]);
-  const set1 = new Map(c1.cast.map(m => [m.id, m]));
-  const commons = c2.cast.filter(m => set1.has(m.id));
-  if (!commons.length) return null;
-  commons.sort((a,b)=> (b.popularity||0)-(a.popularity||0));
-  return commons[0];
-}
 async function buildHints(movieId, excludedActorIds) {
-  const [details, credits] = await Promise.all([
-    tmdbJson(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${API_KEY}`),
-    tmdbJson(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${API_KEY}`)
-  ]);
-  const hints = [];
-  if (details.release_date) hints.push(`Released in ${details.release_date.slice(0,4)}`);
-  if (Array.isArray(details.genres) && details.genres.length) {
-    hints.push(`Genre: ${details.genres.map(g=>g.name).slice(0,2).join(", ")}`);
+  try {
+    const [details, credits] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${API_KEY}`).then(r=>r.json()),
+      fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${API_KEY}`).then(r=>r.json())
+    ]);
+
+    const hints = [];
+    if (details.release_date) hints.push(`Released in ${details.release_date.slice(0,4)}`);
+    if (details.genres?.length) {
+      hints.push(`Genre: ${details.genres.map(g=>g.name).slice(0,2).join(", ")}`);
+    }
+    if (details.runtime) hints.push(`Runtime ≈ ${details.runtime} min`);
+    if (details.tagline) hints.push(`Tagline: “${details.tagline}”`);
+    const director = (credits.crew||[]).find(c=>c.job==="Director");
+    if (director) hints.push(`Directed by ${director.name}`);
+    const castNames = (credits.cast||[])
+      .filter(c => !excludedActorIds.includes(c.id))
+      .slice(0,3).map(c=>c.name);
+    if (castNames.length) hints.push(`Also stars: ${castNames.join(", ")}`);
+
+    hintsPool = [...new Set(hints)].slice(0, 8);
+  } catch (err) {
+    console.error("buildHints failed:", err);
+    hintsPool = [];
   }
-  if (details.runtime) hints.push(`Runtime ≈ ${details.runtime} min`);
-  if (details.tagline) hints.push(`Tagline: “${details.tagline}”`);
-  const director = (credits.crew || []).find(c=>c.job==="Director");
-  if (director) hints.push(`Directed by ${director.name}`);
-  const castNames = (credits.cast || [])
-    .filter(c => !excludedActorIds.includes(c.id))
-    .slice(0,3).map(c=>c.name);
-  if (castNames.length) hints.push(`Also stars: ${castNames.join(", ")}`);
-  return [...new Set(hints)].slice(0, 8);
 }
 
 // ---------- Game flow ----------
-async function initRound() {
-  const picked = pickActorsFromGlobals();
-  if (!picked) {
-    showPopup("Error", "No actors available. Please refresh.");
-    throw new Error("No actors available");
-  }
-  const [aRaw, bRaw] = picked;
-  const a = normalizeActor(aRaw), b = normalizeActor(bRaw);
-  game.actor1 = a; game.actor2 = b;
-  renderActors(a, b);
-
-  try {
-    const common = await findCommonMovie(a.id, b.id);
-    if (common) {
-      game.answerMovie = { id: common.id, title: common.title || common.original_title };
-      game.hintsPool = await buildHints(common.id, [a.id, b.id]);
-    } else {
-      showPopup("Error", "No common movie found. Please refresh.");
-    }
-  } catch (err) {
-    console.error("initRound failed:", err);
-    showPopup("Error", "Could not load data. Please refresh.");
-  }
-  els.status.textContent = "";
-}
-
 function startGame() {
-  if (game.started) return;
-  game.started = true;
+  if (started) return;
+  started = true;
   els.overlay.classList.remove("visible");
-  game.sec = 0;
+  seconds = 0;
   els.timer.textContent = "00:00";
   startTimer();
 }
-
 function endGame(win) {
-  if (game.ended) return;
-  game.ended = true;
+  if (ended) return;
+  ended = true;
   stopTimer();
   els.movieInput.disabled = true;
   els.submitBtn.disabled = true;
-  els.skipBtn.disabled = true;
-  els.hintBtn.disabled = true;
+  els.hintSkipBtn.disabled = true;
 
   if (win) {
     showPopup("You got it! 🎉",
-      `You linked to <strong>${game.answerMovie.title}</strong> in <strong>${game.maxTries - game.triesLeft}</strong> tries and <strong>${formatTime(game.sec)}</strong>.`
-    );
+      `The movie was <strong>${targetMovie.title}</strong>. You solved it in <strong>${6 - triesLeft}</strong> tries and <strong>${formatTime(seconds)}</strong>.`);
   } else {
-    showPopup("Out of tries!", `The correct movie was <strong>${game.answerMovie?.title || "unknown"}</strong>.`);
+    showPopup("Out of tries!", `The correct movie was <strong>${targetMovie.title}</strong>.`);
   }
 }
-
 function consumeTry() {
-  if (game.ended) return;
-  game.triesLeft -= 1;
+  triesLeft--;
   updateCounter();
-  if (game.triesLeft <= 0) endGame(false);
+  if (triesLeft <= 0) endGame(false);
 }
 
 // ---------- Events ----------
 els.submitBtn.addEventListener("click", () => {
-  if (game.ended || !game.started) return;
+  if (!started || ended) return;
   const guess = (els.movieInput.value || "").trim();
   if (!guess) return;
-  if (game.answerMovie && guess.toLowerCase() === game.answerMovie.title.toLowerCase()) {
+
+  if (guess.toLowerCase() === targetMovie.title.toLowerCase()) {
     addListItem(guess, "green");
     endGame(true);
   } else {
@@ -224,25 +170,21 @@ els.submitBtn.addEventListener("click", () => {
     consumeTry();
   }
   els.movieInput.value = "";
-  els.movieInput.focus();
 });
-els.skipBtn.addEventListener("click", () => {
-  if (game.ended || !game.started) return;
-  addListItem("Skipped", "grey");
-  consumeTry();
-});
-els.hintBtn.addEventListener("click", () => {
-  if (game.ended || !game.started) return;
-  const remaining = game.hintsPool.filter(h => !game.usedHints.has(h));
-  if (!remaining.length) {
-    els.status.textContent = "No more hints available.";
-    return;
+
+els.hintSkipBtn.addEventListener("click", () => {
+  if (!started || ended) return;
+  const remaining = hintsPool.filter(h => !usedHints.has(h));
+  if (remaining.length) {
+    const hint = remaining[Math.floor(Math.random()*remaining.length)];
+    usedHints.add(hint);
+    addListItem(hint, "orange");
+  } else {
+    addListItem("Skipped", "grey");
   }
-  const hint = remaining[Math.floor(Math.random()*remaining.length)];
-  game.usedHints.add(hint);
-  addListItem(hint, "orange");
   consumeTry();
 });
+
 els.movieInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") els.submitBtn.click();
 });
@@ -252,7 +194,7 @@ window.startGame = async function() {
   await initRound();
   startGame();
 };
-(async function bootstrap(){
+(async function bootstrap() {
   updateCounter();
   els.timer.textContent = "00:00";
   await initRound();
