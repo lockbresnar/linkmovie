@@ -2,77 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>🎬 Movie Link</title>
-  <!-- IMPORTANT: use the same stylesheet as Actor page -->
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movie Link</title>
+  <link rel="stylesheet" href="main-game.css" />
 </head>
 <body>
-
-  <!-- Intro overlay (starts timer on Start) -->
-  <div id="introOverlay" class="overlay visible">
+  <!-- Start overlay -->
+  <div id="start-overlay" class="overlay">
     <div class="overlay-content">
-      <h2>🎬 Movie Link</h2>
-      <p>Two actors share a hidden movie. Guess it in 6 tries. Skips reveal a new co-star and also use a try.</p>
-      <button onclick="startGame()">Start</button>
+      <h1>Movie Link</h1>
+      <button id="start-btn">Start</button>
     </div>
   </div>
 
-  <!-- Header -->
-  <header>
-    <h1>🎬 Movie Link</h1>
-    <div class="status-bar">
-      <div id="counterCircle">0</div>
-      <div id="timer">00:00</div>
-    </div>
-  </header>
+  <!-- Main container -->
+  <div class="game-container">
+    <header>
+      <h1>Movie Link</h1>
+    </header>
 
-  <!-- Same two-column layout used by Actor page -->
-  <div class="layout">
-    <!-- Left column -->
-    <div class="left-col">
-      <div class="actors">
-        <div>
-          <img id="actor1Img" alt="Actor 1"/>
-          <p id="actor1"></p>
-        </div>
-        <div>
-          <img id="actor2Img" alt="Actor 2"/>
-          <p id="actor2"></p>
-        </div>
-      </div>
+    <!-- Chain display -->
+    <div id="chain" class="chain"></div>
 
-      <div class="input-section">
-        <input id="movieInput" placeholder="Enter a movie..." />
-        <div id="suggestions"></div>
-        <div class="buttons">
-          <button class="btn-submit" onclick="submitGuess()">Submit</button>
-          <button class="btn-red" onclick="skipTurn()">Skip</button>
-        </div>
-      </div>
+    <!-- Input + buttons -->
+    <div class="controls">
+      <input
+        type="text"
+        id="guess-input"
+        placeholder="Enter a movie title..."
+      />
+      <button id="submit-btn">Submit</button>
+      <button id="skip-btn">Skip</button>
+      <button id="hint-btn">Hint</button>
     </div>
 
-    <!-- Right column -->
-    <div class="right-col">
-      <div id="chain">
-        <h3>Current Chain:</h3>
-        <ul id="chainList"></ul>
-      </div>
+    <!-- Status -->
+    <div class="status">
+      <p>Tries left: <span id="tries-left">6</span></p>
+      <p>Time: <span id="timer">0</span>s</p>
     </div>
   </div>
 
-  <!-- Popup (win/lose) -->
-  <div id="popup" class="popup">
-    <div class="popup-content">
-      <h2 id="popupTitle"></h2>
-      <p id="popupMsg"></p>
-      <button onclick="closePopup()">Close</button>
-    </div>
-  </div>
-
-  <!-- Footer (uses your centred custom logo via styles.css) -->
+  <!-- Footer -->
   <footer>
-    <img src="assets/tmdb-logo.svg" alt="TMDb Logo" />
+    <img src="tmdb-logo.png" alt="TMDb Logo" class="tmdb-logo" />
   </footer>
+
+  <!-- Win/Lose popup -->
+  <div id="result-popup" class="overlay hidden">
+    <div class="overlay-content" id="popup-content"></div>
+  </div>
 
   <script src="main-game.js"></script>
 </body>
