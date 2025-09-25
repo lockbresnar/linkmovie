@@ -1,6 +1,6 @@
-/* Movie Link Game Logic (error-hardened) */
+/* Movie Link Game Logic (no fallback actors or movies) */
 
-const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; // ✅ Your TMDb key
+const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMG_BASE = "https://image.tmdb.org/t/p/w300";
 
 const els = {
@@ -43,45 +43,35 @@ function addListItem(text, colorClass) {
   li.classList.add(colorClass);
   els.chainList.appendChild(li);
 }
-
 function updateCounter() {
   const used = game.maxTries - game.triesLeft;
   els.counter.textContent = used;
 }
-
 function formatTime(secTotal) {
   const m = Math.floor(secTotal / 60);
   const s = secTotal % 60;
   return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
-
 function startTimer() {
   game.timerId = setInterval(() => {
     game.sec += 1;
     els.timer.textContent = formatTime(game.sec);
   }, 1000);
 }
-
 function stopTimer() {
   if (game.timerId) clearInterval(game.timerId);
   game.timerId = null;
 }
 
 // ---------- Popups ----------
-window.openHelp = function () {
-  document.getElementById("helpPopup").style.display = "block";
-};
-window.closeHelp = function () {
-  document.getElementById("helpPopup").style.display = "none";
-};
 function showPopup(title, msg) {
   els.popupTitle.textContent = title;
   els.popupMsg.innerHTML = msg;
   els.popup.style.display = "block";
 }
-window.closePopup = function () {
-  els.popup.style.display = "none";
-};
+window.closePopup = () => { els.popup.style.display = "none"; };
+window.openHelp = () => { document.getElementById("helpPopup").style.display = "block"; };
+window.closeHelp = () => { document.getElementById("helpPopup").style.display = "none"; };
 
 // ---------- Actor setup ----------
 function randomOf(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
@@ -103,12 +93,7 @@ function pickActorsFromGlobals() {
       return [a, b];
     }
   }
-
-  // fallback pair
-  return [
-    { id: 6193, name: "Leonardo DiCaprio", profile_path: "/wo2hJpn04vbtmh0B9utCFdsQhxM.jpg" },
-    { id: 24045, name: "Joseph Gordon-Levitt", profile_path: "/4U9G4YwTlIEbBvQe5o6mXSHtYvC.jpg" },
-  ];
+  return null; // no fallback
 }
 
 function normalizeActor(o) {
@@ -118,45 +103,37 @@ function normalizeActor(o) {
     profile_path: o.profile_path || o.profile || o.img || null,
   };
 }
-
 function renderActors(a1, a2) {
   els.actor1Name.textContent = a1.name;
   els.actor2Name.textContent = a2.name;
-
-  els.actor1Img.src = a1.profile_path ? (IMG_BASE + a1.profile_path) : "assets/avatar.svg";
-  els.actor2Img.src = a2.profile_path ? (IMG_BASE + a2.profile_path) : "assets/avatar.svg";
-
-  els.actor1Img.onerror = () => { els.actor1Img.src = "assets/avatar.svg"; };
-  els.actor2Img.onerror = () => { els.actor2Img.src = "assets/avatar.svg"; };
+  els.actor1Img.src = a1.profile_path ? (IMG_BASE + a1.profile_path) : "";
+  els.actor2Img.src = a2.profile_path ? (IMG_BASE + a2.profile_path) : "";
+  els.actor1Img.alt = a1.name;
+  els.actor2Img.alt = a2.name;
 }
 
-// ---------- TMDb data ----------
+// ---------- TMDb ----------
 async function tmdbJson(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`TMDb error ${res.status}`);
   return res.json();
 }
-
 async function findCommonMovie(actorId1, actorId2) {
   const [c1, c2] = await Promise.all([
     tmdbJson(`https://api.themoviedb.org/3/person/${actorId1}/movie_credits?api_key=${API_KEY}`),
     tmdbJson(`https://api.themoviedb.org/3/person/${actorId2}/movie_credits?api_key=${API_KEY}`)
   ]);
-
   const set1 = new Map(c1.cast.map(m => [m.id, m]));
   const commons = c2.cast.filter(m => set1.has(m.id));
   if (!commons.length) return null;
-
   commons.sort((a,b)=> (b.popularity||0)-(a.popularity||0));
   return commons[0];
 }
-
 async function buildHints(movieId, excludedActorIds) {
   const [details, credits] = await Promise.all([
     tmdbJson(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${API_KEY}`),
     tmdbJson(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${API_KEY}`)
   ]);
-
   const hints = [];
   if (details.release_date) hints.push(`Released in ${details.release_date.slice(0,4)}`);
   if (Array.isArray(details.genres) && details.genres.length) {
@@ -164,42 +141,38 @@ async function buildHints(movieId, excludedActorIds) {
   }
   if (details.runtime) hints.push(`Runtime ≈ ${details.runtime} min`);
   if (details.tagline) hints.push(`Tagline: “${details.tagline}”`);
-
   const director = (credits.crew || []).find(c=>c.job==="Director");
   if (director) hints.push(`Directed by ${director.name}`);
-
   const castNames = (credits.cast || [])
     .filter(c => !excludedActorIds.includes(c.id))
     .slice(0,3).map(c=>c.name);
   if (castNames.length) hints.push(`Also stars: ${castNames.join(", ")}`);
-
   return [...new Set(hints)].slice(0, 8);
-}
-
-// ---------- Fallback answer ----------
-function fallbackAnswer() {
-  game.answerMovie = { id: 27205, title: "Inception" };
-  game.hintsPool = ["Released in 2010","Directed by Christopher Nolan","Stars Leonardo DiCaprio"];
 }
 
 // ---------- Game flow ----------
 async function initRound() {
-  try {
-    const [aRaw, bRaw] = pickActorsFromGlobals();
-    const a = normalizeActor(aRaw), b = normalizeActor(bRaw);
-    game.actor1 = a; game.actor2 = b;
-    renderActors(a, b);
+  const picked = pickActorsFromGlobals();
+  if (!picked) {
+    showPopup("Error", "No actors available. Please refresh.");
+    throw new Error("No actors available");
+  }
+  const [aRaw, bRaw] = picked;
+  const a = normalizeActor(aRaw), b = normalizeActor(bRaw);
+  game.actor1 = a; game.actor2 = b;
+  renderActors(a, b);
 
+  try {
     const common = await findCommonMovie(a.id, b.id);
     if (common) {
       game.answerMovie = { id: common.id, title: common.title || common.original_title };
       game.hintsPool = await buildHints(common.id, [a.id, b.id]);
     } else {
-      fallbackAnswer();
+      showPopup("Error", "No common movie found. Please refresh.");
     }
   } catch (err) {
     console.error("initRound failed:", err);
-    fallbackAnswer();
+    showPopup("Error", "Could not load data. Please refresh.");
   }
   els.status.textContent = "";
 }
@@ -217,22 +190,17 @@ function endGame(win) {
   if (game.ended) return;
   game.ended = true;
   stopTimer();
-
   els.movieInput.disabled = true;
   els.submitBtn.disabled = true;
   els.skipBtn.disabled = true;
   els.hintBtn.disabled = true;
 
   if (win) {
-    showPopup(
-      "You got it! 🎉",
+    showPopup("You got it! 🎉",
       `You linked to <strong>${game.answerMovie.title}</strong> in <strong>${game.maxTries - game.triesLeft}</strong> tries and <strong>${formatTime(game.sec)}</strong>.`
     );
   } else {
-    showPopup(
-      "Out of tries!",
-      `The correct movie was <strong>${game.answerMovie.title}</strong>.`
-    );
+    showPopup("Out of tries!", `The correct movie was <strong>${game.answerMovie?.title || "unknown"}</strong>.`);
   }
 }
 
@@ -248,7 +216,6 @@ els.submitBtn.addEventListener("click", () => {
   if (game.ended || !game.started) return;
   const guess = (els.movieInput.value || "").trim();
   if (!guess) return;
-
   if (game.answerMovie && guess.toLowerCase() === game.answerMovie.title.toLowerCase()) {
     addListItem(guess, "green");
     endGame(true);
@@ -259,13 +226,11 @@ els.submitBtn.addEventListener("click", () => {
   els.movieInput.value = "";
   els.movieInput.focus();
 });
-
 els.skipBtn.addEventListener("click", () => {
   if (game.ended || !game.started) return;
   addListItem("Skipped", "grey");
   consumeTry();
 });
-
 els.hintBtn.addEventListener("click", () => {
   if (game.ended || !game.started) return;
   const remaining = game.hintsPool.filter(h => !game.usedHints.has(h));
@@ -278,7 +243,6 @@ els.hintBtn.addEventListener("click", () => {
   addListItem(hint, "orange");
   consumeTry();
 });
-
 els.movieInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") els.submitBtn.click();
 });
@@ -288,7 +252,6 @@ window.startGame = async function() {
   await initRound();
   startGame();
 };
-
 (async function bootstrap(){
   updateCounter();
   els.timer.textContent = "00:00";
