@@ -1,4 +1,6 @@
-/* Main Game Styles */
+/* === v12 stable CSS === */
+
+/* Global */
 body {
   margin: 0;
   font-family: Arial, sans-serif;
@@ -23,6 +25,7 @@ header {
   text-decoration: underline;
 }
 
+/* Intro Overlay */
 #introOverlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -48,6 +51,7 @@ header {
   cursor: pointer;
 }
 
+/* Actors */
 .actors {
   display: flex;
   justify-content: center;
@@ -60,6 +64,8 @@ header {
   margin: 0 20px;
   object-fit: cover;
 }
+
+/* Controls */
 .controls {
   margin: 20px 0;
 }
@@ -82,6 +88,8 @@ button {
 button:hover {
   opacity: 0.9;
 }
+
+/* Counter + Timer */
 #counterCircle {
   display: inline-block;
   margin: 15px;
@@ -95,6 +103,8 @@ button:hover {
   font-size: 18px;
   margin: 10px 0;
 }
+
+/* Chain List */
 #chainList {
   list-style: none;
   padding: 0;
@@ -108,6 +118,7 @@ button:hover {
 #chainList li.orange { background: #e67e22; }
 #chainList li.grey { background: #555; }
 
+/* Popups */
 .popup {
   display: none;
   position: fixed;
@@ -130,18 +141,19 @@ button:hover {
   font-size: 20px;
 }
 
+/* Footer */
 .footer-logo {
   width: 80px;
   margin: 20px auto;
   display: block;
 }
 
-/* Autocomplete suggestions */
+/* === Autocomplete Suggestions (new) === */
 .input-wrapper {
   position: relative;
   display: inline-block;
   width: 100%;
-  max-width: 300px;
+  max-width: 300px; /* match input width */
 }
 
 #movieInput {
