@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>LinkMovie — Movie Link</title>
-  <link rel="stylesheet" href="main-game.css?v=1" />
+  <link rel="stylesheet" href="main-game.css?v=13" />
 </head>
 <body>
   <!-- Header -->
@@ -11,6 +11,14 @@
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
     <nav class="topbar-right">
       <a href="actor-chain.html" class="nav-link">Actor Chain</a>
+      <!-- ✅ Mode Toggle -->
+      <div class="mode-toggle">
+        <label class="switch">
+          <input type="checkbox" id="modeSwitch">
+          <span class="slider round"></span>
+        </label>
+        <span id="modeLabel">Unlimited</span>
+      </div>
       <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
     </nav>
   </header>
@@ -61,8 +69,9 @@
   <div id="introOverlay" class="overlay visible">
     <div class="overlay-card">
       <h2>🎬 Movie Link</h2>
-      <p>Guess the movie that features <strong>both</strong> actors.  
-      You have 6 total tries. Each Submit and Hint/Skip uses 1 try.</p>
+      <p>Guess the movie that features <strong>both</strong> actors.<br/>
+      You have 6 total tries. Each Submit and Hint/Skip uses 1 try.<br/>
+      <em>Switch between Unlimited or Daily mode with the slider above.</em></p>
       <button class="btn btn-submit" onclick="startGame()">Start</button>
     </div>
   </div>
@@ -80,10 +89,10 @@
     <p>
       • 6 tries total. Submit and Hint/Skip each use 1 try.<br/>
       • Hints are unique and shown in orange.<br/>
-      • When hints run out, Hint/Skip acts like Skip.<br/>
       • Correct movie shows in green with a win popup.<br/>
       • Run out of tries → lose popup with correct answer.<br/>
-      • Timer starts on Start, stops on win/lose.
+      • Timer starts on Start, stops on win/lose.<br/>
+      • Use the slider above to switch between <strong>Daily</strong> (same movie for everyone today) or <strong>Unlimited</strong> (random from Top 250 English films).
     </p>
   </div>
 
@@ -96,6 +105,6 @@
   <!-- Actor pool -->
   <script src="actors.js?v=1"></script>
   <!-- JS -->
-  <script src="main-game.js?v=5"></script>
+  <script src="main-game.js?v=13"></script>
 </body>
 </html>

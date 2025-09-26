@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (Top 250 English films, replay popup after end) */
+/* Movie Link Game Logic (Top 250 English films + Daily/Unlimited mode) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -11,9 +11,10 @@ let started = false;
 let ended = false;
 let seconds = 0;
 let timerId = null;
-let topEnglishMovies = []; // ✅ cache top 250 films
+let topEnglishMovies = [];
 let lastPopupTitle = "";
 let lastPopupMsg = "";
+let dailyMode = false; // ✅ default Unlimited
 
 // Elements
 const els = {
@@ -32,6 +33,8 @@ const els = {
   popupTitle: document.getElementById("popupTitle"),
   popupMsg: document.getElementById("popupMsg"),
   status: document.getElementById("status"),
+  modeSwitch: document.getElementById("modeSwitch"),
+  modeLabel: document.getElementById("modeLabel"),
 };
 
 // ---------- Helpers ----------
@@ -45,12 +48,10 @@ function updateCounter() {
   const used = 6 - triesLeft;
   els.counter.textContent = used;
 
-  // color gradient: green → orange → red
   let color;
-  if (used <= 2) color = "#2ecc71";     // green
-  else if (used <= 4) color = "#f39c12"; // orange
-  else color = "#e74c3c";               // red
-
+  if (used <= 2) color = "#2ecc71";     
+  else if (used <= 4) color = "#f39c12"; 
+  else color = "#e74c3c";               
   els.counter.style.backgroundColor = color;
 }
 function formatTime(secTotal) {
@@ -64,10 +65,7 @@ function startTimer() {
     els.timer.textContent = formatTime(seconds);
   }, 1000);
 }
-function stopTimer() {
-  if (timerId) clearInterval(timerId);
-  timerId = null;
-}
+function stopTimer() { if (timerId) clearInterval(timerId); timerId = null; }
 function showPopup(title, msg) {
   els.popupTitle.textContent = title;
   els.popupMsg.innerHTML = msg;
@@ -79,8 +77,9 @@ window.closeHelp = () => { document.getElementById("helpPopup").style.display = 
 
 // ---------- Load Top 250 English Films ----------
 async function loadTopEnglishFilms() {
+  if (topEnglishMovies.length) return topEnglishMovies;
   let movies = [];
-  let totalPages = 13; // 13 * 20 = 260, slice down to 250
+  let totalPages = 13;
   for (let page = 1; page <= totalPages; page++) {
     let res = await fetch(
       `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}` +
@@ -89,22 +88,30 @@ async function loadTopEnglishFilms() {
     let data = await res.json();
     movies = movies.concat(data.results);
   }
-  return movies.slice(0, 250); // ✅ top 250 only
+  topEnglishMovies = movies.slice(0, 250);
+  return topEnglishMovies;
 }
 
-// ---------- Load Actors ----------
+// ---------- Select Movie ----------
+async function selectMovie() {
+  let movies = await loadTopEnglishFilms();
+  if (dailyMode) {
+    const today = new Date();
+    const seed = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
+    const index = seed % movies.length;
+    return movies[index];
+  } else {
+    return movies[Math.floor(Math.random() * movies.length)];
+  }
+}
+
+// ---------- Init Round ----------
 async function initRound() {
   try {
-    if (!topEnglishMovies.length) {
-      topEnglishMovies = await loadTopEnglishFilms();
-    }
-
-    targetMovie = topEnglishMovies[Math.floor(Math.random() * topEnglishMovies.length)];
-
+    targetMovie = await selectMovie();
     let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
     let credits = await creditsRes.json();
 
-    // ✅ only top 5 billed actors with images
     let actorsWithPhotos = credits.cast.filter(c => c.profile_path).slice(0, 5);
     if (actorsWithPhotos.length < 2) {
       els.status.textContent = "Could not load actors. Refresh to try again.";
@@ -121,7 +128,6 @@ async function initRound() {
     els.actor2Name.textContent = endActor.name;
 
     await buildHints(targetMovie.id, [startActor.id, endActor.id]);
-
   } catch (err) {
     console.error("initRound failed:", err);
     els.status.textContent = "Error loading game. Please refresh.";
@@ -134,12 +140,9 @@ async function buildHints(movieId, excludedActorIds) {
       fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${API_KEY}`).then(r=>r.json()),
       fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${API_KEY}`).then(r=>r.json())
     ]);
-
     const hints = [];
     if (details.release_date) hints.push(`Released in ${details.release_date.slice(0,4)}`);
-    if (details.genres?.length) {
-      hints.push(`Genre: ${details.genres.map(g=>g.name).slice(0,2).join(", ")}`);
-    }
+    if (details.genres?.length) hints.push(`Genre: ${details.genres.map(g=>g.name).slice(0,2).join(", ")}`);
     if (details.runtime) hints.push(`Runtime ≈ ${details.runtime} min`);
     if (details.tagline) hints.push(`Tagline: “${details.tagline}”`);
     const director = (credits.crew||[]).find(c=>c.job==="Director");
@@ -148,12 +151,8 @@ async function buildHints(movieId, excludedActorIds) {
       .filter(c => !excludedActorIds.includes(c.id))
       .slice(0,3).map(c=>c.name);
     if (castNames.length) hints.push(`Also stars: ${castNames.join(", ")}`);
-
     hintsPool = [...new Set(hints)].slice(0, 8);
-  } catch (err) {
-    console.error("buildHints failed:", err);
-    hintsPool = [];
-  }
+  } catch (err) { console.error("buildHints failed:", err); hintsPool = []; }
 }
 
 // ---------- Game flow ----------
@@ -166,16 +165,12 @@ function doStartGame() {
   startTimer();
 }
 function endGame(win) {
-  if (ended) {
-    // ✅ re-show popup if game already ended
-    showPopup(lastPopupTitle, lastPopupMsg);
-    return;
-  }
+  if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
   ended = true;
   stopTimer();
   els.movieInput.disabled = true;
-  els.submitBtn.disabled = false; // keep active for popup replay
-  els.hintSkipBtn.disabled = false; // keep active for popup replay
+  els.submitBtn.disabled = false;
+  els.hintSkipBtn.disabled = false;
 
   if (win) {
     lastPopupTitle = "You got it! 🎉";
@@ -186,44 +181,29 @@ function endGame(win) {
   }
   showPopup(lastPopupTitle, lastPopupMsg);
 }
-function consumeTry() {
-  triesLeft--;
-  updateCounter();
-  if (triesLeft <= 0) endGame(false);
-}
+function consumeTry() { triesLeft--; updateCounter(); if (triesLeft <= 0) endGame(false); }
 
 // ---------- Events ----------
 els.submitBtn.addEventListener("click", () => {
-  if (ended) {
-    // ✅ reopen popup after game finished
-    showPopup(lastPopupTitle, lastPopupMsg);
-    return;
-  }
+  if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
   if (!started) return;
   const guess = (els.movieInput.value || "").trim();
   if (!guess) return;
-
   if (guess.toLowerCase() === targetMovie.title.toLowerCase()) {
-    addListItem(guess, "green");
-    endGame(true);
+    addListItem(guess, "green"); endGame(true);
   } else {
-    addListItem(guess, "grey");
-    consumeTry();
+    addListItem(guess, "grey"); consumeTry();
   }
   els.movieInput.value = "";
 });
 
 els.hintSkipBtn.addEventListener("click", () => {
-  if (ended) {
-    showPopup(lastPopupTitle, lastPopupMsg);
-    return;
-  }
+  if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
   if (!started) return;
   const remaining = hintsPool.filter(h => !usedHints.has(h));
   if (remaining.length) {
     const hint = remaining[Math.floor(Math.random()*remaining.length)];
-    usedHints.add(hint);
-    addListItem(hint, "orange");
+    usedHints.add(hint); addListItem(hint, "orange");
   } else {
     addListItem("Skipped", "grey");
   }
@@ -234,17 +214,21 @@ els.movieInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") els.submitBtn.click();
 });
 
+// ---------- Mode Switch ----------
+els.modeSwitch.addEventListener("change", async () => {
+  dailyMode = els.modeSwitch.checked;
+  els.modeLabel.textContent = dailyMode ? "Daily" : "Unlimited";
+  await initRound(); // reload actors for new mode
+});
+
 // ---------- Init ----------
 window.startGame = async function() {
-  if (!targetMovie) {
-    await initRound();
-  }
+  if (!targetMovie) { await initRound(); }
   doStartGame();
 };
 
-// preload actors once behind overlay
 (async function bootstrap() {
   updateCounter();
   els.timer.textContent = "00:00";
-  await initRound(); // actors visible behind overlay
+  await initRound();
 })();
