@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (Top 250 English films + Daily/Unlimited mode) */
+/* Movie Link Game Logic (Top 250 English films, replay popup after end) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -11,10 +11,9 @@ let started = false;
 let ended = false;
 let seconds = 0;
 let timerId = null;
-let topEnglishMovies = [];
+let topEnglishMovies = []; 
 let lastPopupTitle = "";
 let lastPopupMsg = "";
-let dailyMode = false; // ✅ default Unlimited
 
 // Elements
 const els = {
@@ -33,8 +32,6 @@ const els = {
   popupTitle: document.getElementById("popupTitle"),
   popupMsg: document.getElementById("popupMsg"),
   status: document.getElementById("status"),
-  modeSwitch: document.getElementById("modeSwitch"),
-  modeLabel: document.getElementById("modeLabel"),
 };
 
 // ---------- Helpers ----------
@@ -47,7 +44,6 @@ function addListItem(text, color) {
 function updateCounter() {
   const used = 6 - triesLeft;
   els.counter.textContent = used;
-
   let color;
   if (used <= 2) color = "#2ecc71";     
   else if (used <= 4) color = "#f39c12"; 
@@ -65,7 +61,10 @@ function startTimer() {
     els.timer.textContent = formatTime(seconds);
   }, 1000);
 }
-function stopTimer() { if (timerId) clearInterval(timerId); timerId = null; }
+function stopTimer() {
+  if (timerId) clearInterval(timerId);
+  timerId = null;
+}
 function showPopup(title, msg) {
   els.popupTitle.textContent = title;
   els.popupMsg.innerHTML = msg;
@@ -77,7 +76,6 @@ window.closeHelp = () => { document.getElementById("helpPopup").style.display = 
 
 // ---------- Load Top 250 English Films ----------
 async function loadTopEnglishFilms() {
-  if (topEnglishMovies.length) return topEnglishMovies;
   let movies = [];
   let totalPages = 13;
   for (let page = 1; page <= totalPages; page++) {
@@ -88,45 +86,30 @@ async function loadTopEnglishFilms() {
     let data = await res.json();
     movies = movies.concat(data.results);
   }
-  topEnglishMovies = movies.slice(0, 250);
-  return topEnglishMovies;
+  return movies.slice(0, 250); 
 }
 
-// ---------- Select Movie ----------
-async function selectMovie() {
-  let movies = await loadTopEnglishFilms();
-  if (dailyMode) {
-    const today = new Date();
-    const seed = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
-    const index = seed % movies.length;
-    return movies[index];
-  } else {
-    return movies[Math.floor(Math.random() * movies.length)];
-  }
-}
-
-// ---------- Init Round ----------
+// ---------- Load Actors ----------
 async function initRound() {
   try {
-    targetMovie = await selectMovie();
+    if (!topEnglishMovies.length) {
+      topEnglishMovies = await loadTopEnglishFilms();
+    }
+    targetMovie = topEnglishMovies[Math.floor(Math.random() * topEnglishMovies.length)];
     let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
     let credits = await creditsRes.json();
-
     let actorsWithPhotos = credits.cast.filter(c => c.profile_path).slice(0, 5);
     if (actorsWithPhotos.length < 2) {
       els.status.textContent = "Could not load actors. Refresh to try again.";
       return;
     }
-
     let shuffled = actorsWithPhotos.sort(() => 0.5 - Math.random()).slice(0, 2);
     startActor = shuffled[0];
     endActor = shuffled[1];
-
     els.actor1Img.src = IMAGE_URL + startActor.profile_path;
     els.actor1Name.textContent = startActor.name;
     els.actor2Img.src = IMAGE_URL + endActor.profile_path;
     els.actor2Name.textContent = endActor.name;
-
     await buildHints(targetMovie.id, [startActor.id, endActor.id]);
   } catch (err) {
     console.error("initRound failed:", err);
@@ -152,7 +135,10 @@ async function buildHints(movieId, excludedActorIds) {
       .slice(0,3).map(c=>c.name);
     if (castNames.length) hints.push(`Also stars: ${castNames.join(", ")}`);
     hintsPool = [...new Set(hints)].slice(0, 8);
-  } catch (err) { console.error("buildHints failed:", err); hintsPool = []; }
+  } catch (err) {
+    console.error("buildHints failed:", err);
+    hintsPool = [];
+  }
 }
 
 // ---------- Game flow ----------
@@ -165,13 +151,15 @@ function doStartGame() {
   startTimer();
 }
 function endGame(win) {
-  if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
+  if (ended) {
+    showPopup(lastPopupTitle, lastPopupMsg);
+    return;
+  }
   ended = true;
   stopTimer();
   els.movieInput.disabled = true;
-  els.submitBtn.disabled = false;
-  els.hintSkipBtn.disabled = false;
-
+  els.submitBtn.disabled = false; 
+  els.hintSkipBtn.disabled = false; 
   if (win) {
     lastPopupTitle = "You got it! 🎉";
     lastPopupMsg = `The movie was <strong>${targetMovie.title}</strong>. You solved it in <strong>${6 - triesLeft}</strong> tries and <strong>${formatTime(seconds)}</strong>.`;
@@ -181,7 +169,11 @@ function endGame(win) {
   }
   showPopup(lastPopupTitle, lastPopupMsg);
 }
-function consumeTry() { triesLeft--; updateCounter(); if (triesLeft <= 0) endGame(false); }
+function consumeTry() {
+  triesLeft--;
+  updateCounter();
+  if (triesLeft <= 0) endGame(false);
+}
 
 // ---------- Events ----------
 els.submitBtn.addEventListener("click", () => {
@@ -190,43 +182,38 @@ els.submitBtn.addEventListener("click", () => {
   const guess = (els.movieInput.value || "").trim();
   if (!guess) return;
   if (guess.toLowerCase() === targetMovie.title.toLowerCase()) {
-    addListItem(guess, "green"); endGame(true);
+    addListItem(guess, "green");
+    endGame(true);
   } else {
-    addListItem(guess, "grey"); consumeTry();
+    addListItem(guess, "grey");
+    consumeTry();
   }
   els.movieInput.value = "";
 });
-
 els.hintSkipBtn.addEventListener("click", () => {
   if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
   if (!started) return;
   const remaining = hintsPool.filter(h => !usedHints.has(h));
   if (remaining.length) {
     const hint = remaining[Math.floor(Math.random()*remaining.length)];
-    usedHints.add(hint); addListItem(hint, "orange");
+    usedHints.add(hint);
+    addListItem(hint, "orange");
   } else {
     addListItem("Skipped", "grey");
   }
   consumeTry();
 });
-
 els.movieInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") els.submitBtn.click();
 });
 
-// ---------- Mode Switch ----------
-els.modeSwitch.addEventListener("change", async () => {
-  dailyMode = els.modeSwitch.checked;
-  els.modeLabel.textContent = dailyMode ? "Daily" : "Unlimited";
-  await initRound(); // reload actors for new mode
-});
-
 // ---------- Init ----------
 window.startGame = async function() {
-  if (!targetMovie) { await initRound(); }
+  if (!targetMovie) {
+    await initRound();
+  }
   doStartGame();
 };
-
 (async function bootstrap() {
   updateCounter();
   els.timer.textContent = "00:00";
