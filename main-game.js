@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (Daily + Infinite) */
+/* Movie Link Game Logic (Daily + Infinite, global actors) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -122,24 +122,6 @@ async function restoreDailyState() {
   lastPopupTitle = savedState.lastPopupTitle;
   lastPopupMsg = savedState.lastPopupMsg;
 
-  if (savedState.targetMovieId) {
-    targetMovie = topEnglishMovies.find(m => m.id === savedState.targetMovieId);
-    if (targetMovie) {
-      let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
-      let credits = await creditsRes.json();
-      let actorsWithPhotos = credits.cast.filter(c => c.profile_path).slice(0, 5);
-      const seed = getTodaySeed();
-      const idx1 = seed % actorsWithPhotos.length;
-      const idx2 = (Math.floor(seed / 10)) % actorsWithPhotos.length;
-      startActor = actorsWithPhotos[idx1];
-      endActor = actorsWithPhotos[idx2 === idx1 ? (idx2 + 1) % actorsWithPhotos.length : idx2];
-      els.actor1Img.src = IMAGE_URL + startActor.profile_path;
-      els.actor1Name.textContent = startActor.name;
-      els.actor2Img.src = IMAGE_URL + endActor.profile_path;
-      els.actor2Name.textContent = endActor.name;
-      await buildHints(targetMovie.id, [startActor.id, endActor.id]);
-    }
-  }
   if (ended && lastPopupTitle) {
     showPopup(lastPopupTitle, lastPopupMsg);
   }
@@ -189,12 +171,14 @@ async function initRound() {
     }
 
     if (dailyMode) {
+      // Deterministic actor selection (global consistency)
       const seed = getTodaySeed();
       const idx1 = seed % actorsWithPhotos.length;
-      const idx2 = (Math.floor(seed / 10)) % actorsWithPhotos.length;
+      const idx2 = Math.floor(seed / 10) % actorsWithPhotos.length;
       startActor = actorsWithPhotos[idx1];
       endActor = actorsWithPhotos[idx2 === idx1 ? (idx2 + 1) % actorsWithPhotos.length : idx2];
     } else {
+      // Infinite = random
       let shuffled = actorsWithPhotos.sort(() => 0.5 - Math.random()).slice(0, 2);
       startActor = shuffled[0];
       endActor = shuffled[1];
@@ -329,7 +313,6 @@ window.startGame = async function() {
 };
 
 (async function bootstrap() {
-  // load saved mode
   const savedMode = localStorage.getItem("mode");
   if (savedMode === "infinite") dailyMode = false;
 
@@ -342,7 +325,6 @@ window.startGame = async function() {
     startTimer();
   }
 
-  // mark active link
   if (dailyMode) {
     els.dailyLink.style.textDecoration = "underline";
   } else {
