@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (Top 250 English films, top 5 billed, Hint/Skip, counter colors) */
+/* Movie Link Game Logic (Top 250 English films, replay popup after end) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -12,6 +12,8 @@ let ended = false;
 let seconds = 0;
 let timerId = null;
 let topEnglishMovies = []; // ✅ cache top 250 films
+let lastPopupTitle = "";
+let lastPopupMsg = "";
 
 // Elements
 const els = {
@@ -164,19 +166,25 @@ function doStartGame() {
   startTimer();
 }
 function endGame(win) {
-  if (ended) return;
+  if (ended) {
+    // ✅ re-show popup if game already ended
+    showPopup(lastPopupTitle, lastPopupMsg);
+    return;
+  }
   ended = true;
   stopTimer();
   els.movieInput.disabled = true;
-  els.submitBtn.disabled = true;
-  els.hintSkipBtn.disabled = true;
+  els.submitBtn.disabled = false; // keep active for popup replay
+  els.hintSkipBtn.disabled = false; // keep active for popup replay
 
   if (win) {
-    showPopup("You got it! 🎉",
-      `The movie was <strong>${targetMovie.title}</strong>. You solved it in <strong>${6 - triesLeft}</strong> tries and <strong>${formatTime(seconds)}</strong>.`);
+    lastPopupTitle = "You got it! 🎉";
+    lastPopupMsg = `The movie was <strong>${targetMovie.title}</strong>. You solved it in <strong>${6 - triesLeft}</strong> tries and <strong>${formatTime(seconds)}</strong>.`;
   } else {
-    showPopup("Out of tries!", `The correct movie was <strong>${targetMovie.title}</strong>.`);
+    lastPopupTitle = "Out of tries!";
+    lastPopupMsg = `The correct movie was <strong>${targetMovie.title}</strong>.`;
   }
+  showPopup(lastPopupTitle, lastPopupMsg);
 }
 function consumeTry() {
   triesLeft--;
@@ -186,7 +194,12 @@ function consumeTry() {
 
 // ---------- Events ----------
 els.submitBtn.addEventListener("click", () => {
-  if (!started || ended) return;
+  if (ended) {
+    // ✅ reopen popup after game finished
+    showPopup(lastPopupTitle, lastPopupMsg);
+    return;
+  }
+  if (!started) return;
   const guess = (els.movieInput.value || "").trim();
   if (!guess) return;
 
@@ -201,7 +214,11 @@ els.submitBtn.addEventListener("click", () => {
 });
 
 els.hintSkipBtn.addEventListener("click", () => {
-  if (!started || ended) return;
+  if (ended) {
+    showPopup(lastPopupTitle, lastPopupMsg);
+    return;
+  }
+  if (!started) return;
   const remaining = hintsPool.filter(h => !usedHints.has(h));
   if (remaining.length) {
     const hint = remaining[Math.floor(Math.random()*remaining.length)];
