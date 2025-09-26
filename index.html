@@ -15,6 +15,7 @@
     </nav>
   </header>
 
+  <!-- Intro overlay (shown only if Daily hasn't started today) -->
   <div id="introOverlay" class="visible">
     <div class="overlay-content">
       <h1>Movie Link</h1>
@@ -36,9 +37,10 @@
       </div>
 
       <div class="controls">
+        <!-- Wrapper only for positioning the dropdown; no visual changes -->
         <div class="input-wrapper">
           <input type="text" id="movieInput" placeholder="Guess a movie..."/>
-          <!-- Suggestions container -->
+          <!-- Autocomplete suggestions -->
           <div id="suggestions"></div>
         </div>
         <button id="submitBtn">Submit</button>
@@ -53,6 +55,7 @@
     </div>
   </main>
 
+  <!-- Result popup -->
   <div id="popup" class="popup">
     <div class="popup-content">
       <span class="close" onclick="closePopup()">&times;</span>
@@ -61,6 +64,7 @@
     </div>
   </div>
 
+  <!-- Help popup -->
   <div id="helpPopup" class="popup">
     <div class="popup-content">
       <span class="close" onclick="closeHelp()">&times;</span>
