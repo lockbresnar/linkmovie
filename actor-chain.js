@@ -1,204 +1,247 @@
-const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
-const IMG = "https://image.tmdb.org/t/p/w200";
+/* Actor Chain with Daily + Infinite modes, persistent timer, using ACTOR_POOL */
 
-let startActor = null;
-let endActor = null;
+let startActor, endActor;
+let triesLeft = 6;
+let started = false;
+let ended = false;
+let seconds = 0;
+let timerId = null;
+let dailyMode = true;
+let lastPopupTitle = "";
+let lastPopupMsg = "";
 
-let steps = 0;
-let startTime = 0;
-let timerInterval = null;
+const els = {
+  overlay: document.getElementById("introOverlay"),
+  actor1Img: document.getElementById("actor1Img"),
+  actor2Img: document.getElementById("actor2Img"),
+  actor1Name: document.getElementById("actor1"),
+  actor2Name: document.getElementById("actor2"),
+  actorInput: document.getElementById("actorInput"),
+  submitBtn: document.getElementById("submitBtn"),
+  skipBtn: document.getElementById("skipBtn"),
+  chainList: document.getElementById("chainList"),
+  counter: document.getElementById("counterCircle"),
+  timer: document.getElementById("timer"),
+  popup: document.getElementById("popup"),
+  popupTitle: document.getElementById("popupTitle"),
+  popupMsg: document.getElementById("popupMsg"),
+  status: document.getElementById("status"),
+  dailyLink: document.getElementById("dailyLink"),
+  infiniteLink: document.getElementById("infiniteLink"),
+};
 
-// core chain state
-let lastCastIds = null; // Set<number> of actors from last accepted movie
-
-// --- UI helpers ---
-function setCounter(val){
-  const el = document.getElementById("counterCircle");
-  el.textContent = val;
-  if (val < 4) el.style.background = "#4edd00";
-  else if (val < 7) el.style.background = "#fa8b48";
-  else el.style.background = "#e53935";
+// Helpers
+function getTodaySeed() {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
-function setTimer(ms){
-  const s = Math.floor(ms/1000), m = Math.floor(s/60);
-  document.getElementById("timer").textContent =
-    `${String(m).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+function seededRandom(seed, max) {
+  const x = Math.sin(seed) * 10000;
+  return Math.floor((x - Math.floor(x)) * max);
 }
-function addChainItem(text,color){
-  const li=document.createElement("li");
-  li.textContent=text; li.className=color;
-  document.getElementById("chainList").appendChild(li);
+function addListItem(text, color) {
+  const li = document.createElement("li");
+  li.textContent = text;
+  li.classList.add(color);
+  els.chainList.appendChild(li);
 }
-
-// --- actor fetching from name-only pool ---
-async function pickActorByName(name){
-  const res = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${API_KEY}&query=${encodeURIComponent(name)}`);
-  const data = await res.json();
-  if (data.results && data.results.length){
-    const p = data.results[0];
-    return { id:p.id, name:p.name, profile_path:p.profile_path||"" };
-  }
-  return { id:null, name, profile_path:"" };
+function updateCounter() {
+  const used = 6 - triesLeft;
+  els.counter.textContent = used;
+  let color;
+  if (used <= 2) color = "#2ecc71";
+  else if (used <= 4) color = "#f39c12";
+  else color = "#e74c3c";
+  els.counter.style.backgroundColor = color;
 }
-async function pickRandomActor(){
-  const name = ACTOR_POOL[Math.floor(Math.random()*ACTOR_POOL.length)];
-  return pickActorByName(name);
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
 }
-
-// --- game start ---
-async function startGame(){
-  // hide overlay
-  document.getElementById("introOverlay").classList.remove("visible");
-
-  // reset ui/state
-  steps=0; setCounter(steps);
-  document.getElementById("chainList").innerHTML="";
-  lastCastIds = null;
-
-  // pick actors
-  startActor = await pickRandomActor();
-  endActor = await pickRandomActor();
-  while (startActor.id && endActor.id && startActor.id===endActor.id){
-    endActor = await pickRandomActor();
-  }
-
-  // show
-  document.getElementById("actor1Img").src = startActor.profile_path ? IMG+startActor.profile_path : "";
-  document.getElementById("actor1").textContent = startActor.name;
-  document.getElementById("actor2Img").src = endActor.profile_path ? IMG+endActor.profile_path : "";
-  document.getElementById("actor2").textContent = endActor.name;
-
-  // timer
-  if (timerInterval) clearInterval(timerInterval);
-  startTime = Date.now();
-  setTimer(0);
-  timerInterval = setInterval(()=>setTimer(Date.now()-startTime),1000);
-
-  // wire UI events
-  wireControls();
+function showPopup(title, msg) {
+  els.popupTitle.textContent = title;
+  els.popupMsg.innerHTML = msg;
+  els.popup.style.display = "block";
 }
+window.closePopup = () => { els.popup.style.display = "none"; };
+window.openHelp = () => { document.getElementById("helpPopup").style.display = "block"; };
+window.closeHelp = () => { document.getElementById("helpPopup").style.display = "none"; };
 
-// --- controls wiring (once) ---
-let wired = false;
-function wireControls(){
-  if (wired) return;
-  wired = true;
-
-  // suggestions
-  const input = document.getElementById("movieInput");
-  const box = document.getElementById("suggestions");
-  input.addEventListener("input", async (e)=>{
-    const q = e.target.value.trim();
-    box.innerHTML="";
-    if (q.length<3) return;
-    const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(q)}`);
-    const data = await res.json();
-    data.results.slice(0,7).forEach(m=>{
-      const d=document.createElement("div");
-      d.textContent=m.title;
-      d.onclick=()=>{ input.value=m.title; box.innerHTML=""; };
-      box.appendChild(d);
-    });
-  });
-
-  // submit
-  document.querySelector(".btn-submit").addEventListener("click", submitGuess);
-  // reset (chain only)
-  document.querySelector(".btn-red").addEventListener("click", resetChain);
-}
-
-// --- submit logic: chain-follow mechanic ---
-async function submitGuess(){
-  const q = document.getElementById("movieInput").value.trim();
-  if (!q) return;
-
-  // search movie
-  const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(q)}`);
-  const data = await res.json();
-  if (!data.results.length){
-    addChainItem(q,"grey");
-    clearInput();
-    return;
-  }
-  const movie = data.results[0];
-
-  // credits
-  const credRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
-  const credits = await credRes.json();
-  const castIds = new Set(credits.cast.map(c=>c.id));
-
-  const includesStart = castIds.has(startActor.id);
-  const includesTarget = castIds.has(endActor.id);
-
-  // first valid must include start actor
-  if (lastCastIds===null){
-    if (!includesStart){
-      addChainItem(movie.title,"grey");
-      clearInput();
-      return;
+// Timer
+function startTimer() {
+  if (dailyMode) {
+    if (!localStorage.getItem("actorDailyStart")) {
+      localStorage.setItem("actorDailyStart", Date.now().toString());
     }
-    // accept blue
-    addChainItem(movie.title,"blue");
-    steps+=1; setCounter(steps);
-    lastCastIds = castIds;
-    if (includesTarget){
-      winNow(); // edge case: first movie also has target
-    }
-    clearInput();
-    return;
   }
-
-  // subsequent: must share at least one actor with previous accepted movie
-  const sharesWithLast = [...lastCastIds].some(id=>castIds.has(id));
-  if (!sharesWithLast){
-    addChainItem(movie.title,"grey");
-    clearInput();
-    return;
-  }
-
-  // valid link → color rules
-  if (includesTarget){
-    addChainItem(movie.title,"green");
-    steps+=1; setCounter(steps);
-    winNow();
-  } else if (includesStart){
-    addChainItem(movie.title,"blue");
-    steps+=1; setCounter(steps);
-    lastCastIds = castIds;
+  timerId = setInterval(updateTimer, 1000);
+}
+function stopTimer() {
+  if (timerId) clearInterval(timerId);
+  timerId = null;
+}
+function updateTimer() {
+  if (dailyMode) {
+    const start = parseInt(localStorage.getItem("actorDailyStart"), 10);
+    const now = Date.now();
+    seconds = Math.floor((now - start) / 1000);
+    els.timer.textContent = formatTime(seconds);
   } else {
-    addChainItem(movie.title,"orange");
-    steps+=1; setCounter(steps);
-    lastCastIds = castIds;
+    seconds++;
+    els.timer.textContent = formatTime(seconds);
+  }
+}
+
+// State
+function saveDailyState() {
+  if (!dailyMode) return;
+  const state = {
+    triesLeft,
+    ended,
+    started,
+    chain: els.chainList.innerHTML,
+    lastPopupTitle,
+    lastPopupMsg,
+    startActor,
+    endActor
+  };
+  localStorage.setItem("actorDailyState", JSON.stringify(state));
+}
+function restoreDailyState() {
+  const saved = JSON.parse(localStorage.getItem("actorDailyState") || "null");
+  if (!saved) return;
+  triesLeft = saved.triesLeft;
+  ended = saved.ended;
+  started = saved.started;
+  els.chainList.innerHTML = saved.chain;
+  lastPopupTitle = saved.lastPopupTitle;
+  lastPopupMsg = saved.lastPopupMsg;
+  if (ended && lastPopupTitle) {
+    showPopup(lastPopupTitle, lastPopupMsg);
+  }
+}
+
+// Game logic
+function initRound() {
+  if (dailyMode) {
+    const seed = getTodaySeed();
+    startActor = ACTOR_POOL[seededRandom(seed, ACTOR_POOL.length)];
+    endActor = ACTOR_POOL[seededRandom(seed + 1, ACTOR_POOL.length)];
+  } else {
+    const shuffled = ACTOR_POOL.sort(() => 0.5 - Math.random()).slice(0, 2);
+    startActor = shuffled[0];
+    endActor = shuffled[1];
   }
 
-  clearInput();
+  els.actor1Img.src = startActor.img;
+  els.actor1Name.textContent = startActor.name;
+  els.actor2Img.src = endActor.img;
+  els.actor2Name.textContent = endActor.name;
 }
 
-function clearInput(){
-  document.getElementById("movieInput").value="";
-  document.getElementById("suggestions").innerHTML="";
+function doStartGame() {
+  if (started) return;
+  started = true;
+  els.overlay.classList.remove("visible");
+  updateCounter();
+  startTimer();
+}
+function endGame(win) {
+  if (ended) {
+    showPopup(lastPopupTitle, lastPopupMsg);
+    return;
+  }
+  ended = true;
+  stopTimer();
+  els.actorInput.disabled = true;
+  els.submitBtn.disabled = false;
+  els.skipBtn.disabled = false;
+  if (win) {
+    lastPopupTitle = "You got it! 🎉";
+    lastPopupMsg = `You solved it in <strong>${6 - triesLeft}</strong> tries and <strong>${formatTime(seconds)}</strong>.`;
+  } else {
+    lastPopupTitle = "Out of tries!";
+    lastPopupMsg = `Better luck tomorrow.`;
+  }
+  showPopup(lastPopupTitle, lastPopupMsg);
+  saveDailyState();
+}
+function consumeTry() {
+  triesLeft--;
+  updateCounter();
+  saveDailyState();
+  if (triesLeft <= 0) endGame(false);
 }
 
-function resetChain(){
-  document.getElementById("chainList").innerHTML="";
-  steps=0; setCounter(steps);
-  lastCastIds = null; // force next valid to include start actor again
-  document.getElementById("status").textContent="";
-}
+// Events
+els.submitBtn.addEventListener("click", () => {
+  if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
+  if (!started) return;
+  const guess = (els.actorInput.value || "").trim();
+  if (!guess) return;
+  if (guess.toLowerCase() === endActor.name.toLowerCase()) {
+    addListItem(guess, "green");
+    endGame(true);
+  } else {
+    addListItem(guess, "grey");
+    consumeTry();
+  }
+  els.actorInput.value = "";
+  saveDailyState();
+});
+els.skipBtn.addEventListener("click", () => {
+  if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
+  if (!started) return;
+  addListItem("Skipped", "grey");
+  consumeTry();
+  saveDailyState();
+});
+els.actorInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") els.submitBtn.click();
+});
 
-function winNow(){
-  if (timerInterval) clearInterval(timerInterval);
-  showPopup("🎉 You linked them!",
-    `Steps: ${steps}\nTime: ${document.getElementById("timer").textContent}`);
-}
+// Mode switching
+els.dailyLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  localStorage.setItem("actorMode", "daily");
+  dailyMode = true;
+  location.reload();
+});
+els.infiniteLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  localStorage.setItem("actorMode", "infinite");
+  dailyMode = false;
+  location.reload();
+});
 
-// popups + help
-function showPopup(title,msg){
-  const p=document.getElementById("popup");
-  document.getElementById("popupTitle").textContent=title;
-  document.getElementById("popupMsg").textContent=msg.replace(/\n/g,"<br/>");
-  p.style.display="block";
-}
-function closePopup(){ document.getElementById("popup").style.display="none"; }
-function openHelp(){ document.getElementById("helpPopup").style.display="block"; }
-function closeHelp(){ document.getElementById("helpPopup").style.display="none"; }
+// Init
+window.startGame = function() {
+  if (!startActor) {
+    initRound();
+  }
+  doStartGame();
+  saveDailyState();
+};
+
+(function bootstrap() {
+  const savedMode = localStorage.getItem("actorMode");
+  if (savedMode === "infinite") dailyMode = false;
+
+  updateCounter();
+  els.timer.textContent = "00:00";
+  initRound();
+
+  if (dailyMode) {
+    restoreDailyState();
+    const savedState = JSON.parse(localStorage.getItem("actorDailyState") || "null");
+    if (savedState && savedState.started) {
+      els.overlay.classList.remove("visible");
+      started = true;
+      if (!ended) startTimer();
+    }
+  }
+
+  if (dailyMode) els.dailyLink.style.textDecoration = "underline";
+  else els.infiniteLink.style.textDecoration = "underline";
+})();
