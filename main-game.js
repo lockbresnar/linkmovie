@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (Top 250 English films, Daily/Infinite modes) */
+/* Movie Link Game Logic (Daily + Infinite) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -14,8 +14,6 @@ let timerId = null;
 let topEnglishMovies = []; 
 let lastPopupTitle = "";
 let lastPopupMsg = "";
-
-// Mode state
 let dailyMode = true;
 
 // Elements
@@ -64,16 +62,6 @@ function formatTime(secTotal) {
   const s = secTotal % 60;
   return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
-function startTimer() {
-  timerId = setInterval(() => {
-    seconds++;
-    els.timer.textContent = formatTime(seconds);
-  }, 1000);
-}
-function stopTimer() {
-  if (timerId) clearInterval(timerId);
-  timerId = null;
-}
 function showPopup(title, msg) {
   els.popupTitle.textContent = title;
   els.popupMsg.innerHTML = msg;
@@ -82,6 +70,80 @@ function showPopup(title, msg) {
 window.closePopup = () => { els.popup.style.display = "none"; };
 window.openHelp = () => { document.getElementById("helpPopup").style.display = "block"; };
 window.closeHelp = () => { document.getElementById("helpPopup").style.display = "none"; };
+
+// ---------- Timer ----------
+function startTimer() {
+  if (dailyMode) {
+    if (!localStorage.getItem("dailyStart")) {
+      localStorage.setItem("dailyStart", Date.now().toString());
+    }
+  }
+  timerId = setInterval(updateTimer, 1000);
+}
+function stopTimer() {
+  if (timerId) clearInterval(timerId);
+  timerId = null;
+}
+function updateTimer() {
+  if (dailyMode) {
+    const start = parseInt(localStorage.getItem("dailyStart"), 10);
+    const now = Date.now();
+    seconds = Math.floor((now - start) / 1000);
+    els.timer.textContent = formatTime(seconds);
+  } else {
+    seconds++;
+    els.timer.textContent = formatTime(seconds);
+  }
+}
+
+// ---------- State save/load (Daily only) ----------
+function saveDailyState() {
+  if (!dailyMode) return;
+  const state = {
+    triesLeft,
+    ended,
+    started,
+    chain: els.chainList.innerHTML,
+    usedHints: Array.from(usedHints),
+    lastPopupTitle,
+    lastPopupMsg,
+    targetMovieId: targetMovie?.id || null
+  };
+  localStorage.setItem("dailyState", JSON.stringify(state));
+}
+async function restoreDailyState() {
+  const savedState = JSON.parse(localStorage.getItem("dailyState") || "null");
+  if (!savedState) return;
+  triesLeft = savedState.triesLeft;
+  ended = savedState.ended;
+  started = savedState.started;
+  els.chainList.innerHTML = savedState.chain;
+  usedHints = new Set(savedState.usedHints);
+  lastPopupTitle = savedState.lastPopupTitle;
+  lastPopupMsg = savedState.lastPopupMsg;
+
+  if (savedState.targetMovieId) {
+    targetMovie = topEnglishMovies.find(m => m.id === savedState.targetMovieId);
+    if (targetMovie) {
+      let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
+      let credits = await creditsRes.json();
+      let actorsWithPhotos = credits.cast.filter(c => c.profile_path).slice(0, 5);
+      const seed = getTodaySeed();
+      const idx1 = seed % actorsWithPhotos.length;
+      const idx2 = (Math.floor(seed / 10)) % actorsWithPhotos.length;
+      startActor = actorsWithPhotos[idx1];
+      endActor = actorsWithPhotos[idx2 === idx1 ? (idx2 + 1) % actorsWithPhotos.length : idx2];
+      els.actor1Img.src = IMAGE_URL + startActor.profile_path;
+      els.actor1Name.textContent = startActor.name;
+      els.actor2Img.src = IMAGE_URL + endActor.profile_path;
+      els.actor2Name.textContent = endActor.name;
+      await buildHints(targetMovie.id, [startActor.id, endActor.id]);
+    }
+  }
+  if (ended && lastPopupTitle) {
+    showPopup(lastPopupTitle, lastPopupMsg);
+  }
+}
 
 // ---------- Load Top 250 English Films ----------
 async function loadTopEnglishFilms() {
@@ -125,13 +187,24 @@ async function initRound() {
       els.status.textContent = "Could not load actors. Refresh to try again.";
       return;
     }
-    let shuffled = actorsWithPhotos.sort(() => 0.5 - Math.random()).slice(0, 2);
-    startActor = shuffled[0];
-    endActor = shuffled[1];
+
+    if (dailyMode) {
+      const seed = getTodaySeed();
+      const idx1 = seed % actorsWithPhotos.length;
+      const idx2 = (Math.floor(seed / 10)) % actorsWithPhotos.length;
+      startActor = actorsWithPhotos[idx1];
+      endActor = actorsWithPhotos[idx2 === idx1 ? (idx2 + 1) % actorsWithPhotos.length : idx2];
+    } else {
+      let shuffled = actorsWithPhotos.sort(() => 0.5 - Math.random()).slice(0, 2);
+      startActor = shuffled[0];
+      endActor = shuffled[1];
+    }
+
     els.actor1Img.src = IMAGE_URL + startActor.profile_path;
     els.actor1Name.textContent = startActor.name;
     els.actor2Img.src = IMAGE_URL + endActor.profile_path;
     els.actor2Name.textContent = endActor.name;
+
     await buildHints(targetMovie.id, [startActor.id, endActor.id]);
   } catch (err) {
     console.error("initRound failed:", err);
@@ -168,8 +241,7 @@ function doStartGame() {
   if (started) return;
   started = true;
   els.overlay.classList.remove("visible");
-  seconds = 0;
-  els.timer.textContent = "00:00";
+  updateCounter();
   startTimer();
 }
 function endGame(win) {
@@ -190,10 +262,12 @@ function endGame(win) {
     lastPopupMsg = `The correct movie was <strong>${targetMovie.title}</strong>.`;
   }
   showPopup(lastPopupTitle, lastPopupMsg);
+  saveDailyState();
 }
 function consumeTry() {
   triesLeft--;
   updateCounter();
+  saveDailyState();
   if (triesLeft <= 0) endGame(false);
 }
 
@@ -211,6 +285,7 @@ els.submitBtn.addEventListener("click", () => {
     consumeTry();
   }
   els.movieInput.value = "";
+  saveDailyState();
 });
 els.hintSkipBtn.addEventListener("click", () => {
   if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
@@ -224,6 +299,7 @@ els.hintSkipBtn.addEventListener("click", () => {
     addListItem("Skipped", "grey");
   }
   consumeTry();
+  saveDailyState();
 });
 els.movieInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") els.submitBtn.click();
@@ -249,6 +325,7 @@ window.startGame = async function() {
     await initRound();
   }
   doStartGame();
+  saveDailyState();
 };
 
 (async function bootstrap() {
@@ -260,7 +337,12 @@ window.startGame = async function() {
   els.timer.textContent = "00:00";
   await initRound();
 
-  // simple visual indicator
+  if (dailyMode) {
+    await restoreDailyState();
+    startTimer();
+  }
+
+  // mark active link
   if (dailyMode) {
     els.dailyLink.style.textDecoration = "underline";
   } else {
