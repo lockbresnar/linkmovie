@@ -6,20 +6,21 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <nav>
-      <!-- keep your original nav links -->
-      <a href="index.html" class="nav-link">Movie Link</a>
-      
-      <!-- ✅ added for mode toggle -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <img src="assets/logo.svg" alt="Logo" class="logo" />
+    </div>
+    <nav class="topbar-right">
+      <a href="index.html" class="nav-link">Main Game</a>
+      <!-- ✅ Added toggle links -->
       <a href="actor-chain.html" id="dailyLink" class="nav-link">Daily</a>
       <a href="actor-chain.html" id="infiniteLink" class="nav-link">Infinite</a>
-      
-      <a href="#" class="nav-link" onclick="openHelp()">Help</a>
+      <!-- End toggle links -->
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
     </nav>
   </header>
 
-  <div id="introOverlay" class="visible">
+  <div id="introOverlay" class="overlay visible">
     <div class="overlay-content">
       <h1>Actor Chain</h1>
       <button onclick="startGame()">Start</button>
@@ -75,10 +76,10 @@
   </div>
 
   <footer>
-    <img src="tmdb-black.svg" alt="TMDb logo" class="footer-logo"/>
+    <img src="assets/tmdb-black.svg" alt="TMDb logo" class="footer-logo"/>
   </footer>
 
   <script src="actors.js"></script>
-  <script src="actor-chain.js?v=3"></script>
+  <script src="actor-chain.js?v=4"></script>
 </body>
 </html>
