@@ -288,8 +288,7 @@ window.startGame = startGame;
     }
   } else {
     document.getElementById("introOverlay").classList.add("visible");
-    localStorage.removeItem(LS_AC_STARTED);
-    localStorage.removeItem(LS_AC_START_TS);
+    // ❌ no longer clearing daily state here
   }
 
   // Highlight active mode
