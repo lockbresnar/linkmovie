@@ -1,351 +1,332 @@
-<script>
-// Actor Chain — Daily/Infinite modes (no HTML/CSS changes)
+/* Actor Chain — Daily/Infinite modes + persistent Daily timer
+   IMPORTANT: No HTML/CSS changes required. Uses existing ACTOR_POOL and autocomplete.
+   Respects global 'mode' (daily/infinite) set by the main game.
+*/
 
-// ====== Config ======
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 const IMG = "https://image.tmdb.org/t/p/w200";
 
-// ====== State ======
+// ===== State =====
 let startActor = null;
 let endActor = null;
 let steps = 0;
 let timerInterval = null;
-let lastCastIds = null; // Set of actor IDs from last accepted movie
+let lastCastIds = null; // Set of TMDb person IDs from the last accepted movie
+let dailyMode = true;
 
-// Daily/Infinite
-let dailyMode = true;           // derived from localStorage 'mode'
-const LS_MODE_KEY = "mode";     // "daily" | "infinite" (set on main game)
-const LS_AC_STARTED = "ac_started";
-const LS_AC_START_TS = "ac_dailyStart";
-const LS_AC_CHAIN_HTML = "ac_chain_html";
-const LS_AC_STEPS = "ac_steps";
+const LS_MODE_KEY       = "mode";                // shared with main game: "daily" | "infinite"
+const LS_AC_STARTED     = "ac_started";          // "true" after first Start on Daily
+const LS_AC_START_TS    = "ac_dailyStart";       // timestamp (ms) when Daily started
+const LS_AC_CHAIN_HTML  = "ac_chain_html";       // saved <ul id="chainList"> markup
+const LS_AC_STEPS       = "ac_steps";            // numeric steps
 
-// ====== UI helpers ======
-function setCounter(val){
+// ===== UI helpers (match your existing structure) =====
+function setCounter(val) {
   const el = document.getElementById("counterCircle");
   el.textContent = val;
   if (val < 4) el.style.background = "#4edd00";
   else if (val < 7) el.style.background = "#fa8b48";
   else el.style.background = "#e53935";
 }
-function setTimerFromElapsedSec(sec){
+function setTimerFromSeconds(sec) {
   const m = Math.floor(sec/60), s = sec%60;
   document.getElementById("timer").textContent =
     `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
-function setTimer(ms){
-  const s = Math.floor(ms/1000), m = Math.floor(s/60);
-  document.getElementById("timer").textContent =
-    `${String(m).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-}
-function addChainItem(text,color){
-  const li=document.createElement("li");
-  li.textContent=text; li.className=color;
+function addChainItem(text, color) {
+  const li = document.createElement("li");
+  li.textContent = text;
+  li.className = color;  // uses your colors in styles.css
   document.getElementById("chainList").appendChild(li);
-  // Persist chain in daily mode
   if (dailyMode) {
     localStorage.setItem(LS_AC_CHAIN_HTML, document.getElementById("chainList").innerHTML);
   }
 }
-
-// ====== Pick from ACTOR_POOL (name-only) ======
-async function pickActorByName(name){
-  const res = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${API_KEY}&query=${encodeURIComponent(name)}`);
-  const data = await res.json();
-  if (data.results && data.results.length){
-    const p = data.results[0];
-    return { id:p.id, name:p.name, profile_path:p.profile_path||"" };
-  }
-  return { id:null, name, profile_path:"" };
+function showPopup(title, msg) {
+  const p = document.getElementById("popup");
+  document.getElementById("popupTitle").textContent = title;
+  document.getElementById("popupMsg").innerHTML = msg.replace(/\n/g,"<br/>");
+  p.style.display = "block";
 }
+function closePopup(){ document.getElementById("popup").style.display = "none"; }
+function openHelp(){ document.getElementById("helpPopup").style.display = "block"; }
+function closeHelp(){ document.getElementById("helpPopup").style.display = "none"; }
+window.closePopup = closePopup;
+window.openHelp = openHelp;
+window.closeHelp = closeHelp;
 
-// Non-deterministic random
-async function pickRandomActor(){
-  const name = ACTOR_POOL[Math.floor(Math.random()*ACTOR_POOL.length)];
-  return pickActorByName(name);
-}
-
-// Deterministic by day (global)
-function todaySeed(){
+// ===== Actor pool helpers (use your ACTOR_POOL names) =====
+function todaySeed() {
   const d = new Date();
   return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
 }
-function pickTwoDeterministicNames(){
+async function pickActorByName(name) {
+  const res = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${API_KEY}&query=${encodeURIComponent(name)}`);
+  const data = await res.json();
+  if (data.results && data.results.length) {
+    const p = data.results[0];
+    return { id: p.id, name: p.name, profile_path: p.profile_path || "" };
+  }
+  return { id: null, name, profile_path: "" };
+}
+async function pickRandomActor() {
+  const name = ACTOR_POOL[Math.floor(Math.random()*ACTOR_POOL.length)];
+  return pickActorByName(name);
+}
+function pickTwoDeterministicNames() {
   const N = ACTOR_POOL.length;
   const seed = todaySeed();
-  // Two stable indices from the date, guaranteed distinct
   const i1 = seed % N;
-  const i2raw = Math.floor(seed / 7) + 13; // shift + different divisor to mix
+  const i2raw = Math.floor(seed / 7) + 13;
   const i2 = (i2raw % N === i1) ? (i2raw+1) % N : (i2raw % N);
   return [ACTOR_POOL[i1], ACTOR_POOL[i2]];
 }
 
-// ====== Game start / resume ======
-async function setActorsOnUI(a1,a2){
-  document.getElementById("actor1Img").src = a1.profile_path ? IMG+a1.profile_path : "";
+// ===== Actors on UI =====
+async function setActorsOnUI(a1, a2) {
+  const img1 = document.getElementById("actor1Img");
+  const img2 = document.getElementById("actor2Img");
+  img1.src = a1.profile_path ? (IMG + a1.profile_path) : "";
+  img2.src = a2.profile_path ? (IMG + a2.profile_path) : "";
   document.getElementById("actor1").textContent = a1.name;
-  document.getElementById("actor2Img").src = a2.profile_path ? IMG+a2.profile_path : "";
   document.getElementById("actor2").textContent = a2.name;
 }
 
-async function initActors(){
-  if (dailyMode){
-    // Deterministic from pool
+// ===== Init round (Daily vs Infinite) =====
+async function initActors() {
+  if (dailyMode) {
     const [n1, n2] = pickTwoDeterministicNames();
     startActor = await pickActorByName(n1);
     endActor   = await pickActorByName(n2);
-    // Edge-case: if same TMDb person id (unlikely), nudge to next name
-    if (startActor.id && endActor.id && startActor.id===endActor.id){
-      const fallbackIdx = (ACTOR_POOL.indexOf(n2)+1) % ACTOR_POOL.length;
-      endActor = await pickActorByName(ACTOR_POOL[fallbackIdx]);
+    if (startActor.id && endActor.id && startActor.id === endActor.id) {
+      // extremely rare — nudge one index forward
+      const idx = (ACTOR_POOL.indexOf(n2)+1) % ACTOR_POOL.length;
+      endActor = await pickActorByName(ACTOR_POOL[idx]);
     }
   } else {
-    // Original behavior
     startActor = await pickRandomActor();
     endActor   = await pickRandomActor();
-    while (startActor.id && endActor.id && startActor.id===endActor.id){
+    while (startActor.id && endActor.id && startActor.id === endActor.id) {
       endActor = await pickRandomActor();
     }
   }
   await setActorsOnUI(startActor, endActor);
 }
 
-async function startGame(){
-  // hide overlay
-  document.getElementById("introOverlay").classList.remove("visible");
-
-  // mark started in daily mode & start persistent timer
-  if (dailyMode && !localStorage.getItem(LS_AC_STARTED)) {
-    localStorage.setItem(LS_AC_STARTED, "true");
+// ===== Timer =====
+function startDailyTimer() {
+  if (!localStorage.getItem(LS_AC_START_TS)) {
+    localStorage.setItem(LS_AC_START_TS, Date.now().toString());
   }
-
-  // reset ui/state (does NOT clear a restored daily chain on resume)
-  steps = parseInt(localStorage.getItem(LS_AC_STEPS)||"0",10);
-  setCounter(steps);
-  lastCastIds = null;
-
-  // (Re)init actors + show
-  await initActors();
-
-  // timer
+  const tick = () => {
+    const start = parseInt(localStorage.getItem(LS_AC_START_TS), 10);
+    const now = Date.now();
+    const seconds = Math.max(0, Math.floor((now - start) / 1000));
+    setTimerFromSeconds(seconds);
+  };
+  tick();
   if (timerInterval) clearInterval(timerInterval);
-  if (dailyMode) {
-    // persistent timer
-    if (!localStorage.getItem(LS_AC_START_TS)) {
-      localStorage.setItem(LS_AC_START_TS, Date.now().toString());
-    }
-    // update each sec based on stored start
-    const tick = ()=>{
-      const start = parseInt(localStorage.getItem(LS_AC_START_TS),10);
-      const now = Date.now();
-      const sec = Math.max(0, Math.floor((now-start)/1000));
-      setTimerFromElapsedSec(sec);
-    };
-    tick();
-    timerInterval = setInterval(tick, 1000);
-  } else {
-    // classic per-session timer
-    const t0 = Date.now();
-    setTimer(0);
-    timerInterval = setInterval(()=>setTimer(Date.now()-t0),1000);
-  }
-
-  // wire UI
-  wireControls();
+  timerInterval = setInterval(tick, 1000);
+}
+function startInfiniteTimer() {
+  const t0 = Date.now();
+  setTimerFromSeconds(0);
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const seconds = Math.floor((Date.now() - t0) / 1000);
+    setTimerFromSeconds(seconds);
+  }, 1000);
 }
 
-// ====== Controls wiring (once) ======
+// ===== Controls wiring (keep your existing selectors) =====
 let wired = false;
-function wireControls(){
+function wireControls() {
   if (wired) return;
   wired = true;
 
-  // suggestions (unchanged)
+  // Autocomplete you already had (kept exactly as-is)
   const input = document.getElementById("movieInput");
   const box = document.getElementById("suggestions");
-  input.addEventListener("input", async (e)=>{
+  input.addEventListener("input", async (e) => {
     const q = e.target.value.trim();
-    box.innerHTML="";
-    if (q.length<3) return;
+    box.innerHTML = "";
+    if (q.length < 3) return;
     const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(q)}`);
     const data = await res.json();
-    data.results.slice(0,7).forEach(m=>{
-      const d=document.createElement("div");
-      d.textContent=m.title;
-      d.onclick=()=>{ input.value=m.title; box.innerHTML=""; };
+    data.results.slice(0, 7).forEach(m => {
+      const d = document.createElement("div");
+      d.textContent = m.title;
+      d.onclick = () => { input.value = m.title; box.innerHTML = ""; };
       box.appendChild(d);
     });
   });
 
-  // submit
-  document.querySelector(".btn-submit").addEventListener("click", submitGuess);
-  // reset (chain only)
-  document.querySelector(".btn-red").addEventListener("click", resetChain);
+  // Submit / Reset buttons (use your class names)
+  const submitBtn = document.querySelector(".btn-submit");
+  const resetBtn  = document.querySelector(".btn-red");
+  if (submitBtn) submitBtn.addEventListener("click", submitGuess);
+  if (resetBtn)  resetBtn.addEventListener("click", resetChain);
 }
 
-// ====== Submit logic (chain-follow) ======
-async function submitGuess(){
+// ===== Submit logic (chain-follow mechanic) =====
+async function submitGuess() {
   const q = document.getElementById("movieInput").value.trim();
   if (!q) return;
 
-  // search movie
+  // Search movie
   const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(q)}`);
   const data = await res.json();
-  if (!data.results.length){
-    addChainItem(q,"grey");
+  if (!data.results.length) {
+    addChainItem(q, "grey");
     clearInput();
-    persistSteps(); // grey doesn't increment; keep consistent with existing logic
+    persistDaily();
     return;
   }
   const movie = data.results[0];
 
-  // credits
+  // Credits
   const credRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
   const credits = await credRes.json();
-  const castIds = new Set(credits.cast.map(c=>c.id));
+  const castIds = new Set(credits.cast.map(c => c.id));
 
-  const includesStart = castIds.has(startActor.id);
-  const includesTarget = castIds.has(endActor.id);
+  const includesStart  = startActor.id && castIds.has(startActor.id);
+  const includesTarget = endActor.id   && castIds.has(endActor.id);
 
-  // first valid must include start actor
-  if (lastCastIds===null){
-    if (!includesStart){
-      addChainItem(movie.title,"grey");
+  // First accepted must include the start actor
+  if (lastCastIds === null) {
+    if (!includesStart) {
+      addChainItem(movie.title, "grey");
       clearInput();
-      persistSteps();
+      persistDaily();
       return;
     }
-    // accept blue
-    addChainItem(movie.title,"blue");
-    steps+=1; setCounter(steps);
+    addChainItem(movie.title, "blue");
+    steps += 1; setCounter(steps);
     lastCastIds = castIds;
-    if (includesTarget){
-      winNow(); // edge case: first movie also has target
+    if (includesTarget) {
+      winNow(); // edge: first movie also contains target
     }
     clearInput();
-    persistSteps();
+    persistDaily();
     return;
   }
 
-  // subsequent: must share at least one actor with previous accepted movie
-  const sharesWithLast = [...lastCastIds].some(id=>castIds.has(id));
-  if (!sharesWithLast){
-    addChainItem(movie.title,"grey");
+  // Subsequent: must share at least one actor with previous accepted movie
+  const sharesWithLast = [...lastCastIds].some(id => castIds.has(id));
+  if (!sharesWithLast) {
+    addChainItem(movie.title, "grey");
     clearInput();
-    persistSteps();
+    persistDaily();
     return;
   }
 
-  // valid link → color rules
-  if (includesTarget){
-    addChainItem(movie.title,"green");
-    steps+=1; setCounter(steps);
+  // Valid link → color
+  if (includesTarget) {
+    addChainItem(movie.title, "green");
+    steps += 1; setCounter(steps);
     winNow();
-  } else if (includesStart){
-    addChainItem(movie.title,"blue");
-    steps+=1; setCounter(steps);
+  } else if (includesStart) {
+    addChainItem(movie.title, "blue");
+    steps += 1; setCounter(steps);
     lastCastIds = castIds;
   } else {
-    addChainItem(movie.title,"orange");
-    steps+=1; setCounter(steps);
+    addChainItem(movie.title, "orange");
+    steps += 1; setCounter(steps);
     lastCastIds = castIds;
   }
-
   clearInput();
-  persistSteps();
+  persistDaily();
 }
 
-function clearInput(){
-  document.getElementById("movieInput").value="";
-  document.getElementById("suggestions").innerHTML="";
+function clearInput() {
+  document.getElementById("movieInput").value = "";
+  const box = document.getElementById("suggestions");
+  if (box) box.innerHTML = "";
 }
 
-function resetChain(){
-  document.getElementById("chainList").innerHTML="";
-  steps=0; setCounter(steps);
-  lastCastIds = null; // force next valid to include start actor again
-  document.getElementById("status").textContent="";
-  if (dailyMode){
+function resetChain() {
+  document.getElementById("chainList").innerHTML = "";
+  steps = 0; setCounter(steps);
+  lastCastIds = null;
+  document.getElementById("status").textContent = "";
+  if (dailyMode) {
     localStorage.setItem(LS_AC_CHAIN_HTML, "");
     localStorage.setItem(LS_AC_STEPS, "0");
   }
 }
 
-function persistSteps(){
-  if (dailyMode){
-    localStorage.setItem(LS_AC_STEPS, String(steps));
-    localStorage.setItem(LS_AC_CHAIN_HTML, document.getElementById("chainList").innerHTML);
-  }
+function persistDaily() {
+  if (!dailyMode) return;
+  localStorage.setItem(LS_AC_STEPS, String(steps));
+  localStorage.setItem(LS_AC_CHAIN_HTML, document.getElementById("chainList").innerHTML);
 }
 
-function winNow(){
+function winNow() {
   if (timerInterval) clearInterval(timerInterval);
-  showPopup("🎉 You linked them!",
-    `Steps: ${steps}\nTime: ${document.getElementById("timer").textContent}`);
-  // keep daily progress saved; nothing else needed
+  showPopup("🎉 You linked them!", `Steps: ${steps}\nTime: ${document.getElementById("timer").textContent}`);
 }
 
-// ====== Popups + help (unchanged) ======
-function showPopup(title,msg){
-  const p=document.getElementById("popup");
-  document.getElementById("popupTitle").textContent=title;
-  document.getElementById("popupMsg").innerHTML = msg.replace(/\n/g,"<br/>");
-  p.style.display="block";
-}
-function closePopup(){ document.getElementById("popup").style.display="none"; }
-function openHelp(){ document.getElementById("helpPopup").style.display="block"; }
-function closeHelp(){ document.getElementById("helpPopup").style.display="none"; }
+// ===== Start & Bootstrap =====
+async function startGame() {
+  // Hide overlay
+  const ov = document.getElementById("introOverlay");
+  if (ov) ov.classList.remove("visible");
 
-// ====== Bootstrap ======
-(async function bootstrap(){
-  // Read mode chosen on the main game
-  const savedMode = localStorage.getItem(LS_MODE_KEY);
-  dailyMode = savedMode !== "infinite"; // default to daily unless explicitly infinite
+  // Mark started for Daily
+  if (dailyMode && !localStorage.getItem(LS_AC_STARTED)) {
+    localStorage.setItem(LS_AC_STARTED, "true");
+  }
 
-  setCounter(steps);
-  // Prepare actors immediately so the page always shows the pair (no style changes)
+  // (Re)init actors and timers
   await initActors();
 
-  if (dailyMode){
-    // Restore chain + steps (optional, harmless if none)
-    const savedHTML = localStorage.getItem(LS_AC_CHAIN_HTML);
-    const savedSteps = localStorage.getItem(LS_AC_STEPS);
-    if (savedHTML != null) {
-      document.getElementById("chainList").innerHTML = savedHTML;
-    }
-    if (savedSteps != null) {
-      steps = parseInt(savedSteps,10) || 0;
-      setCounter(steps);
-    }
+  // Timer mode
+  if (timerInterval) clearInterval(timerInterval);
+  if (dailyMode) startDailyTimer();
+  else startInfiniteTimer();
 
-    // If the daily was already started, skip overlay and continue persistent timer
-    if (localStorage.getItem(LS_AC_STARTED)==="true") {
-      document.getElementById("introOverlay").classList.remove("visible");
-      // ensure a start timestamp exists
-      if (!localStorage.getItem(LS_AC_START_TS)){
+  // Wire controls (once)
+  wireControls();
+}
+window.startGame = startGame; // ensure inline onclick works
+
+(async function bootstrap() {
+  // Mode follows main game; default to Daily if not set
+  const savedMode = localStorage.getItem(LS_MODE_KEY);
+  dailyMode = savedMode !== "infinite";
+
+  setCounter(steps);
+  await initActors();
+
+  if (dailyMode) {
+    // Restore saved chain + steps if any
+    const savedHTML  = localStorage.getItem(LS_AC_CHAIN_HTML);
+    const savedSteps = localStorage.getItem(LS_AC_STEPS);
+    if (savedHTML != null)  document.getElementById("chainList").innerHTML = savedHTML;
+    if (savedSteps != null) { steps = parseInt(savedSteps, 10) || 0; setCounter(steps); }
+
+    // If already started today, skip overlay and run persistent timer
+    if (localStorage.getItem(LS_AC_STARTED) === "true") {
+      const ov = document.getElementById("introOverlay");
+      if (ov) ov.classList.remove("visible");
+      if (!localStorage.getItem(LS_AC_START_TS)) {
         localStorage.setItem(LS_AC_START_TS, Date.now().toString());
       }
-      // run timer loop based on stored start
-      const tick = ()=>{
-        const start = parseInt(localStorage.getItem(LS_AC_START_TS),10);
-        const now = Date.now();
-        const sec = Math.max(0, Math.floor((now-start)/1000));
-        setTimerFromElapsedSec(sec);
-      };
-      tick();
-      if (timerInterval) clearInterval(timerInterval);
-      timerInterval = setInterval(tick, 1000);
-    } else {
-      // initial daily visit → show overlay; timer begins when Start is pressed
-      document.getElementById("introOverlay").classList.add("visible");
+      startDailyTimer();
+      wireControls();
+      return;
     }
+    // Otherwise, show overlay until Start is clicked
+    const ov = document.getElementById("introOverlay");
+    if (ov) ov.classList.add("visible");
   } else {
-    // Infinite: show overlay until Start; per-session timer
-    document.getElementById("introOverlay").classList.add("visible");
-    // Clear any daily-only keys so they don't leak between modes
+    // Infinite: always show overlay until Start
+    const ov = document.getElementById("introOverlay");
+    if (ov) ov.classList.add("visible");
+    // Clear daily-only keys so they don't leak
     localStorage.removeItem(LS_AC_STARTED);
     localStorage.removeItem(LS_AC_START_TS);
   }
-})();
 
-</script>
+  // (Controls wired on start)
+})();
