@@ -2,15 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Actor Chain</title>
-  <!-- Keep the original stylesheet link -->
-  <link rel="stylesheet" href="styles.css" />
+  <title>LinkMovie — Actor Chain</title>
+  <link rel="stylesheet" href="styles.css?v=alpha1" />
 </head>
 <body>
+  <!-- Header -->
   <header class="topbar">
-    <div class="topbar-left">
-      <img src="assets/logo.svg" alt="Logo" class="logo" />
-    </div>
+    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
     <nav class="topbar-right">
       <a href="index.html" class="nav-link">Main Game</a>
       <!-- ✅ Added links -->
@@ -21,66 +19,83 @@
     </nav>
   </header>
 
-  <div id="introOverlay" class="overlay visible">
-    <div class="overlay-content">
-      <h1>Actor Chain</h1>
-      <button onclick="startGame()">Start</button>
-    </div>
+  <!-- Stats -->
+  <div class="stats">
+    <h1 class="page-title condensed">Actor Chain</h1>
+    <div id="counterCircle" class="counter-circle">0</div>
+    <div id="timer" class="timer condensed">00:00</div>
   </div>
 
-  <main>
-    <div id="game">
-      <div class="actors">
-        <div>
-          <img id="actor1Img" alt="Actor 1"/>
-          <div id="actor1"></div>
+  <!-- Two-column layout -->
+  <div class="layout">
+    <!-- LEFT: actors + controls -->
+    <div class="left-col">
+      <div class="actors-row">
+        <div class="actor-card">
+          <img id="actor1Img" alt="Start Actor" />
+          <p id="actor1" class="actor-name"></p>
         </div>
-        <div>
-          <img id="actor2Img" alt="Actor 2"/>
-          <div id="actor2"></div>
+        <div class="actor-card">
+          <img id="actor2Img" alt="Target Actor" />
+          <p id="actor2" class="actor-name"></p>
         </div>
       </div>
 
       <div class="controls">
-        <input type="text" id="movieInput" placeholder="Guess a movie..."/>
-        <div id="suggestions"></div>
-        <button class="btn-submit">Submit</button>
-        <button class="btn-red">Reset</button>
+        <input id="movieInput" placeholder="Enter a movie..." />
+        <div id="suggestions" class="suggestions"></div>
+        <div class="button-row">
+          <button class="btn btn-submit">Submit</button>
+          <button class="btn btn-red">Reset</button>
+        </div>
       </div>
-
-      <div id="status"></div>
-      <div id="counterCircle">0</div>
-      <div id="timer">00:00</div>
-
-      <ul id="chainList"></ul>
     </div>
-  </main>
 
+    <!-- RIGHT: chain -->
+    <aside class="right-col">
+      <div class="chain-box">
+        <h3>Current Chain:</h3>
+        <ul id="chainList"></ul>
+      </div>
+      <p id="status" class="status"></p>
+    </aside>
+  </div>
+
+  <!-- Intro overlay -->
+  <div id="introOverlay" class="overlay visible">
+    <div class="overlay-card">
+      <h2>🎬 Actor Chain Challenge</h2>
+      <p>Connect the two actors through movies. Press Start to begin.</p>
+      <button class="btn btn-submit" onclick="startGame()">Start</button>
+    </div>
+  </div>
+
+  <!-- Popups -->
   <div id="popup" class="popup">
-    <div class="popup-content">
-      <span class="close" onclick="closePopup()">&times;</span>
-      <h2 id="popupTitle"></h2>
-      <p id="popupMsg"></p>
-    </div>
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    <h2 id="popupTitle"></h2>
+    <p id="popupMsg"></p>
   </div>
 
   <div id="helpPopup" class="popup">
-    <div class="popup-content">
-      <span class="close" onclick="closeHelp()">&times;</span>
-      <h2>How to Play</h2>
-      <p>
-        Connect the two actors by guessing movies they’ve worked in.  
-        First movie must include the left actor, each step must connect through shared actors,  
-        and you must reach the right actor. Colors show link progress.
-      </p>
-    </div>
+    <button class="popup-close" onclick="closeHelp()">✕</button>
+    <h2>How to Play</h2>
+    <p>
+      1) First movie must include the start actor (blue).<br/>
+      2) Each next movie must share any actor with the previous accepted movie (follows the chain).<br/>
+      3) If it also includes the target actor, you win (green).<br/>
+      4) If it follows the chain but has neither start nor target actor, it’s orange.<br/>
+      5) Wrong guesses (no link) are grey and don’t increment the counter.
+    </p>
   </div>
 
-  <footer>
-    <img src="assets/tmdb-black.svg" alt="TMDb logo" class="footer-logo"/>
+  <!-- Footer -->
+  <footer class="footer">
+    This product uses the TMDb API but is not endorsed or certified by TMDb.<br/>
+    <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <script src="actors.js"></script>
-  <script src="actor-chain.js?v=6"></script>
+  <script src="actors.js?v=alpha1"></script>
+  <script src="actor-chain.js?v=alpha1"></script>
 </body>
 </html>
