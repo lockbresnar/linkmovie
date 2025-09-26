@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (English films, top 5 billed, counter color shift, Hint/Skip) */
+/* Movie Link Game Logic (Top 250 English films, top 5 billed, Hint/Skip, counter colors) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -11,6 +11,7 @@ let started = false;
 let ended = false;
 let seconds = 0;
 let timerId = null;
+let topEnglishMovies = []; // ✅ cache top 250 films
 
 // Elements
 const els = {
@@ -74,15 +75,29 @@ window.closePopup = () => { els.popup.style.display = "none"; };
 window.openHelp = () => { document.getElementById("helpPopup").style.display = "block"; };
 window.closeHelp = () => { document.getElementById("helpPopup").style.display = "none"; };
 
+// ---------- Load Top 250 English Films ----------
+async function loadTopEnglishFilms() {
+  let movies = [];
+  let totalPages = 13; // 13 * 20 = 260, slice down to 250
+  for (let page = 1; page <= totalPages; page++) {
+    let res = await fetch(
+      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}` +
+      `&with_original_language=en&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`
+    );
+    let data = await res.json();
+    movies = movies.concat(data.results);
+  }
+  return movies.slice(0, 250); // ✅ top 250 only
+}
+
 // ---------- Load Actors ----------
 async function initRound() {
   try {
-    // ✅ Discover only English-language films
-    let res = await fetch(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=en&sort_by=popularity.desc&page=1`
-    );
-    let data = await res.json();
-    targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
+    if (!topEnglishMovies.length) {
+      topEnglishMovies = await loadTopEnglishFilms();
+    }
+
+    targetMovie = topEnglishMovies[Math.floor(Math.random() * topEnglishMovies.length)];
 
     let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
     let credits = await creditsRes.json();
