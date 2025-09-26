@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (actors from top 5 billed + counter color shift) */
+/* Movie Link Game Logic (English films, top 5 billed, counter color shift, Hint/Skip) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -77,7 +77,10 @@ window.closeHelp = () => { document.getElementById("helpPopup").style.display = 
 // ---------- Load Actors ----------
 async function initRound() {
   try {
-    let res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&page=1`);
+    // ✅ Discover only English-language films
+    let res = await fetch(
+      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=en&sort_by=popularity.desc&page=1`
+    );
     let data = await res.json();
     targetMovie = data.results[Math.floor(Math.random() * data.results.length)];
 
