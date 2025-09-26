@@ -1,11 +1,10 @@
-/* Actor Chain — Daily/Infinite modes + persistent Daily timer
+/* Actor Chain — Daily/Infinite modes with persistent Daily timer
    Uses ACTOR_POOL (actors.js). Style and autocomplete remain unchanged.
 */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 const IMG = "https://image.tmdb.org/t/p/w200";
 
-// ===== State =====
 let startActor = null;
 let endActor = null;
 let steps = 0;
@@ -133,6 +132,10 @@ function startInfiniteTimer() {
     setTimerFromSeconds(seconds);
   }, 1000);
 }
+function stopTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+}
 
 // ===== Controls =====
 let wired = false;
@@ -140,7 +143,6 @@ function wireControls() {
   if (wired) return;
   wired = true;
 
-  // Autocomplete unchanged
   const input = document.getElementById("movieInput");
   const box = document.getElementById("suggestions");
   input.addEventListener("input", async (e) => {
@@ -163,7 +165,7 @@ function wireControls() {
   if (resetBtn)  resetBtn.addEventListener("click", resetChain);
 }
 
-// ===== Game logic (submit, reset, win) =====
+// ===== Game logic =====
 async function submitGuess() {
   const q = document.getElementById("movieInput").value.trim();
   if (!q) return;
@@ -241,7 +243,7 @@ function persistDaily() {
   localStorage.setItem(LS_AC_CHAIN_HTML, document.getElementById("chainList").innerHTML);
 }
 function winNow() {
-  if (timerInterval) clearInterval(timerInterval);
+  stopTimer();
   showPopup("🎉 You linked them!", `Steps: ${steps}\nTime: ${document.getElementById("timer").textContent}`);
 }
 
@@ -253,7 +255,7 @@ async function startGame() {
     localStorage.setItem(LS_AC_STARTED, "true");
   }
   await initActors();
-  if (timerInterval) clearInterval(timerInterval);
+  stopTimer();
   if (dailyMode) startDailyTimer();
   else startInfiniteTimer();
   wireControls();
@@ -290,7 +292,7 @@ window.startGame = startGame;
     localStorage.removeItem(LS_AC_START_TS);
   }
 
-  // === Highlight active mode link + click handlers ===
+  // Highlight active mode
   const dailyLink = document.getElementById("dailyLink");
   const infiniteLink = document.getElementById("infiniteLink");
   if (dailyMode && dailyLink) dailyLink.style.textDecoration = "underline";
