@@ -1,6 +1,5 @@
-/* === v12 stable CSS (unchanged look) === */
+/* === v12 stable CSS === */
 
-/* Global */
 body {
   margin: 0;
   font-family: Arial, sans-serif;
@@ -20,12 +19,10 @@ header {
   text-decoration: none;
   font-size: 14px;
 }
-
 .nav-link:hover {
   text-decoration: underline;
 }
 
-/* Intro Overlay */
 #introOverlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -51,7 +48,6 @@ header {
   cursor: pointer;
 }
 
-/* Actors */
 .actors {
   display: flex;
   justify-content: center;
@@ -65,7 +61,6 @@ header {
   object-fit: cover;
 }
 
-/* Controls */
 .controls {
   margin: 20px 0;
 }
@@ -89,7 +84,6 @@ button:hover {
   opacity: 0.9;
 }
 
-/* Counter + Timer */
 #counterCircle {
   display: inline-block;
   margin: 15px;
@@ -104,7 +98,6 @@ button:hover {
   margin: 10px 0;
 }
 
-/* Chain List */
 #chainList {
   list-style: none;
   padding: 0;
@@ -118,7 +111,6 @@ button:hover {
 #chainList li.orange { background: #e67e22; }
 #chainList li.grey { background: #555; }
 
-/* Popups */
 .popup {
   display: none;
   position: fixed;
@@ -141,38 +133,35 @@ button:hover {
   font-size: 20px;
 }
 
-/* Footer */
 .footer-logo {
   width: 80px;
   margin: 20px auto;
   display: block;
 }
 
-/* === Autocomplete Suggestions (added; does not affect existing look) === */
+/* === Autocomplete Suggestions (new) === */
 .input-wrapper {
-  position: relative;       /* positions the dropdown under the input */
-  display: inline-block;    /* keeps same inline layout as before */
+  position: relative;
+  display: inline-block;
 }
 
 #suggestions {
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;                 /* matches the input’s width automatically */
+  right: 0;
   background: #222;
   border: 1px solid #444;
-  z-index: 1000;
   border-radius: 4px;
-  overflow: hidden;
+  z-index: 1000;
 }
 
 .suggestion-item {
   padding: 6px 10px;
-  cursor: pointer;
   font-size: 14px;
+  cursor: pointer;
   color: #fff;
 }
-
 .suggestion-item:hover {
   background: #333;
 }
