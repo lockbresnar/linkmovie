@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>LinkMovie — Movie Link</title>
-  <link rel="stylesheet" href="main-game.css" />
+  <link rel="stylesheet" href="main-game.css?v=13" />
 </head>
 <body>
   <!-- Header -->
@@ -11,8 +11,8 @@
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
     <nav class="topbar-right">
       <a href="actor-chain.html" class="nav-link">Actor Chain</a>
-      <a href="#" id="dailyLink" class="nav-link">Daily</a>
-      <a href="#" id="infiniteLink" class="nav-link">Infinite</a>
+      <a href="index.html" id="dailyLink" class="nav-link">Daily</a>
+      <a href="index.html" id="infiniteLink" class="nav-link">Infinite</a>
       <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
     </nav>
   </header>
@@ -26,22 +26,12 @@
 
   <!-- Two-column layout -->
   <div class="layout">
-    <!-- LEFT: actors + controls -->
+    <!-- LEFT: controls -->
     <div class="left-col">
-      <div class="actors-row">
-        <div class="actor-card">
-          <img id="actor1Img" alt="Start Actor" />
-          <p id="actor1" class="actor-name"></p>
-        </div>
-        <div class="actor-card">
-          <img id="actor2Img" alt="Target Actor" />
-          <p id="actor2" class="actor-name"></p>
-        </div>
-      </div>
-
       <div class="controls">
-        <input id="movieInput" placeholder="Enter a movie..." />
-        <div id="suggestions" class="suggestions" style="display:none"></div>
+        <input type="text" id="movieInput" placeholder="Guess the movie..." />
+        <!-- ✅ Added suggestions box -->
+        <div id="suggestions" class="suggestions"></div>
         <div class="button-row">
           <button id="submitBtn" class="btn btn-submit">Submit</button>
           <button id="hintSkipBtn" class="btn btn-blue">Hint / Skip</button>
@@ -49,7 +39,7 @@
       </div>
     </div>
 
-    <!-- RIGHT: guesses -->
+    <!-- RIGHT: chain -->
     <aside class="right-col">
       <div class="chain-box">
         <h3>Guesses:</h3>
@@ -62,12 +52,8 @@
   <!-- Intro overlay -->
   <div id="introOverlay" class="overlay visible">
     <div class="overlay-card">
-      <h2>🎬 Movie Link</h2>
-      <p>
-        Guess the movie that features <strong>both</strong> actors.<br/>
-        You have 6 total tries. Each Submit and Hint/Skip uses 1 try.<br/>
-        <em>Switch between Daily (same for everyone today) or Infinite (new game on reload) in the header.</em>
-      </p>
+      <h2>🎬 Movie Link Challenge</h2>
+      <p>Connect the two actors through movies. Press Start to begin.</p>
       <button class="btn btn-submit" onclick="startGame()">Start</button>
     </div>
   </div>
@@ -83,14 +69,11 @@
     <button class="popup-close" onclick="closeHelp()">✕</button>
     <h2>How to Play</h2>
     <p>
-      • 6 tries total. Submit and Hint/Skip each use 1 try.<br/>
-      • Hints are unique and shown in orange.<br/>
-      • Correct movie shows in green with a win popup.<br/>
-      • Run out of tries → lose popup with correct answer.<br/>
-      • Timer starts on Start, stops on win/lose.<br/>
-      • Inputs lock after game ends.<br/>
-      • After the game, Submit/Skip will re-open the result popup.<br/>
-      • Use the header links to switch between <strong>Daily</strong> and <strong>Infinite</strong>.
+      1) First guess must include one of the target actors.<br/>
+      2) Each guess uses a try (max 6).<br/>
+      3) Hints also use a try.<br/>
+      4) Win by guessing the correct movie (green).<br/>
+      5) Lose after 6 tries — the correct answer will be revealed.
     </p>
   </div>
 
@@ -100,9 +83,6 @@
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <!-- Actor pool -->
-  <script src="actors.js"></script>
-  <!-- Game logic -->
-  <script src="main-game.js"></script>
+  <script src="main-game.js?v=13"></script>
 </body>
 </html>
