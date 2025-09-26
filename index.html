@@ -26,11 +26,22 @@
 
   <!-- Two-column layout -->
   <div class="layout">
-    <!-- LEFT: controls -->
+    <!-- LEFT: actors + controls -->
     <div class="left-col">
+      <div class="actors-row">
+        <div class="actor-card">
+          <img id="actor1Img" alt="Start Actor" />
+          <p id="actor1" class="actor-name"></p>
+        </div>
+        <div class="actor-card">
+          <img id="actor2Img" alt="Target Actor" />
+          <p id="actor2" class="actor-name"></p>
+        </div>
+      </div>
+
       <div class="controls">
         <input type="text" id="movieInput" placeholder="Guess the movie..." />
-        <!-- ✅ Added suggestions box -->
+        <!-- ✅ Added for autocomplete -->
         <div id="suggestions" class="suggestions"></div>
         <div class="button-row">
           <button id="submitBtn" class="btn btn-submit">Submit</button>
@@ -69,11 +80,13 @@
     <button class="popup-close" onclick="closeHelp()">✕</button>
     <h2>How to Play</h2>
     <p>
-      1) First guess must include one of the target actors.<br/>
-      2) Each guess uses a try (max 6).<br/>
-      3) Hints also use a try.<br/>
-      4) Win by guessing the correct movie (green).<br/>
-      5) Lose after 6 tries — the correct answer will be revealed.
+      1) Two actors from the target movie are shown at the top.<br/>
+      2) You have 6 tries to guess the correct movie.<br/>
+      3) Each guess or hint uses a try.<br/>
+      4) Correct guess = green, win popup.<br/>
+      5) Out of tries = lose popup with correct answer.<br/>
+      6) Daily mode = same movie and actors for everyone that day.<br/>
+      7) Infinite mode = new random movie each time.
     </p>
   </div>
 
@@ -83,6 +96,6 @@
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <script src="main-game.js?v=13"></script>
+  <script src="main-game.js?v=14"></script>
 </body>
 </html>
