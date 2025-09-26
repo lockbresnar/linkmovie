@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>LinkMovie — Movie Link</title>
-  <link rel="stylesheet" href="main-game.css?v=12" />
+  <link rel="stylesheet" href="main-game.css" />
 </head>
 <body>
   <!-- Header -->
@@ -61,8 +61,10 @@
   <div id="introOverlay" class="overlay visible">
     <div class="overlay-card">
       <h2>🎬 Movie Link</h2>
-      <p>Guess the movie that features <strong>both</strong> actors.<br/>
-      You have 6 total tries. Each Submit and Hint/Skip uses 1 try.</p>
+      <p>
+        Guess the movie that features <strong>both</strong> actors.<br/>
+        You have 6 total tries. Each Submit and Hint/Skip uses 1 try.
+      </p>
       <button class="btn btn-submit" onclick="startGame()">Start</button>
     </div>
   </div>
@@ -95,8 +97,8 @@
   </footer>
 
   <!-- Actor pool -->
-  <script src="actors.js?v=1"></script>
-  <!-- JS -->
-  <script src="main-game.js?v=12"></script>
+  <script src="actors.js"></script>
+  <!-- Game logic -->
+  <script src="main-game.js"></script>
 </body>
 </html>
