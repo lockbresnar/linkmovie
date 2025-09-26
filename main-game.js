@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (Top 250 English films, replay popup after end) */
+/* Movie Link Game Logic (Top 250 English films, Daily/Infinite modes) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -14,6 +14,9 @@ let timerId = null;
 let topEnglishMovies = []; 
 let lastPopupTitle = "";
 let lastPopupMsg = "";
+
+// Mode state
+let dailyMode = true;
 
 // Elements
 const els = {
@@ -32,9 +35,15 @@ const els = {
   popupTitle: document.getElementById("popupTitle"),
   popupMsg: document.getElementById("popupMsg"),
   status: document.getElementById("status"),
+  dailyLink: document.getElementById("dailyLink"),
+  infiniteLink: document.getElementById("infiniteLink"),
 };
 
 // ---------- Helpers ----------
+function getTodaySeed() {
+  const today = new Date();
+  return today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
+}
 function addListItem(text, color) {
   const li = document.createElement("li");
   li.textContent = text;
@@ -89,13 +98,26 @@ async function loadTopEnglishFilms() {
   return movies.slice(0, 250); 
 }
 
+// ---------- Select Movie ----------
+async function selectMovie() {
+  let movies = await loadTopEnglishFilms();
+  if (dailyMode) {
+    const seed = getTodaySeed();
+    const index = seed % movies.length;
+    return movies[index];
+  } else {
+    return movies[Math.floor(Math.random() * movies.length)];
+  }
+}
+
 // ---------- Load Actors ----------
 async function initRound() {
   try {
     if (!topEnglishMovies.length) {
       topEnglishMovies = await loadTopEnglishFilms();
     }
-    targetMovie = topEnglishMovies[Math.floor(Math.random() * topEnglishMovies.length)];
+    targetMovie = await selectMovie();
+
     let creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${targetMovie.id}/credits?api_key=${API_KEY}`);
     let credits = await creditsRes.json();
     let actorsWithPhotos = credits.cast.filter(c => c.profile_path).slice(0, 5);
@@ -207,6 +229,20 @@ els.movieInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") els.submitBtn.click();
 });
 
+// ---------- Mode Switching ----------
+els.dailyLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  localStorage.setItem("mode", "daily");
+  dailyMode = true;
+  location.reload();
+});
+els.infiniteLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  localStorage.setItem("mode", "infinite");
+  dailyMode = false;
+  location.reload();
+});
+
 // ---------- Init ----------
 window.startGame = async function() {
   if (!targetMovie) {
@@ -214,8 +250,20 @@ window.startGame = async function() {
   }
   doStartGame();
 };
+
 (async function bootstrap() {
+  // load saved mode
+  const savedMode = localStorage.getItem("mode");
+  if (savedMode === "infinite") dailyMode = false;
+
   updateCounter();
   els.timer.textContent = "00:00";
   await initRound();
+
+  // simple visual indicator
+  if (dailyMode) {
+    els.dailyLink.style.textDecoration = "underline";
+  } else {
+    els.infiniteLink.style.textDecoration = "underline";
+  }
 })();

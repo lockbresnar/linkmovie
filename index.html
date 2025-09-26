@@ -11,6 +11,8 @@
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
     <nav class="topbar-right">
       <a href="actor-chain.html" class="nav-link">Actor Chain</a>
+      <a href="#" id="dailyLink" class="nav-link">Daily</a>
+      <a href="#" id="infiniteLink" class="nav-link">Infinite</a>
       <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
     </nav>
   </header>
@@ -63,7 +65,8 @@
       <h2>🎬 Movie Link</h2>
       <p>
         Guess the movie that features <strong>both</strong> actors.<br/>
-        You have 6 total tries. Each Submit and Hint/Skip uses 1 try.
+        You have 6 total tries. Each Submit and Hint/Skip uses 1 try.<br/>
+        <em>Switch between Daily (same for everyone today) or Infinite (new game on reload) in the header.</em>
       </p>
       <button class="btn btn-submit" onclick="startGame()">Start</button>
     </div>
@@ -86,7 +89,8 @@
       • Run out of tries → lose popup with correct answer.<br/>
       • Timer starts on Start, stops on win/lose.<br/>
       • Inputs lock after game ends.<br/>
-      • After the game, Submit/Skip will re-open the result popup.
+      • After the game, Submit/Skip will re-open the result popup.<br/>
+      • Use the header links to switch between <strong>Daily</strong> and <strong>Infinite</strong>.
     </p>
   </div>
 
