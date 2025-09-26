@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (Daily + Infinite, global actors) */
+/* Movie Link Game Logic (Daily + Infinite, global actors, persistent timer, no overlay repeat) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -322,7 +322,16 @@ window.startGame = async function() {
 
   if (dailyMode) {
     await restoreDailyState();
-    startTimer();
+
+    const savedState = JSON.parse(localStorage.getItem("dailyState") || "null");
+    if (savedState && savedState.started) {
+      // Already started → skip overlay
+      els.overlay.classList.remove("visible");
+      started = true;
+      if (!ended) startTimer();
+    } else {
+      els.overlay.classList.add("visible");
+    }
   }
 
   if (dailyMode) {
