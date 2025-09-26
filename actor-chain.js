@@ -1,4 +1,6 @@
-/* Actor Chain with Daily + Infinite modes, persistent timer, using ACTOR_POOL */
+/* Actor Chain with Daily + Infinite modes and persistent timer
+   Uses ACTOR_POOL from actors.js (with autocomplete intact)
+*/
 
 let startActor, endActor;
 let triesLeft = 6;
