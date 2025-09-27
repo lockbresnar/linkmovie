@@ -10,13 +10,13 @@
     #gameArea { display:none; }
     ul { list-style:none; padding:0; }
     li { margin:4px 0; }
-    #overlay, #winnerPopup {
+    #overlay, #winnerPopup, #scoreboardPopup {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.8); color: #fff;
+      background: rgba(0,0,0,0.85); color: #fff;
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; z-index: 1000;
     }
-    #winnerPopup { display: none; }
+    #winnerPopup, #scoreboardPopup { display: none; }
     #suggestions {
       position: absolute;
       background: #fff;
@@ -61,6 +61,13 @@
   <div id="winnerPopup">
     <h2 id="winnerText"></h2>
     <p id="pointsText"></p>
+    <p>⏳ Others still have 10 seconds to play!</p>
+  </div>
+
+  <div id="scoreboardPopup">
+    <h2>Round Over</h2>
+    <ul id="scoreList"></ul>
+    <p id="scoreCountdown">▶️ Next round starts in 10s</p>
   </div>
 
   <script type="module">
@@ -117,7 +124,6 @@
      * -------------------------- */
     function startStopwatch(startTime) {
       if (timerInterval) clearInterval(timerInterval);
-
       timerInterval = setInterval(() => {
         const now = Date.now();
         const secs = Math.floor((now - startTime) / 1000);
@@ -201,6 +207,7 @@
 
         if (data.status === "playing") {
           $('overlay')?.remove();
+          $('scoreboardPopup').style.display = "none";
           $('gameArea').style.display = "block";
           $('roundNum').textContent = data.round;
           $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
@@ -209,41 +216,40 @@
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
 
-          if (data.startTime) {
-            startStopwatch(data.startTime);
-          }
+          if (data.startTime) startStopwatch(data.startTime);
         }
 
-        // ✅ Winner announced, allow grace play
-        if (data.winner && data.winner !== "") {
+        // ✅ Grace mode
+        if (data.status === "grace") {
           showWinner(data.winner, data.winnerPoints || 0);
 
-          // Host triggers post-round when grace ends
-          if (isHost && data.graceEndsAt && Date.now() > data.graceEndsAt && data.status === "playing") {
+          if (isHost && data.graceEndsAt && Date.now() > data.graceEndsAt) {
             await updateDoc(lobbyRef, {
               status: "postRound",
-              postRoundEndsAt: new Date(Date.now() + 10000) // 10s break
+              postRoundEndsAt: new Date(Date.now() + 10000)
             });
           }
-        } else {
-          $('winnerPopup').style.display = "none";
         }
 
-        // ✅ After post-round -> next round
-        if (isHost && data.status === "postRound" && data.postRoundEndsAt && Date.now() > data.postRoundEndsAt.toMillis()) {
-          if (data.round < 5) {
-            await updateDoc(lobbyRef, {
-              status: "countdown",
-              countdownEndsAt: new Date(Date.now() + 10000),
-              round: data.round + 1,
-              winner: "",
-              winnerPoints: 0,
-              ...getRandomActors()
-            });
-          } else {
-            $('winnerPopup').style.display = "flex";
-            $('winnerText').textContent = "🏆 Game Over!";
-            $('pointsText').textContent = "";
+        // ✅ PostRound = scoreboard with countdown
+        if (data.status === "postRound") {
+          showScoreboard(data.postRoundEndsAt.toMillis());
+
+          if (isHost && data.postRoundEndsAt && Date.now() > data.postRoundEndsAt.toMillis()) {
+            if (data.round < 5) {
+              await updateDoc(lobbyRef, {
+                status: "countdown",
+                countdownEndsAt: new Date(Date.now() + 10000),
+                round: data.round + 1,
+                winner: "",
+                winnerPoints: 0,
+                ...getRandomActors()
+              });
+            } else {
+              $('winnerPopup').style.display = "flex";
+              $('winnerText').textContent = "🏆 Game Over!";
+              $('pointsText').textContent = "";
+            }
           }
         }
       });
@@ -264,7 +270,6 @@
           ul.appendChild(li);
         });
 
-        // Host starts countdown when enough players
         if (isHost && snap.size >= 2) {
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
@@ -298,7 +303,7 @@
             await updateDoc(lobbyRef, {
               status: "playing",
               round: 1,
-              startTime: Date.now(), // stopwatch start
+              startTime: Date.now(),
               ...getRandomActors()
             });
           }
@@ -310,6 +315,18 @@
       $('winnerPopup').style.display = "flex";
       $('winnerText').textContent = `🏆 Winner: ${name}`;
       $('pointsText').textContent = `+${pts} points`;
+    }
+
+    function showScoreboard(endTime) {
+      $('scoreboardPopup').style.display = "flex";
+      $('scoreList').innerHTML = $("players").innerHTML;
+
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
+        $('scoreCountdown').textContent = `▶️ Next round starts in ${secs}s`;
+        if (secs <= 0) clearInterval(interval);
+      }, 500);
     }
 
     function getRandomActors() {
@@ -327,9 +344,7 @@
     }
 
     window.addEventListener("beforeunload", async () => {
-      if (playerRef) {
-        await deleteDoc(playerRef);
-      }
+      if (playerRef) await deleteDoc(playerRef);
     });
 
     /** --------------------------
@@ -366,11 +381,11 @@
         const newScore = (data.score || 0) + pts;
         await updateDoc(playerRef, { score: newScore });
 
-        // ✅ Winner triggers grace if not already set
         if (!lobbyData.winner) {
           await updateDoc(lobbyRef, {
             winner: username,
             winnerPoints: pts,
+            status: "grace",
             graceEndsAt: Date.now() + 10000
           });
         }
