@@ -168,14 +168,20 @@
       }
     };
 
-    // --- Join Lobby helper ---
+    // --- Join Lobby helper (with reset) ---
     async function joinLobby(lobbyId, name) {
       currentLobby = lobbyId;
       currentPlayer = name;
+
+      // 🔧 Force clear winner/finalScores on join
+      const lobbyRef = doc(db, "lobbies", currentLobby);
+      await updateDoc(lobbyRef, { winner: null, finalScores: null });
+
       await setDoc(doc(db, "lobbies", currentLobby, "players", currentPlayer), {
         name: currentPlayer, steps: 0, score: 0
-      });
-      const lobbySnap = await getDoc(doc(db, "lobbies", currentLobby));
+      }, { merge: true });
+
+      const lobbySnap = await getDoc(lobbyRef);
       const type = lobbySnap.exists() ? (lobbySnap.data().type || "private") : "private";
       startGame(currentLobby, type);
     }
@@ -195,7 +201,7 @@
         $('roundNumber').textContent = data.round || 0;
         $('targetActors').textContent = data.target || "-";
 
-        // ✅ stricter winner check
+        // ✅ Only show winner if game really ended
         if (
           data.winner &&
           ((data.round >= 5) || Object.values(data.finalScores || {}).some(s => s >= 400))
