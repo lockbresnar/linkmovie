@@ -17,6 +17,7 @@
       flex-direction: column; z-index: 1000;
     }
     #scoreboardPopup { display: none; }
+    #roundTimer { font-weight: bold; font-size: 20px; }
     #suggestions {
       position: absolute;
       background: #fff;
@@ -195,20 +196,34 @@
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
+          $("roundTimer").style.color = "white"; // reset timer color
           if (data.startTime) startStopwatch(data.startTime);
         }
 
         if (data.finishers) highlightFinishers(data.finishers);
 
-        if (data.status === "grace" && isHost && data.graceEndsAt && Date.now() > data.graceEndsAt) {
-          await updateDoc(lobbyRef, { status: "postRound", postRoundEndsAt: new Date(Date.now() + 10000) });
+        if (data.status === "grace") {
+          $("roundTimer").style.color = "red"; // 🔴 clock red during grace
+          if (isHost && data.graceEndsAt && Date.now() > data.graceEndsAt) {
+            await updateDoc(lobbyRef, { status: "postRound", postRoundEndsAt: new Date(Date.now() + 10000) });
+          }
         }
 
         if (data.status === "postRound") {
+          $("gameArea").style.display = "none";
+          $("scoreboardPopup").style.display = "flex";
           showScoreboard(data.postRoundEndsAt.toMillis(), data.finishers || []);
           if (isHost && data.postRoundEndsAt && Date.now() > data.postRoundEndsAt.toMillis()) {
             if (data.round < 5) {
-              await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: new Date(Date.now() + 10000), round: data.round + 1, winner: "", winnerPoints: 0, finishers: [], ...getRandomActors() });
+              await updateDoc(lobbyRef, {
+                status: "countdown",
+                countdownEndsAt: new Date(Date.now() + 10000),
+                round: data.round + 1,
+                winner: "",
+                winnerPoints: 0,
+                finishers: [],
+                ...getRandomActors()
+              });
             } else { showFinalScores(); }
           }
         }
@@ -216,9 +231,7 @@
 
       const playersRef = collection(db, "lobbies", currentLobby, "players");
       onSnapshot(playersRef, async (snap) => {
-        const players = [];
-        snap.forEach(d => players.push(d.id));
-        players.sort();
+        const players = []; snap.forEach(d => players.push(d.id)); players.sort();
         isHost = (players[0] === username);
 
         const ul = $('players'); ul.innerHTML = "";
@@ -271,7 +284,6 @@
     }
 
     function showScoreboard(endTime, finishers) {
-      $('scoreboardPopup').style.display = "flex";
       const medals = ["🥇","🥈","🥉","🎖️"];
       $('scoreList').innerHTML = finishers.map((f,i) => `<li>${medals[i]||"#"+(i+1)} ${f.name} — ${f.points} pts</li>`).join("");
       const interval = setInterval(() => {
