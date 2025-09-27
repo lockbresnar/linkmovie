@@ -240,29 +240,6 @@
           $("gameArea").style.display = "none";
           $("scoreboardPopup").style.display = "flex";
           showScoreboard(data.postRoundEndsAt ? data.postRoundEndsAt.toMillis() : (Date.now() + 10000));
-
-          // ✅ Host always triggers next round in 10s
-          if (isHost) {
-            console.log("Host scheduling next round in 10s...");
-            setTimeout(async () => {
-              const snap2 = await getDoc(lobbyRef);
-              const lobbyData = snap2.data();
-              if (lobbyData.round < 5) {
-                console.log("Starting next round...");
-                await updateDoc(lobbyRef, {
-                  status: "countdown",
-                  countdownEndsAt: new Date(Date.now() + 10000),
-                  round: lobbyData.round + 1,
-                  winner: "",
-                  winnerPoints: 0,
-                  finishers: [],
-                  ...getRandomActors()
-                });
-              } else {
-                showFinalScores();
-              }
-            }, 10000);
-          }
         }
       });
 
@@ -335,12 +312,43 @@
       const el = $('scoreCountdown');
       if (!el) return;
 
+      const update = () => {
+        const secs = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+        if (el) el.textContent = `▶️ Next round starts in ${secs}s`;
+      };
+      update();
       const interval = setInterval(() => {
-        const now = Date.now();
-        const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
-        el.textContent = `▶️ Next round starts in ${secs}s`;
-        if (secs <= 0) clearInterval(interval);
+        update();
+        if (Date.now() >= endTime) clearInterval(interval);
       }, 500);
+
+      // 👑 End game early if anyone hit 400+
+      if (allPlayers.some(p => (p.score || 0) >= 400)) {
+        console.log("🏆 Player reached 400 points — ending game early.");
+        if (isHost) showFinalScores();
+        return;
+      }
+
+      // ✅ Only host triggers next round
+      if (isHost) {
+        setTimeout(async () => {
+          const snap2 = await getDoc(doc(db, "lobbies", currentLobby));
+          const lobbyData = snap2.data();
+          if (lobbyData.round < 5) {
+            await updateDoc(doc(db, "lobbies", currentLobby), {
+              status: "countdown",
+              countdownEndsAt: new Date(Date.now() + 10000),
+              round: lobbyData.round + 1,
+              winner: "",
+              winnerPoints: 0,
+              finishers: [],
+              ...getRandomActors()
+            });
+          } else {
+            showFinalScores();
+          }
+        }, Math.max(0, endTime - Date.now()));
+      }
     }
 
     function showFinalScores() {
