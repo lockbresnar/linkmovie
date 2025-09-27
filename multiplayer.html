@@ -225,8 +225,8 @@
           $('overlay')?.remove();
           $('scoreboardPopup').style.display = "none";
           $('gameArea').style.display = "block";
-          $('roundNum').textContent = data.round;
-          $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
+          if ($('roundNum')) $('roundNum').textContent = data.round;
+          if ($('targetActors')) $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
           currentStart = data.startActor;
           currentTarget = data.endActor;
           lastMovieCast = [];
@@ -273,7 +273,7 @@
                 if (lobbyData.round < 5) {
                   await updateDoc(lobbyRef, {
                     status: "countdown",
-                    countdownEndsAt: new Date(Date.now() + 10000), // keep as Timestamp (original behavior)
+                    countdownEndsAt: Date.now() + 10000, // keep as Timestamp (original behavior)
                     round: lobbyData.round + 1,
                     winner: "",
                     winnerPoints: 0,
@@ -284,7 +284,7 @@
                   showFinalScores();
                 }
                 window._scheduledNext = false;
-              }, msLeft || 100);
+              }, msLeft || 100); // fallback
             }
           }
         }
@@ -310,7 +310,7 @@
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
           if (data.status === "waiting") {
-            await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: new Date(Date.now() + 10000), round: 1, ...getRandomActors() });
+            await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: Date.now() + 10000, round: 1, ...getRandomActors() });
           }
         }
         if (snap.size === 0) {
