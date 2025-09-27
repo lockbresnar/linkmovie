@@ -88,6 +88,14 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const $ = (id) => document.getElementById(id);
+    // Helper: returns milliseconds whether the value is a Firestore Timestamp or a number
+function ms(val) {
+  if (val == null) return 0;
+  if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
+  const n = Number(val);
+  return Number.isFinite(n) ? n : 0;
+}
+
 
     function setText(id, value) {
       const el = $(id);
