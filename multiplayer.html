@@ -39,8 +39,8 @@
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // 🔑 Replace with your TMDb API key
-    const API_KEY = "YOUR_TMDB_API_KEY";
+    // ✅ Your TMDb API key
+    const API_KEY = "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
@@ -63,27 +63,53 @@
     // --- Auto join or create lobby ---
     async function joinLobby() {
       $('status').textContent = `Hello ${username}, searching...`;
-      const q = query(collection(db, "lobbies"), where("status", "==", "waiting"));
-      const snaps = await getDocs(q);
 
-      if (!snaps.empty) {
-        const lobby = snaps.docs[0];
-        currentLobby = lobby.id;
-        playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username, steps: 0, score: 0 });
-        $('status').textContent = `Joined lobby ${currentLobby}`;
-        watchLobby();
-      } else {
-        const ref = await addDoc(collection(db, "lobbies"), {
-          status: "waiting",
-          createdAt: Date.now(),
-          round: 0
-        });
-        currentLobby = ref.id;
-        playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username, steps: 0, score: 0 });
-        $('status').textContent = `Created lobby ${currentLobby}, waiting...`;
-        watchLobby();
+      try {
+        const q = query(collection(db, "lobbies"), where("status", "==", "waiting"));
+        const snaps = await getDocs(q);
+
+        let chosenLobby = null;
+        for (const docSnap of snaps.docs) {
+          const playersRef = collection(db, "lobbies", docSnap.id, "players");
+          const playersSnap = await getDocs(playersRef);
+
+          // skip stale lobbies
+          if (playersSnap.size === 0) {
+            console.log("🗑 Removing stale empty lobby:", docSnap.id);
+            await deleteDoc(doc(db, "lobbies", docSnap.id));
+            continue;
+          }
+
+          if (playersSnap.size < 4) {
+            chosenLobby = docSnap;
+            break;
+          }
+        }
+
+        if (chosenLobby) {
+          currentLobby = chosenLobby.id;
+          playerRef = doc(db, "lobbies", currentLobby, "players", username);
+          await setDoc(playerRef, { name: username, steps: 0, score: 0 });
+          console.log("✅ Joined lobby:", currentLobby);
+          $('status').textContent = `Joined lobby ${currentLobby}`;
+          watchLobby();
+        } else {
+          // create new lobby
+          const ref = await addDoc(collection(db, "lobbies"), {
+            status: "waiting",
+            createdAt: Date.now(),
+            round: 0
+          });
+          currentLobby = ref.id;
+          playerRef = doc(db, "lobbies", currentLobby, "players", username);
+          await setDoc(playerRef, { name: username, steps: 0, score: 0 });
+          console.log("✅ Created new lobby:", currentLobby);
+          $('status').textContent = `Created lobby ${currentLobby}, waiting...`;
+          watchLobby();
+        }
+      } catch (err) {
+        console.error("❌ joinLobby failed:", err);
+        $('status').textContent = "Error creating/joining lobby (see console)";
       }
     }
 
@@ -123,16 +149,20 @@
         });
 
         const playerCount = snap.size;
+
+        // start game if 2+ players
         if (playerCount >= 2) {
-          const lobbyRef = doc(db, "lobbies", currentLobby);
           await updateDoc(lobbyRef, {
             status: "countdown",
             countdownEndsAt: new Date(Date.now() + 10000),
             round: 1,
-            ...getRandomActors() // start + end actors
+            ...getRandomActors()
           });
         }
+
+        // cleanup if no players left
         if (playerCount === 0) {
+          console.log("🗑 Deleting empty lobby:", currentLobby);
           await deleteDoc(lobbyRef);
         }
       });
@@ -153,83 +183,13 @@
       }, 200);
     }
 
-    // --- Submit guess ---
-    $('submitGuess').onclick = async () => {
-      const guess = $('guessInput').value.trim();
-      if (!guess) return;
-
-      const lobbyRef = doc(db, "lobbies", currentLobby);
-      const lobbySnap = await getDoc(lobbyRef);
-      const lobby = lobbySnap.data();
-      const sActor = lobby.startActor;
-      const eActor = lobby.endActor;
-
-      // search movie
-      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(guess)}`);
-      const data = await res.json();
-      if (!data.results.length) return await logGuess(guess, "grey");
-
-      const movie = data.results[0];
-      const credRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
-      const credits = await credRes.json();
-      const castIds = new Set(credits.cast.map(c => c.id));
-
-      const snap = await getDoc(playerRef);
-      const p = snap.data() || {};
-      const lastCastIds = p.lastCastIds || null;
-      let steps = p.steps || 0;
-
-      const includesStart  = sActor?.id && castIds.has(sActor.id);
-      const includesTarget = eActor?.id && castIds.has(eActor.id);
-
-      if (!lastCastIds) {
-        if (!includesStart) return await logGuess(movie.title, "grey");
-        steps++;
-        await logGuess(movie.title, "blue", castIds, steps);
-        if (includesTarget) await declareWinner(username);
-        return;
-      }
-
-      const sharesWithLast = lastCastIds.some(id => castIds.has(id));
-      if (!sharesWithLast) return await logGuess(movie.title, "grey");
-
-      steps++;
-      if (includesTarget) {
-        await logGuess(movie.title, "green", castIds, steps);
-        await declareWinner(username);
-      } else if (includesStart) {
-        await logGuess(movie.title, "blue", castIds, steps);
-      } else {
-        await logGuess(movie.title, "orange", castIds, steps);
-      }
-    };
-
-    async function logGuess(title, color, castIds=null, stepsInc=null) {
-      const snap = await getDoc(playerRef);
-      const chain = snap.exists() ? (snap.data().chain || []) : [];
-      chain.push({ title, color });
-
-      const updates = { chain };
-      if (castIds) updates.lastCastIds = [...castIds];
-      if (stepsInc) updates.steps = stepsInc;
-
-      await setDoc(playerRef, updates, { merge: true });
-
-      const li = document.createElement("li");
-      li.textContent = `${title} (${color})`;
-      $('guessLog').appendChild(li);
-    }
-
-    async function declareWinner(name) {
-      const lobbyRef = doc(db, "lobbies", currentLobby);
-      await updateDoc(lobbyRef, { winner: name });
-    }
-
+    // --- Winner popup ---
     function showWinner(name) {
       $('winnerPopup').style.display = "flex";
       $('winnerText').textContent = `🏆 Winner: ${name}`;
     }
 
+    // --- Random actors for round ---
     function getRandomActors() {
       const pool = [
         {id: 31, name: "Tom Hanks"},
@@ -244,4 +204,14 @@
       return { startActor: a, endActor: b };
     }
 
-    window.addEventListener("befor
+    // --- Cleanup on exit ---
+    window.addEventListener("beforeunload", async () => {
+      if (playerRef) {
+        await deleteDoc(playerRef);
+      }
+    });
+
+    joinLobby();
+  </script>
+</body>
+</html>
