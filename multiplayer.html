@@ -214,8 +214,23 @@
           }
         }
 
-        // Handle grace end -> next round
-        if (isHost && data.winner && data.graceEndsAt && Date.now() > data.graceEndsAt) {
+        // ✅ Winner announced, allow grace play
+        if (data.winner && data.winner !== "") {
+          showWinner(data.winner, data.winnerPoints || 0);
+
+          // Host triggers post-round when grace ends
+          if (isHost && data.graceEndsAt && Date.now() > data.graceEndsAt && data.status === "playing") {
+            await updateDoc(lobbyRef, {
+              status: "postRound",
+              postRoundEndsAt: new Date(Date.now() + 10000) // 10s break
+            });
+          }
+        } else {
+          $('winnerPopup').style.display = "none";
+        }
+
+        // ✅ After post-round -> next round
+        if (isHost && data.status === "postRound" && data.postRoundEndsAt && Date.now() > data.postRoundEndsAt.toMillis()) {
           if (data.round < 5) {
             await updateDoc(lobbyRef, {
               status: "countdown",
@@ -230,12 +245,6 @@
             $('winnerText').textContent = "🏆 Game Over!";
             $('pointsText').textContent = "";
           }
-        }
-
-        if (data.winner && data.winner !== "") {
-          showWinner(data.winner, data.winnerPoints || 0);
-        } else {
-          $('winnerPopup').style.display = "none";
         }
       });
 
@@ -347,21 +356,24 @@
       li.textContent = result.movieTitle;
       $('guessLog').appendChild(li);
 
-      if (result.reachedTarget) {
-        const lobbyRef = doc(db, "lobbies", currentLobby);
-        const lobbySnap = await getDoc(lobbyRef);
-        const lobbyData = lobbySnap.data();
+      const lobbyRef = doc(db, "lobbies", currentLobby);
+      const lobbySnap = await getDoc(lobbyRef);
+      const lobbyData = lobbySnap.data();
 
+      if (result.reachedTarget) {
         const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime) / 1000);
         const pts = Math.max(10, 100 - newSteps * 10 - Math.floor(elapsedSecs / 10));
         const newScore = (data.score || 0) + pts;
         await updateDoc(playerRef, { score: newScore });
 
-        await updateDoc(lobbyRef, {
-          winner: username,
-          winnerPoints: pts,
-          graceEndsAt: Date.now() + 10000
-        });
+        // ✅ Winner triggers grace if not already set
+        if (!lobbyData.winner) {
+          await updateDoc(lobbyRef, {
+            winner: username,
+            winnerPoints: pts,
+            graceEndsAt: Date.now() + 10000
+          });
+        }
       }
 
       $('guessInput').value = "";
