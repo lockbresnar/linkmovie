@@ -49,6 +49,7 @@
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    // ✅ Firebase config (yours)
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -71,10 +72,11 @@
     let currentTarget = null;
     let lastMovieCast = [];
 
-    const TMDB_API_KEY = "<<<YOUR_TMDB_API_KEY>>>"; // 🔑 use your existing key
+    // ✅ Your TMDb key (from solo game)
+    const TMDB_API_KEY = "c3b5adfd2dd9cfc57cf1d4cc08a78cb9";
 
     /** --------------------------
-     *  TMDb Helpers (from actors.js)
+     *  TMDb Helpers
      * -------------------------- */
     async function searchMovie(title) {
       const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
@@ -98,25 +100,20 @@
       const cast = await getMovieCast(movie.id);
 
       if (isFirstGuess) {
-        // first guess must include start actor
         const ok = cast.some(a => a.id === currentStart.id);
         if (!ok) return { valid: false, reason: "Must include start actor" };
       } else {
-        // must share cast with last movie
         const overlap = cast.some(a => lastMovieCast.some(b => b.id === a.id));
         if (!overlap) return { valid: false, reason: "Must connect with previous movie" };
       }
 
-      // store cast for next turn
       lastMovieCast = cast;
-
-      // check win
       const reachedTarget = cast.some(a => a.id === currentTarget.id);
       return { valid: true, reachedTarget, movieTitle: movie.title };
     }
 
     /** --------------------------
-     *  Firestore
+     *  Firestore Join/Watch
      * -------------------------- */
     async function joinLobby() {
       $('status').textContent = `Hello ${username}, searching...`;
@@ -138,7 +135,7 @@
       if (chosenLobby) {
         currentLobby = chosenLobby.id;
         playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username, steps: 0, chain: [] });
+        await setDoc(playerRef, { name: username, steps: 0 });
         watchLobby();
       } else {
         const ref = await addDoc(collection(db, "lobbies"), {
@@ -148,7 +145,7 @@
         });
         currentLobby = ref.id;
         playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username, steps: 0, chain: [] });
+        await setDoc(playerRef, { name: username, steps: 0 });
         watchLobby();
       }
     }
@@ -172,6 +169,7 @@
           currentStart = data.startActor;
           currentTarget = data.endActor;
           lastMovieCast = [];
+          $('guessLog').innerHTML = ""; // reset your chain
         }
 
         if (data.winner && data.winner !== "") {
@@ -267,7 +265,7 @@
 
       const snap = await getDoc(playerRef);
       const data = snap.data();
-      const isFirst = (data.chain || []).length === 0;
+      const isFirst = (data.steps || 0) === 0;
 
       const result = await validateMovieGuess(guess, isFirst);
       if (!result.valid) {
@@ -276,8 +274,7 @@
       }
 
       const newSteps = (data.steps || 0) + 1;
-      const newChain = [...(data.chain || []), result.movieTitle];
-      await updateDoc(playerRef, { steps: newSteps, chain: newChain });
+      await updateDoc(playerRef, { steps: newSteps });
 
       const li = document.createElement("li");
       li.textContent = result.movieTitle;
