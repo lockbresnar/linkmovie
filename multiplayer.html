@@ -144,7 +144,8 @@
         }
 
         if (data.status === "playing") {
-          $('overlay').style.display = "none";   // ✅ hide the overlay
+          const overlay = $('overlay');
+          if (overlay) overlay.remove();   // ✅ remove overlay completely
           $('gameArea').style.display = "block";
           $('roundNum').textContent = data.round;
           $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
