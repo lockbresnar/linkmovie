@@ -52,7 +52,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
-      getFirestore, collection, query, where, getDocs, addDoc,
+      getFirestore, collection, getDocs, addDoc,
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -83,7 +83,6 @@
       $('status').textContent = `Hello ${username}, searching...`;
 
       try {
-        // ✅ Look for both waiting and countdown lobbies
         const snaps = await getDocs(collection(db, "lobbies"));
 
         let chosenLobby = null;
@@ -114,18 +113,16 @@
           $('status').textContent = `Joined lobby ${currentLobby}`;
           watchLobby();
         } else {
-          // ✅ Create new lobby, mark self as host
+          // Create new lobby
           const ref = await addDoc(collection(db, "lobbies"), {
             status: "waiting",
             createdAt: Date.now(),
-            round: 0,
-            host: username
+            round: 0
           });
           currentLobby = ref.id;
-          isHost = true;
           playerRef = doc(db, "lobbies", currentLobby, "players", username);
           await setDoc(playerRef, { name: username, steps: 0, score: 0 });
-          console.log("✅ Created new lobby as host:", currentLobby);
+          console.log("✅ Created new lobby:", currentLobby);
           $('status').textContent = `Created lobby ${currentLobby}, waiting...`;
           watchLobby();
         }
@@ -163,6 +160,13 @@
 
       const playersRef = collection(db, "lobbies", currentLobby, "players");
       onSnapshot(playersRef, async (snap) => {
+        const players = [];
+        snap.forEach(d => players.push(d.id));
+
+        // ✅ Ensure first player alphabetically is host
+        players.sort();
+        isHost = (players[0] === username);
+
         const ul = $('players');
         ul.innerHTML = "";
         snap.forEach(d => {
@@ -172,30 +176,26 @@
           ul.appendChild(li);
         });
 
-        const playerCount = snap.size;
-
-        // ✅ Only host triggers game start
-        if (isHost && dataForHostStart(playerCount)) {
-          await updateDoc(lobbyRef, {
-            status: "countdown",
-            countdownEndsAt: new Date(Date.now() + 10000),
-            round: 1,
-            ...getRandomActors()
-          });
+        // Only host can trigger countdown
+        if (isHost && snap.size >= 2) {
+          const lobbySnap = await getDoc(lobbyRef);
+          const data = lobbySnap.data();
+          if (data.status === "waiting") {
+            await updateDoc(lobbyRef, {
+              status: "countdown",
+              countdownEndsAt: new Date(Date.now() + 10000),
+              round: 1,
+              ...getRandomActors()
+            });
+          }
         }
 
         // cleanup if no players left
-        if (playerCount === 0) {
+        if (snap.size === 0) {
           console.log("🗑 Deleting empty lobby:", currentLobby);
           await deleteDoc(lobbyRef);
         }
       });
-    }
-
-    // --- Host-only start logic ---
-    function dataForHostStart(playerCount) {
-      // Only start if at least 2 players, and not already counting down/playing
-      return playerCount >= 2;
     }
 
     // --- Countdown before round ---
@@ -207,6 +207,10 @@
         if (secs <= 0) {
           clearInterval(interval);
           $('countdown').textContent = "";
+
+          // ✅ Always remove overlay after countdown
+          const overlay = $('overlay');
+          if (overlay) overlay.remove();
 
           // ✅ Only host transitions to playing
           if (isHost) {
