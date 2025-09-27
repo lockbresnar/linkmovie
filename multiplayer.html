@@ -129,7 +129,7 @@
       return { startActor: { id: nameA, name: nameA }, endActor: { id: nameB, name: nameB } };
     }
 
-    // ... all your existing logic for stopwatch, grace countdown, validateMovieGuess, joinLobby, etc. remains unchanged ...
+    // ... all your existing functions (stopwatch, grace countdown, validateMovieGuess, joinLobby, etc.) ...
 
     function watchLobby() {
       const lobbyRef = doc(db, "lobbies", currentLobby);
@@ -190,11 +190,12 @@
               setTimeout(async () => {
                 const snap2 = await getDoc(lobbyRef);
                 const lobbyData = snap2.data();
-                if (lobbyData.round < 5) {
+                const currentRound = lobbyData.round || 1;
+                if (currentRound < 5) {
                   await updateDoc(lobbyRef, {
                     status: "countdown",
                     countdownEndsAt: new Date(Date.now() + 10000),
-                    round: lobbyData.round + 1,
+                    round: currentRound + 1,
                     winner: "",
                     winnerPoints: 0,
                     finishers: [],
@@ -204,16 +205,16 @@
                   showFinalScores();
                 }
                 window._scheduledNext = false;
-              }, msLeft || 100); // ✅ fallback to ensure it always fires
+              }, msLeft || 100); // ✅ ensure timer always fires
             }
           }
         }
       });
 
-      // ... your existing players snapshot listener remains unchanged ...
+      // ... rest of your original player snapshot handling ...
     }
 
-    // ... rest of your unchanged functions (startCountdown, highlightFinishers, showScoreboard, showFinalScores, event listeners, joinLobby, etc.) ...
+    // ... the rest of your unchanged functions (startCountdown, showScoreboard, showFinalScores, event listeners, etc.) ...
 
     joinLobby();
   </script>
