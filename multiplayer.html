@@ -97,6 +97,7 @@
     let currentTarget = null;
     let lastMovieCast = [];
     let timerInterval = null;
+    let graceInterval = null;
 
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 
@@ -128,6 +129,18 @@
         const m = String(Math.floor(secs / 60)).padStart(2, "0");
         const s = String(secs % 60).padStart(2, "0");
         $("roundTimer").textContent = `${m}:${s}`;
+      }, 500);
+    }
+
+    function startGraceCountdown(endTime) {
+      if (timerInterval) clearInterval(timerInterval); // stop stopwatch
+      if (graceInterval) clearInterval(graceInterval);
+      $("roundTimer").style.color = "red";
+
+      graceInterval = setInterval(() => {
+        const secs = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+        $("roundTimer").textContent = `00:${String(secs).padStart(2,"0")}`;
+        if (secs <= 0) clearInterval(graceInterval);
       }, 500);
     }
 
@@ -196,14 +209,14 @@
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
-          $("roundTimer").style.color = "white"; // reset timer color
+          $("roundTimer").style.color = "white"; // reset
           if (data.startTime) startStopwatch(data.startTime);
         }
 
         if (data.finishers) highlightFinishers(data.finishers);
 
         if (data.status === "grace") {
-          $("roundTimer").style.color = "red"; // 🔴 clock red during grace
+          startGraceCountdown(data.graceEndsAt);
           if (isHost && data.graceEndsAt && Date.now() > data.graceEndsAt) {
             await updateDoc(lobbyRef, { status: "postRound", postRoundEndsAt: new Date(Date.now() + 10000) });
           }
@@ -310,17 +323,29 @@
       const li = document.createElement("li"); li.textContent = result.movieTitle; $('guessLog').appendChild(li);
 
       const lobbyRef = doc(db, "lobbies", currentLobby); const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
+
       if (result.reachedTarget) {
-        const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime) / 1000);
+        const elapsedSecs = lobbyData.elapsedAtWin || Math.floor((Date.now() - lobbyData.startTime) / 1000);
         const pts = Math.max(10, 100 - newSteps * 10 - Math.floor(elapsedSecs / 10));
         const newScore = (data.score || 0) + pts; await updateDoc(playerRef, { score: newScore });
-        let finishers = lobbyData.finishers || []; if (!finishers.find(f => f.name === username)) finishers.push({ name: username, points: pts });
+
+        let finishers = lobbyData.finishers || [];
+        if (!finishers.find(f => f.name === username)) finishers.push({ name: username, points: pts });
+
         if (!lobbyData.winner) {
-          await updateDoc(lobbyRef, { winner: username, winnerPoints: pts, finishers, status: "grace", graceEndsAt: Date.now() + 10000 });
+          await updateDoc(lobbyRef, {
+            winner: username,
+            winnerPoints: pts,
+            finishers,
+            status: "grace",
+            graceEndsAt: Date.now() + 10000,
+            elapsedAtWin: elapsedSecs
+          });
         } else {
           await updateDoc(lobbyRef, { finishers });
         }
       }
+
       $('guessInput').value = ""; $('suggestions').style.display = "none";
     });
 
