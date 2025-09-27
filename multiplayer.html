@@ -65,7 +65,6 @@
     <p id="scoreCountdown">▶️ Next round starts in 10s</p>
   </div>
 
-  <!-- ✅ Load your actors.js (global ACTOR_POOL) -->
   <script src="./actors.js"></script>
 
   <script type="module">
@@ -110,8 +109,28 @@
 
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 
-    // === all your existing functions (searchMovie, getMovieCast, getRandomActors,
-    // startStopwatch, startGraceCountdown, validateMovieGuess, joinLobby, etc.) remain unchanged ===
+    async function searchMovie(title) {
+      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
+      const data = await res.json();
+      return data.results;
+    }
+
+    async function getMovieCast(movieId) {
+      const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${TMDB_API_KEY}`);
+      const data = await res.json();
+      return data.cast;
+    }
+
+    function getRandomActors() {
+      const nameA = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)];
+      let nameB;
+      do { nameB = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)]; }
+      while (nameA === nameB);
+      return { startActor: { id: nameA, name: nameA }, endActor: { id: nameB, name: nameB } };
+    }
+
+    // === all your existing functions stay intact ===
+    // joinLobby, watchLobby, startCountdown, startGraceCountdown, validateMovieGuess, showScoreboard, showFinalScores, etc.
 
     function watchLobby() {
       const lobbyRef = doc(db, "lobbies", currentLobby);
@@ -120,7 +139,7 @@
         if (!snap.exists()) return;
         const data = snap.data();
 
-        // ... countdown, playing, grace unchanged ...
+        // countdown, playing, grace logic unchanged...
 
         // ✅ PATCHED POST-ROUND
         if (data.status === "postRound") {
@@ -151,16 +170,16 @@
                   showFinalScores();
                 }
                 window._scheduledNext = false;
-              }, msLeft || 100); // ✅ fallback ensures next round always fires
+              }, msLeft || 100); // ✅ fallback ensures timer always fires
             }
           }
         }
       });
 
-      // ... rest of your original players snapshot handling ...
+      // ... rest of your player snapshot handling unchanged ...
     }
 
-    // ... rest of your unchanged functions (startCountdown, highlightFinishers, showScoreboard, showFinalScores, event listeners, etc.) ...
+    // ... rest of your original functions unchanged ...
 
     joinLobby();
   </script>
