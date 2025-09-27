@@ -91,7 +91,7 @@
           status: "waiting",
           round: 0,
           host: username,
-          createdAt: Date.now(),
+          createdAt: new Date(),
           ...getRandomActors()
         });
         currentLobby = ref.id;
@@ -113,7 +113,7 @@
           if (isHost) {
             const playersSnap = await getDocs(collection(db,"lobbies",currentLobby,"players"));
             if (playersSnap.size >= 2) {
-              await updateDoc(lobbyRef, { status:"countdown", countdownEndsAt: Date.now()+10000, round:1 });
+              await updateDoc(lobbyRef, { status:"countdown", countdownEndsAt: new Date(Date.now()+10000), round:1 });
             }
           }
         }
@@ -123,7 +123,7 @@
           console.log("⏳ New round starts soon...");
           setTimeout(() => {
             if (isHost) {
-              updateDoc(lobbyRef, { status:"playing", round:data.round, ...getRandomActors(), startTime: Date.now() });
+              updateDoc(lobbyRef, { status:"playing", round:data.round, ...getRandomActors(), startTime: new Date() });
             }
           }, 10000);
         }
@@ -139,11 +139,12 @@
         if (data.status === "grace") {
           if (isHost && data.graceEndsAt) {
             const check = setInterval(async () => {
-              if (Date.now() > data.graceEndsAt) {
+              const graceEnd = data.graceEndsAt instanceof Date ? data.graceEndsAt.getTime() : data.graceEndsAt.toMillis();
+              if (Date.now() > graceEnd) {
                 clearInterval(check);
                 await updateDoc(lobbyRef, {
                   status: "postRound",
-                  postRoundEndsAt: Date.now() + 10000   // ✅ number not Date
+                  postRoundEndsAt: new Date(Date.now() + 10000) // ✅ Firestore Timestamp
                 });
               }
             }, 500);
@@ -153,17 +154,20 @@
         if (data.status === "postRound") {
           $("gameArea").style.display = "none";
           $("scoreboardPopup").style.display = "flex";
-          showScoreboard(data.postRoundEndsAt);
+          const endTime = data.postRoundEndsAt instanceof Date
+            ? data.postRoundEndsAt.getTime()
+            : data.postRoundEndsAt.toMillis();
+          showScoreboard(endTime);
 
-          if (isHost && data.postRoundEndsAt) {
-            const msLeft = data.postRoundEndsAt - Date.now();
+          if (isHost && endTime) {
+            const msLeft = endTime - Date.now();
             setTimeout(async () => {
               const snap2 = await getDoc(lobbyRef);
               const lobbyData = snap2.data();
               if (lobbyData.round < 5) {
                 await updateDoc(lobbyRef, {
                   status:"countdown",
-                  countdownEndsAt: Date.now()+10000,
+                  countdownEndsAt: new Date(Date.now()+10000),
                   round:lobbyData.round+1,
                   winner:"",
                   finishers:[],
@@ -199,7 +203,7 @@
       if (!el) return;
 
       const update = () => {
-        const secs = Math.max(0, Math.ceil((endTime-Date.now())/1000));
+        const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
         el.textContent = `▶️ Next round starts in ${secs}s`;
       };
       update();
