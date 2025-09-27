@@ -75,7 +75,6 @@
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // === Firebase config (unchanged from your original) ===
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -88,15 +87,15 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
     const $ = (id) => document.getElementById(id);
 
-    // === NEW: tiny helper to read Timestamp OR number as ms ===
-    function ms(val) {
-      if (!val) return 0;
-      if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
-      const n = Number(val);
-      return Number.isFinite(n) ? n : 0;
+    function setText(id, value) {
+      const el = $(id);
+      if (el) el.textContent = value;
+    }
+    function setStyle(id, prop, value) {
+      const el = $(id);
+      if (el && el.style) el.style[prop] = value;
     }
 
     const username = "Player-" + Math.floor(Math.random() * 10000);
@@ -108,9 +107,7 @@
     let lastMovieCast = [];
     let timerInterval = null;
     let graceInterval = null;
-    window._scheduledNext = false; // guard against double-scheduling
 
-    // === Your TMDB key (unchanged) ===
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 
     async function searchMovie(title) {
@@ -148,7 +145,7 @@
       if (timerInterval) clearInterval(timerInterval);
       if (graceInterval) clearInterval(graceInterval);
 
-      $("roundTimer").style.color = "red";
+      setStyle('roundTimer','color','red');
 
       graceInterval = setInterval(() => {
         const secs = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
@@ -213,31 +210,24 @@
         if (!snap.exists()) return;
         const data = snap.data();
 
-        // COUNTDOWN
-        if (data.status === "countdown" && data.countdownEndsAt) {
-          window._scheduledNext = false; // reset guard entering countdown
-          startCountdown(ms(data.countdownEndsAt));  /* <- tolerant read */
-        }
+        if (data.status === "countdown" && data.countdownEndsAt) startCountdown(ms(data.countdownEndsAt));
 
-        // PLAYING
         if (data.status === "playing") {
-          window._scheduledNext = false; // reset guard entering playing
           $('overlay')?.remove();
           $('scoreboardPopup').style.display = "none";
           $('gameArea').style.display = "block";
-          const rn = $('roundNum'); if (rn) rn.textContent = data.round; /* <- guard */
-          const ta = $('targetActors'); if (ta) ta.textContent = `${data.startActor?.name} → ${data.endActor?.name}`; /* <- guard */
+          setText('roundNum', data.round);
+          setText('targetActors', `${data.startActor?.name} → ${data.endActor?.name}`);
           currentStart = data.startActor;
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
-          $("roundTimer").style.color = "white";
+          setStyle('roundTimer','color','white');
           if (data.startTime) startStopwatch(data.startTime);
         }
 
         if (data.finishers) highlightFinishers(data.finishers);
 
-        // GRACE
         if (data.status === "grace") {
           startGraceCountdown(data.graceEndsAt);
 
@@ -245,47 +235,39 @@
             const checkGrace = setInterval(async () => {
               if (Date.now() > data.graceEndsAt) {
                 clearInterval(checkGrace);
-                // ✅ WRITE as number, not Date()
                 await updateDoc(lobbyRef, {
                   status: "postRound",
-                  postRoundEndsAt: Date.now() + 10000
+                  postRoundEndsAt: new Date(Date.now() + 10000)
                 });
               }
             }, 500);
           }
         }
 
-        // POST-ROUND (SCOREBOARD)
         if (data.status === "postRound") {
           $("gameArea").style.display = "none";
           $("scoreboardPopup").style.display = "flex";
+          showScoreboard(data.postRoundEndsAt.toMillis());
 
-          const endMs = ms(data.postRoundEndsAt);      // ✅ tolerant read
-          showScoreboard(endMs);                        // expects number
-
-          if (isHost && endMs) {
-            const msLeft = Math.max(0, endMs - Date.now());
-            if (!window._scheduledNext) {
-              window._scheduledNext = true;            // ✅ guard against double setTimeout
-              setTimeout(async () => {
-                const snap2 = await getDoc(lobbyRef);
-                const lobbyData = snap2.data();
-                if (lobbyData.round < 5) {
-                  await updateDoc(lobbyRef, {
-                    status: "countdown",
-                    countdownEndsAt: Date.now() + 10000, // <- number, not Date()
-                    round: lobbyData.round + 1,
-                    winner: "",
-                    winnerPoints: 0,
-                    finishers: [],
-                    ...getRandomActors()
-                  });
-                } else {
-                  showFinalScores();
-                }
-                window._scheduledNext = false;
-              }, msLeft || 100); // ✅ fallback ensures next round always fires
-            }
+          if (isHost && data.postRoundEndsAt) {
+            const msLeft = data.postRoundEndsAt.toMillis() - Date.now();
+            setTimeout(async () => {
+              const snap2 = await getDoc(lobbyRef);
+              const lobbyData = snap2.data();
+              if (lobbyData.round < 5) {
+                await updateDoc(lobbyRef, {
+                  status: "countdown",
+                  countdownEndsAt: Date.now() + 10000,
+                  round: lobbyData.round + 1,
+                  winner: "",
+                  winnerPoints: 0,
+                  finishers: [],
+                  ...getRandomActors()
+                });
+              } else {
+                showFinalScores();
+              }
+            }, msLeft || 100);
           }
         }
       });
@@ -306,17 +288,13 @@
         });
 
         if (isHost && snap.size >= 2) {
-          const lobbyRef = doc(db, "lobbies", currentLobby);
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
           if (data.status === "waiting") {
-            await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: Date.now() + 10000, round: 1, ...getRandomActors() }); /* <- number */
+            await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: Date.now() + 10000, round: 1, ...getRandomActors() });
           }
         }
-        if (snap.size === 0) {
-          const lobbyRef = doc(db, "lobbies", currentLobby);
-          await deleteDoc(lobbyRef);
-        }
+        if (snap.size === 0) await deleteDoc(lobbyRef);
       });
     }
 
@@ -324,7 +302,7 @@
       const interval = setInterval(async () => {
         const now = Date.now();
         const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
-        $('countdown').textContent = secs;
+        setText('countdown', secs);
         if (secs <= 0) {
           clearInterval(interval);
           $('countdown').textContent = "";
@@ -363,7 +341,7 @@
       const interval = setInterval(() => {
         const now = Date.now();
         const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
-        $('scoreCountdown').textContent = `▶️ Next round starts in ${secs}s`;
+        setText('scoreCountdown', `▶️ Next round starts in ${secs}s`);
         if (secs <= 0) clearInterval(interval);
       }, 500);
     }
