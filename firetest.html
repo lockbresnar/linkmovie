@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Firestore Test</title>
+</head>
+<body>
+  <h1>Firestore Test</h1>
+  <pre id="log">Loading...</pre>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
+      authDomain: "linkmovie-ef911.firebaseapp.com",
+      projectId: "linkmovie-ef911",
+      storageBucket: "linkmovie-ef911.appspot.com",
+      messagingSenderId: "523659305871",
+      appId: "1:523659305871:web:129810d281b5cf9b33a1fa",
+      measurementId: "G-ZEW051T33S"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function testWrite() {
+      try {
+        const ref = await addDoc(collection(db, "debugTests"), {
+          message: "Hello Firestore",
+          time: Date.now()
+        });
+        document.getElementById("log").textContent = "✅ Wrote doc id: " + ref.id;
+        console.log("✅ Wrote doc id:", ref.id);
+      } catch (err) {
+        document.getElementById("log").textContent = "❌ Error: " + err.message;
+        console.error("❌ Error:", err);
+      }
+    }
+
+    testWrite();
+  </script>
+</body>
+</html>
