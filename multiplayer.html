@@ -58,7 +58,7 @@
   <!-- Winner Popup -->
   <div id="winnerPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:1000;">
     <h2 id="winnerText"></h2>
-    <button onclick="window.location.href='/multiplayer.html'">Play Again</button>
+    <button id="resetBtn">Play Again</button>
   </div>
 
   <script type="module">
@@ -99,7 +99,9 @@
           type: type,
           round: 1,
           target: getRandomActors(),
-          roundResolved: false
+          roundResolved: false,
+          winner: null,
+          finalScores: null
         });
 
         currentLobby = lobbyRef.id;
@@ -146,7 +148,9 @@
             type: "public",
             round: 1,
             target: getRandomActors(),
-            roundResolved: false
+            roundResolved: false,
+            winner: null,
+            finalScores: null
           });
           currentLobby = lobbyRef.id;
           currentPlayer = name;
@@ -235,7 +239,6 @@
       const lobby = lobbySnap.data();
       const round = (lobby.round || 1);
 
-      // Check for winner by points
       const playersSnap = await getDocs(collection(db, "lobbies", lobbyId, "players"));
       let topPlayer = null, topScore = -1;
       const scores = {};
@@ -244,15 +247,35 @@
         scores[p.name] = p.score;
         if (p.score > topScore) { topScore = p.score; topPlayer = p.name; }
       });
+
       if (topScore >= 400 || round >= 5) {
         await updateDoc(lobbyRef, { winner: topPlayer, finalScores: scores });
       } else {
         await updateDoc(lobbyRef, {
           round: round + 1,
           target: getRandomActors(),
-          roundResolved: false
+          roundResolved: false,
+          winner: null,
+          finalScores: null
         });
       }
+    }
+
+    // --- Reset Lobby for Replay ---
+    async function resetLobby(lobbyId) {
+      const lobbyRef = doc(db, "lobbies", lobbyId);
+      await updateDoc(lobbyRef, {
+        round: 1,
+        target: getRandomActors(),
+        roundResolved: false,
+        winner: null,
+        finalScores: null
+      });
+      const playersSnap = await getDocs(collection(db, "lobbies", lobbyId, "players"));
+      playersSnap.forEach(async (d) => {
+        await updateDoc(doc(db, "lobbies", lobbyId, "players", d.id), { steps: 0, score: 0 });
+      });
+      $('winnerPopup').style.display = "none";
     }
 
     // --- Show Winner ---
@@ -279,6 +302,11 @@
       $('setup').style.display = "block";
       $('game').style.display = "none";
     }
+
+    // --- Play Again button ---
+    $('resetBtn').onclick = () => {
+      if (currentLobby) resetLobby(currentLobby);
+    };
 
     function showError(msg) {
       $('errorBox').textContent = msg;
