@@ -77,6 +77,7 @@
     }
 
     let nextRoundTimerSet = false;
+    let scheduleNextOnce = false; // ✅ new guard
 
     async function findOrCreateLobby() {
       const lobbiesSnap = await getDocs(collection(db, "lobbies"));
@@ -127,36 +128,48 @@
           $("gameArea").style.display = "none";
           $("scoreboardPopup").style.display = "flex";
 
-          // normalize to number
+          // ✅ Normalize to ms
           const endTime = data.postRoundEndsAt?.toMillis
             ? data.postRoundEndsAt.toMillis()
-            : data.postRoundEndsAt || (Date.now() + 10000);
+            : Number(data.postRoundEndsAt) || (Date.now() + 10000);
 
           showScoreboard(endTime);
 
-          if (!nextRoundTimerSet && endTime) {
-            nextRoundTimerSet = true;
-            const msLeft = endTime - Date.now();
+          // ✅ Always schedule transition (not just host)
+          if (!scheduleNextOnce && endTime) {
+            scheduleNextOnce = true;
+            const msLeft = Math.max(0, endTime - Date.now());
             setTimeout(async () => {
-              const snap2 = await getDoc(lobbyRef);
-              const lobbyData = snap2.data();
-              if (!lobbyData) return;
+              try {
+                const snap2 = await getDoc(lobbyRef);
+                const lobbyData = snap2.data();
+                if (!lobbyData) return;
 
-              if (lobbyData.round < 5) {
-                await updateDoc(lobbyRef, {
-                  status:"countdown",
-                  countdownEndsAt: new Date(Date.now()+10000),
-                  round:lobbyData.round+1,
-                  winner: "",
-                  winnerPoints: 0,
-                  finishers: [],
-                  ...getRandomActors()
-                });
-              } else {
-                await updateDoc(lobbyRef, { status:"final" });
+                // Stop if already advanced
+                if (lobbyData.status !== "postRound") {
+                  scheduleNextOnce = false;
+                  return;
+                }
+
+                if (lobbyData.round < 5) {
+                  await updateDoc(lobbyRef, {
+                    status:"countdown",
+                    countdownEndsAt: new Date(Date.now()+10000),
+                    round:(lobbyData.round||1)+1,
+                    winner: "",
+                    winnerPoints: 0,
+                    finishers: [],
+                    ...getRandomActors()
+                  });
+                } else {
+                  await updateDoc(lobbyRef, { status:"final" });
+                }
+              } catch (e) {
+                console.warn("Next round scheduling failed:", e);
+              } finally {
+                scheduleNextOnce = false;
               }
-              nextRoundTimerSet = false;
-            }, Math.max(0, msLeft));
+            }, msLeft);
           }
         }
 
