@@ -10,13 +10,13 @@
     #gameArea { display:none; }
     ul { list-style:none; padding:0; }
     li { margin:4px 0; }
-    #overlay, #winnerPopup, #scoreboardPopup {
+    #overlay, #scoreboardPopup {
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.85); color: #fff;
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; z-index: 1000;
     }
-    #winnerPopup, #scoreboardPopup { display: none; }
+    #scoreboardPopup { display: none; }
     #suggestions {
       position: absolute;
       background: #fff;
@@ -58,12 +58,6 @@
     <ul id="players"></ul>
   </div>
 
-  <div id="winnerPopup">
-    <h2 id="winnerText"></h2>
-    <p id="pointsText"></p>
-    <p>⏳ Others still have 10 seconds to play!</p>
-  </div>
-
   <div id="scoreboardPopup">
     <h2>Round Over</h2>
     <ul id="scoreList"></ul>
@@ -76,6 +70,9 @@
       getFirestore, collection, getDocs, addDoc,
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ✅ Import your full actors dataset
+    import { ACTORS } from "./actors.js";
 
     // ✅ Firebase config
     const firebaseConfig = {
@@ -220,8 +217,8 @@
         }
 
         // ✅ Grace mode
-        if (data.status === "grace") {
-          showWinner(data.winner, data.winnerPoints || 0);
+        if (data.status === "grace" && data.winner) {
+          highlightWinner(data.winner, data.winnerPoints || 0);
 
           if (isHost && data.graceEndsAt && Date.now() > data.graceEndsAt) {
             await updateDoc(lobbyRef, {
@@ -246,9 +243,7 @@
                 ...getRandomActors()
               });
             } else {
-              $('winnerPopup').style.display = "flex";
-              $('winnerText').textContent = "🏆 Game Over!";
-              $('pointsText').textContent = "";
+              showFinalScores();
             }
           }
         }
@@ -311,10 +306,13 @@
       }, 200);
     }
 
-    function showWinner(name, pts) {
-      $('winnerPopup').style.display = "flex";
-      $('winnerText').textContent = `🏆 Winner: ${name}`;
-      $('pointsText').textContent = `+${pts} points`;
+    function highlightWinner(name, pts) {
+      const ul = $("players");
+      Array.from(ul.children).forEach(li => {
+        if (li.textContent.startsWith(name)) {
+          li.textContent = `${name} — 🏆 Winner (+${pts})`;
+        }
+      });
     }
 
     function showScoreboard(endTime) {
@@ -329,17 +327,18 @@
       }, 500);
     }
 
+    function showFinalScores() {
+      $('scoreboardPopup').style.display = "flex";
+      $('scoreList').innerHTML = $("players").innerHTML;
+      $('scoreCountdown').textContent = "🏆 Game Over!";
+    }
+
     function getRandomActors() {
-      const pool = [
-        {id: 31, name: "Tom Hanks"},
-        {id: 3084, name: "Meryl Streep"},
-        {id: 287, name: "Brad Pitt"},
-        {id: 54693, name: "Emma Stone"},
-        {id: 5292, name: "Denzel Washington"}
-      ];
-      const a = pool[Math.floor(Math.random() * pool.length)];
+      const a = ACTORS[Math.floor(Math.random() * ACTORS.length)];
       let b;
-      do { b = pool[Math.floor(Math.random() * pool.length)]; } while (a.id === b.id);
+      do {
+        b = ACTORS[Math.floor(Math.random() * ACTORS.length)];
+      } while (a.id === b.id);
       return { startActor: a, endActor: b };
     }
 
