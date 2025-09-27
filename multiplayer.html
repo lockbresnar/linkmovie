@@ -122,11 +122,12 @@
         const data = snap.data();
 
         if (data.status === "countdown" && data.countdownEndsAt) {
+          $('status').textContent = "⏳ Round starting soon...";
           startCountdown(data.countdownEndsAt.toMillis());
         }
 
         if (data.status === "playing") {
-          $('status').textContent = "▶️ Round in progress!";
+          $('status').style.display = "none";   // ✅ hide overlay
           $('gameArea').style.display = "block";
           $('roundNum').textContent = data.round;
           $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
