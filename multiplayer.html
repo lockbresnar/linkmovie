@@ -2,65 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LinkMovie Multiplayer</title>
+  <title>LinkMovie Multiplayer Auto</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui, Arial, sans-serif; margin: 24px; background: #fafafa; color: #111; }
-    h1 { margin: 0 0 12px; }
-    .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px; max-width: 720px; margin-bottom: 20px; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
-    input, select { padding: 10px; border: 1px solid #ccc; border-radius: 8px; min-width: 200px; }
-    button { padding: 10px 14px; border: 0; border-radius: 999px; background: #4fa7ff; color: #fff; cursor: pointer; }
-    ul { padding-left: 18px; }
-    #errorBox { white-space: pre-wrap; color: #b00020; margin-top: 10px; }
-    #game { display: none; }
-    code { background: #f3f3f3; padding: 2px 6px; border-radius: 6px; }
+    body { font-family: system-ui, Arial, sans-serif; text-align:center; margin: 40px; }
+    #countdown { font-size: 48px; margin: 20px 0; }
   </style>
 </head>
 <body>
   <h1>🎬 LinkMovie Multiplayer</h1>
-
-  <!-- Setup Screen -->
-  <div class="card" id="setup">
-    <div class="row">
-      <input id="playerName" placeholder="Enter your name" />
-    </div>
-    <div class="row">
-      <select id="lobbyType">
-        <option value="private">Private Lobby (invite only)</option>
-        <option value="public">Public Lobby (Quick Play)</option>
-      </select>
-      <button id="createLobby">Create Lobby</button>
-    </div>
-  </div>
-
-  <!-- Game Screen -->
-  <div class="card" id="game">
-    <p>Lobby ID: <code id="lobbyCode"></code></p>
-    <p>Status: <span id="lobbyStatus"></span></p>
-    <p>Round: <span id="roundNumber">0</span> / 5</p>
-    <p>Target: <span id="targetActors">-</span></p>
-    <div class="row">
-      <button id="submitAnswer">Submit Answer (+100 pts)</button>
-    </div>
-    <h3>Players</h3>
-    <ul id="playersList"></ul>
-  </div>
-
-  <!-- Winner Popup -->
-  <div id="winnerPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:1000;">
-    <h2 id="winnerText"></h2>
-    <button id="resetBtn">Play Again</button>
-  </div>
+  <p id="status">Joining lobby...</p>
+  <div id="countdown"></div>
+  <ul id="players"></ul>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
-      getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs,
-      onSnapshot
+      getFirestore, collection, query, where, getDocs, addDoc,
+      doc, setDoc, onSnapshot, updateDoc, serverTimestamp,
+      deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // ✅ Correct config (note storageBucket fixed to .appspot.com)
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -73,154 +35,111 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
     const $ = (id) => document.getElementById(id);
+
+    // --- Random username
+    const username = "Player-" + Math.floor(Math.random() * 10000);
+
     let currentLobby = null;
-    let currentPlayer = null;
+    let playerRef = null;
 
-    // --- Force initial state (setup visible, game/overlay hidden) ---
-    window.addEventListener("DOMContentLoaded", () => {
-      $('setup').style.display = "block";
-      $('game').style.display = "none";
-      $('winnerPopup').style.display = "none";
-    });
+    // --- Auto join or create lobby
+    async function joinLobby() {
+      $('status').textContent = `Hello ${username}, searching for lobby...`;
 
-    // --- Create Lobby ---
-    $('createLobby').onclick = async () => {
-      try {
-        const name = $('playerName').value.trim();
-        if (!name) return alert('Enter a name');
-        const type = $('lobbyType').value;
+      // look for waiting lobby with <4 players
+      const q = query(collection(db, "lobbies"), where("status", "==", "waiting"));
+      const snaps = await getDocs(q);
 
-        const lobbyRef = await addDoc(collection(db, "lobbies"), {
-          createdAt: Date.now(),
+      if (!snaps.empty) {
+        const lobby = snaps.docs[0];
+        currentLobby = lobby.id;
+        playerRef = doc(db, "lobbies", currentLobby, "players", username);
+        await setDoc(playerRef, { name: username });
+        $('status').textContent = `Joined lobby ${currentLobby}`;
+        watchLobby();
+      } else {
+        // create new lobby
+        const ref = await addDoc(collection(db, "lobbies"), {
           status: "waiting",
-          type,
-          round: 1,
-          target: getRandomActors(),
-          winner: null,
-          finalScores: null
+          createdAt: Date.now()
         });
-
-        currentLobby = lobbyRef.id;
-        currentPlayer = name;
-
-        await setDoc(doc(db, "lobbies", currentLobby, "players", currentPlayer), {
-          name: currentPlayer,
-          score: 0
-        });
-
-        console.log("✅ Lobby created:", currentLobby);
-        startGame(currentLobby, type);
-      } catch (err) {
-        console.error("❌ Failed to create lobby:", err);
+        currentLobby = ref.id;
+        playerRef = doc(db, "lobbies", currentLobby, "players", username);
+        await setDoc(playerRef, { name: username });
+        $('status').textContent = `Created lobby ${currentLobby}, waiting for players...`;
+        watchLobby();
       }
-    };
+    }
 
-    // --- Start Game ---
-    function startGame(lobbyId, type) {
-      $('setup').style.display = "none";
-      $('game').style.display = "block";
-      $('lobbyCode').textContent = lobbyId;
-      $('lobbyStatus').textContent = type;
-
-      const lobbyRef = doc(db, "lobbies", lobbyId);
+    // --- Watch lobby updates
+    function watchLobby() {
+      const lobbyRef = doc(db, "lobbies", currentLobby);
 
       onSnapshot(lobbyRef, (snap) => {
-        if (!snap.exists()) {
-          console.log("⚠️ Lobby doc not found:", lobbyId);
-          return;
-        }
+        if (!snap.exists()) return;
         const data = snap.data();
         console.log("📡 Lobby update:", data);
 
-        $('roundNumber').textContent = data.round || 0;
-        $('targetActors').textContent = data.target || "-";
-
-        if (data.winner && data.finalScores) {
-          showWinner(data.winner, data.finalScores);
+        if (data.status === "countdown" && data.countdownEndsAt) {
+          startCountdown(data.countdownEndsAt.toMillis());
         }
       });
 
-      const playersRef = collection(db, "lobbies", lobbyId, "players");
-      onSnapshot(playersRef, (snap) => {
-        const ul = $('playersList');
+      const playersRef = collection(db, "lobbies", currentLobby, "players");
+      onSnapshot(playersRef, async (snap) => {
+        const ul = $('players');
         ul.innerHTML = "";
-        snap.forEach((d) => {
-          const p = d.data();
+        snap.forEach(d => {
           const li = document.createElement("li");
-          li.textContent = `${p.name} — ${p.score || 0} pts`;
+          li.textContent = d.id;
           ul.appendChild(li);
         });
-      });
-    }
 
-    // --- Submit Answer (+100 pts) ---
-    $('submitAnswer').onclick = async () => {
-      const playerRef = doc(db, "lobbies", currentLobby, "players", currentPlayer);
-      const snap = await getDoc(playerRef);
-      const oldScore = snap.exists() ? snap.data().score || 0 : 0;
-      const newScore = oldScore + 100;
-      await setDoc(playerRef, { score: newScore }, { merge: true });
+        const playerCount = snap.size;
 
-      if (newScore >= 400) {
-        await endGame(currentLobby);
-      }
-    };
+        // If lobby has at least 2 players and still waiting, start 10s join window
+        const lobbySnap = await getDocs(query(collection(db, "lobbies")));
+        if (playerCount >= 2) {
+          const lobbyData = snap.docs[0];
+          const lobbyRef = doc(db, "lobbies", currentLobby);
+          const lobbyDocSnap = await getDocs(query(collection(db, "lobbies")));
+          await updateDoc(lobbyRef, {
+            status: "countdown",
+            countdownEndsAt: new Date(Date.now() + 10000) // start 10s window
+          });
+        }
 
-    // --- End Game ---
-    async function endGame(lobbyId) {
-      const playersSnap = await getDocs(collection(db, "lobbies", lobbyId, "players"));
-      let topPlayer = null, topScore = -1;
-      const scores = {};
-      playersSnap.forEach((d) => {
-        const p = d.data();
-        scores[p.name] = p.score || 0;
-        if (p.score > topScore) {
-          topScore = p.score;
-          topPlayer = p.name;
+        // If no players remain, delete lobby
+        if (playerCount === 0) {
+          await deleteDoc(lobbyRef);
+          console.log("🗑 Lobby deleted (no players left):", currentLobby);
         }
       });
-
-      const lobbyRef = doc(db, "lobbies", lobbyId);
-      await setDoc(lobbyRef, {
-        winner: topPlayer,
-        finalScores: scores
-      }, { merge: true });
-
-      console.log("✅ Game ended. Winner:", topPlayer, "Scores:", scores);
     }
 
-    // --- Show Winner ---
-    function showWinner(name, scores) {
-      $('winnerPopup').style.display = "flex";
-      $('winnerText').textContent = `🏆 Winner: ${name}\nScores: ${JSON.stringify(scores)}`;
+    // --- 5-second countdown before round
+    function startCountdown(endTime) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
+        $('countdown').textContent = secs;
+        if (secs <= 0) {
+          clearInterval(interval);
+          $('status').textContent = "▶️ Round started!";
+          $('countdown').textContent = "";
+        }
+      }, 200);
     }
 
-    // --- Reset ---
-    $('resetBtn').onclick = async () => {
-      const lobbyRef = doc(db, "lobbies", currentLobby);
-      await setDoc(lobbyRef, {
-        round: 1,
-        target: getRandomActors(),
-        winner: null,
-        finalScores: null
-      }, { merge: true });
+    // --- Cleanup on exit
+    window.addEventListener("beforeunload", async () => {
+      if (playerRef) {
+        await deleteDoc(playerRef);
+      }
+    });
 
-      $('winnerPopup').style.display = "none";
-      const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
-      playersSnap.forEach(async (d) => {
-        await setDoc(doc(db, "lobbies", currentLobby, "players", d.id), { score: 0 }, { merge: true });
-      });
-    };
-
-    // --- Random Actors ---
-    function getRandomActors() {
-      const actors = ["Tom Hanks", "Meryl Streep", "Brad Pitt", "Emma Stone", "Denzel Washington"];
-      const a = actors[Math.floor(Math.random() * actors.length)];
-      const b = actors[Math.floor(Math.random() * actors.length)];
-      return `${a} → ${b}`;
-    }
+    joinLobby();
   </script>
 </body>
 </html>
