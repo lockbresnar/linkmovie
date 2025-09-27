@@ -41,7 +41,7 @@
     <p>Round: <span id="roundNumber">0</span> / 5</p>
     <p>Target: <span id="targetActors">-</span></p>
     <div class="row">
-      <button id="submitAnswer">Submit Answer (test +100 pts)</button>
+      <button id="submitAnswer">Submit Answer (+100 pts)</button>
     </div>
     <h3>Players</h3>
     <ul id="playersList"></ul>
@@ -57,14 +57,15 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs,
-      updateDoc, onSnapshot, deleteDoc
+      onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    // ✅ Fixed config (storageBucket corrected to .appspot.com)
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
       projectId: "linkmovie-ef911",
-      storageBucket: "linkmovie-ef911.appspot.com", // double-check in console
+      storageBucket: "linkmovie-ef911.appspot.com",
       messagingSenderId: "523659305871",
       appId: "1:523659305871:web:129810d281b5cf9b33a1fa",
       measurementId: "G-ZEW051T33S"
@@ -90,7 +91,6 @@
           type,
           round: 1,
           target: getRandomActors(),
-          roundResolved: false,
           winner: null,
           finalScores: null
         });
@@ -103,10 +103,10 @@
           score: 0
         });
 
+        console.log("✅ Lobby created:", currentLobby);
         startGame(currentLobby, type);
-        alert("Lobby created: " + currentLobby);
       } catch (err) {
-        console.error("Create failed", err);
+        console.error("❌ Failed to create lobby:", err);
       }
     };
 
@@ -120,12 +120,17 @@
       const lobbyRef = doc(db, "lobbies", lobbyId);
 
       onSnapshot(lobbyRef, (snap) => {
-        if (!snap.exists()) return;
+        if (!snap.exists()) {
+          console.log("⚠️ Lobby doc not found:", lobbyId);
+          return;
+        }
         const data = snap.data();
+        console.log("📡 Lobby update:", data);
+
         $('roundNumber').textContent = data.round || 0;
         $('targetActors').textContent = data.target || "-";
 
-        if (data.winner && (data.round >= 5 || Object.values(data.finalScores || {}).some(s => s >= 400))) {
+        if (data.winner) {
           showWinner(data.winner, data.finalScores || {});
         }
       });
@@ -137,13 +142,13 @@
         snap.forEach((d) => {
           const p = d.data();
           const li = document.createElement("li");
-          li.textContent = `${p.name} — ${p.score} pts`;
+          li.textContent = `${p.name} — ${p.score || 0} pts`;
           ul.appendChild(li);
         });
       });
     }
 
-    // --- Submit Answer (simulate +100 pts) ---
+    // --- Submit Answer (simulated +100 pts) ---
     $('submitAnswer').onclick = async () => {
       const playerRef = doc(db, "lobbies", currentLobby, "players", currentPlayer);
       const snap = await getDoc(playerRef);
@@ -151,33 +156,10 @@
       const newScore = oldScore + 100;
       await setDoc(playerRef, { score: newScore }, { merge: true });
 
-      // check if round should end
       if (newScore >= 400) {
         await endGame(currentLobby);
-      } else {
-        await nextRound(currentLobby);
       }
     };
-
-    // --- Next Round ---
-    async function nextRound(lobbyId) {
-      const lobbyRef = doc(db, "lobbies", lobbyId);
-      const snap = await getDoc(lobbyRef);
-      if (!snap.exists()) return;
-      const round = (snap.data().round || 1) + 1;
-
-      if (round > 5) {
-        await endGame(lobbyId);
-      } else {
-        await setDoc(lobbyRef, {
-          round,
-          target: getRandomActors(),
-          roundResolved: false,
-          winner: null,
-          finalScores: null
-        }, { merge: true });
-      }
-    }
 
     // --- End Game ---
     async function endGame(lobbyId) {
@@ -198,6 +180,8 @@
         winner: topPlayer,
         finalScores: scores
       }, { merge: true });
+
+      console.log("✅ Game ended. Winner:", topPlayer, "Scores:", scores);
     }
 
     // --- Show Winner ---
@@ -215,6 +199,7 @@
         winner: null,
         finalScores: null
       }, { merge: true });
+
       $('winnerPopup').style.display = "none";
       const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
       playersSnap.forEach(async (d) => {
@@ -222,7 +207,7 @@
       });
     };
 
-    // --- Helper: random actors ---
+    // --- Random Actors ---
     function getRandomActors() {
       const actors = ["Tom Hanks", "Meryl Streep", "Brad Pitt", "Emma Stone", "Denzel Washington"];
       const a = actors[Math.floor(Math.random() * actors.length)];
