@@ -13,23 +13,116 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { 
+      getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    // ✅ Full Firebase config snippet (replace placeholder values with your real ones)
+    // ✅ Your real Firebase config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID",
-      measurementId: "YOUR_MEASUREMENT_ID"
+      apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
+      authDomain: "linkmovie-ef911.firebaseapp.com",
+      projectId: "linkmovie-ef911",
+      storageBucket: "linkmovie-ef911.firebasestorage.app",
+      messagingSenderId: "523659305871",
+      appId: "1:523659305871:web:129810d281b5cf9b33a1fa",
+      measurementId: "G-ZEW051T33S"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // ... rest of your original multiplayer.html script content ...
+    // === Helper to normalize Firestore Timestamps/numbers ===
+    function ms(val) {
+      if (!val) return 0;
+      if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
+      const n = Number(val);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function $(id) { return document.getElementById(id); }
+
+    // === Multiplayer logic ===
+    const lobbyRef = doc(db, "lobbies", "default-lobby"); // adjust as needed
+    let isHost = false; // you already determine this in your original code
+
+    onSnapshot(lobbyRef, (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      // Playing
+      if (data.status === "playing") {
+        window._scheduledNext = false;
+        $("gameArea").style.display = "block";
+        $("scoreboardPopup").style.display = "none";
+        // ... your playing logic (actor chain game) ...
+      }
+
+      // Countdown
+      if (data.status === "countdown") {
+        window._scheduledNext = false;
+        $("gameArea").style.display = "block";
+        $("scoreboardPopup").style.display = "none";
+        // ... your countdown logic ...
+      }
+
+      // PostRound (scoreboard)
+      if (data.status === "postRound") {
+        $("gameArea").style.display = "none";
+        $("scoreboardPopup").style.display = "flex";
+
+        const endMs = ms(data.postRoundEndsAt);
+        showScoreboard(endMs); // already in your code
+
+        if (isHost && endMs) {
+          const msLeft = Math.max(0, endMs - Date.now());
+          if (!window._scheduledNext) {
+            window._scheduledNext = true;
+            setTimeout(async () => {
+              const snap2 = await getDoc(lobbyRef);
+              const lobbyData = snap2.data();
+              if ((lobbyData.round || 1) < 5) {
+                await updateDoc(lobbyRef, {
+                  status: "countdown",
+                  countdownEndsAt: new Date(Date.now() + 10000),
+                  round: (lobbyData.round || 1) + 1,
+                  winner: "",
+                  winnerPoints: 0,
+                  finishers: [],
+                  ...getRandomActors()
+                });
+              } else {
+                showFinalScores();
+              }
+              window._scheduledNext = false;
+            }, msLeft);
+          }
+        }
+      }
+    });
+
+    // === Example: called when grace period ends ===
+    async function endGrace() {
+      await updateDoc(lobbyRef, {
+        status: "postRound",
+        postRoundEndsAt: Date.now() + 10000 // number instead of Date()
+      });
+    }
+
+    // === Your existing helpers ===
+    function showScoreboard(endMs) {
+      console.log("Show scoreboard until", new Date(endMs).toISOString());
+      // ... your real scoreboard display logic ...
+    }
+
+    function showFinalScores() {
+      console.log("Show final scores");
+      // ... your real final scores logic ...
+    }
+
+    function getRandomActors() {
+      // ... your existing random actor picker ...
+      return { actorA: "Actor 1", actorB: "Actor 2" };
+    }
 
   </script>
 </body>
