@@ -133,13 +133,18 @@
     }
 
     function startGraceCountdown(endTime) {
+      if (timerInterval) clearInterval(timerInterval); // ✅ stop stopwatch
       if (graceInterval) clearInterval(graceInterval);
+
       $("roundTimer").style.color = "red";
 
       graceInterval = setInterval(() => {
         const secs = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
         $("roundTimer").textContent = `00:${String(secs).padStart(2,"0")}`;
-        if (secs <= 0) clearInterval(graceInterval);
+        if (secs <= 0) {
+          clearInterval(graceInterval);
+          $("roundTimer").textContent = "00:00"; // freeze at 0
+        }
       }, 500);
     }
 
