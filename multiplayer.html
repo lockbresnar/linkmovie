@@ -168,14 +168,13 @@
       }
     };
 
-    // --- Join Lobby helper (with reset) ---
+    // --- Join Lobby helper ---
     async function joinLobby(lobbyId, name) {
       currentLobby = lobbyId;
       currentPlayer = name;
 
-      // 🔧 Force clear winner/finalScores on join
       const lobbyRef = doc(db, "lobbies", currentLobby);
-      await updateDoc(lobbyRef, { winner: null, finalScores: null });
+      await updateDoc(lobbyRef, { winner: null, finalScores: null }).catch(()=>{});
 
       await setDoc(doc(db, "lobbies", currentLobby, "players", currentPlayer), {
         name: currentPlayer, steps: 0, score: 0
@@ -196,12 +195,17 @@
       const lobbyRef = doc(db, "lobbies", lobbyId);
 
       onSnapshot(lobbyRef, (snap) => {
-        if (!snap.exists()) return;
+        if (!snap.exists()) {
+          console.log("⚠️ Lobby does not exist:", lobbyId);
+          return;
+        }
+
         const data = snap.data();
+        console.log("✅ Lobby update:", data);
+
         $('roundNumber').textContent = data.round || 0;
         $('targetActors').textContent = data.target || "-";
 
-        // ✅ Only show winner if game really ended
         if (
           data.winner &&
           ((data.round >= 5) || Object.values(data.finalScores || {}).some(s => s >= 400))
@@ -271,7 +275,7 @@
       }
     }
 
-    // --- Reset Lobby for Replay ---
+    // --- Reset Lobby ---
     async function resetLobby(lobbyId) {
       const lobbyRef = doc(db, "lobbies", lobbyId);
       await updateDoc(lobbyRef, {
@@ -294,7 +298,7 @@
       $('winnerText').textContent = `🏆 Winner: ${name}\nScores: ${JSON.stringify(scores)}`;
     }
 
-    // --- Helper: random actors placeholder ---
+    // --- Random Actors ---
     function getRandomActors() {
       const actors = ["Tom Hanks", "Meryl Streep", "Brad Pitt", "Emma Stone", "Denzel Washington"];
       const a = actors[Math.floor(Math.random() * actors.length)];
@@ -302,7 +306,7 @@
       return `${a} → ${b}`;
     }
 
-    // --- Auto-Join only if params present ---
+    // --- Auto-Join with params ---
     const params = new URLSearchParams(window.location.search);
     const lobbyParam = params.get("lobby");
     const nameParam = params.get("name");
@@ -318,7 +322,7 @@
       if (currentLobby) resetLobby(currentLobby);
     };
 
-    // --- Auto-cleanup on leave ---
+    // --- Auto-cleanup ---
     window.addEventListener("beforeunload", async () => {
       if (currentLobby && currentPlayer) {
         const playerRef = doc(db, "lobbies", currentLobby, "players", currentPlayer);
