@@ -65,7 +65,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getFirestore, collection, doc, setDoc, addDoc, updateDoc, increment,
-      onSnapshot, query, where, getDocs, getDoc
+      onSnapshot, query, where, getDocs, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -307,6 +307,18 @@
     $('resetBtn').onclick = () => {
       if (currentLobby) resetLobby(currentLobby);
     };
+
+    // --- Auto-cleanup on leave ---
+    window.addEventListener("beforeunload", async () => {
+      if (currentLobby && currentPlayer) {
+        const playerRef = doc(db, "lobbies", currentLobby, "players", currentPlayer);
+        await deleteDoc(playerRef);
+        const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
+        if (playersSnap.empty) {
+          await deleteDoc(doc(db, "lobbies", currentLobby));
+        }
+      }
+    });
 
     function showError(msg) {
       $('errorBox').textContent = msg;
