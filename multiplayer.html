@@ -4,50 +4,29 @@
   <meta charset="UTF-8">
   <title>LinkMovie Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="main-game.css">
   <style>
-    :root { color-scheme: dark; }
-    body { background:#0f0f0f; color:#eee; margin:0; font-family:system-ui,Arial,sans-serif; }
+    body { font-family: Arial, sans-serif; background: #111; color: #eee; text-align: center; }
     #overlay, #scoreboardPopup, #finalScoresPopup {
-      position: fixed; inset:0; display:none;
-      background:rgba(0,0,0,0.9); z-index:1000;
-      align-items:center; justify-content:center; flex-direction:column;
-      text-align:center; padding:24px;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9); display: none; flex-direction: column;
+      align-items: center; justify-content: center; color: #fff; z-index: 1000;
     }
-    #countdownBig { font-size:56px; font-weight:700; margin:12px 0; }
-    #roundTimer { font-weight:bold; }
-    ul { list-style:none; padding:0; }
-    li { margin:4px 0; }
+    input, button { padding: 8px; margin: 5px; }
+    ul { list-style: none; padding: 0; }
   </style>
 </head>
 <body>
-  <h1 style="text-align:center; margin:16px 0;">🎬 LinkMovie Multiplayer</h1>
-
-  <!-- Overlay: waiting & countdown -->
-  <div id="overlay">
-    <p id="status">Joining lobby…</p>
-    <div id="countdownBig"></div>
-  </div>
-
-  <!-- Main game area -->
-  <div id="gameArea" style="display:none; text-align:center;">
-    <p>
-      Round <span id="roundNum">1</span>/5 —
-      ⏱ <span id="roundTimer">00:00</span>
-    </p>
-    <p id="targetActors"></p>
-
-    <div style="margin:12px 0;">
-      <input id="movieInput" placeholder="Enter movie…" autocomplete="off"/>
-      <button id="submitBtn">Submit</button>
-    </div>
-
-    <h3>Your Chain</h3>
+  <h1>🎬 LinkMovie Multiplayer</h1>
+  <div id="gameArea" style="display:none;">
+    <p id="roundInfo"></p>
+    <p id="targetInfo"></p>
+    <input id="movieInput" placeholder="Enter movie..."/>
+    <button id="submitBtn">Submit</button>
+    <p>Your Chain</p>
     <ul id="yourChain"></ul>
-
     <h3>Players</h3>
     <ul id="playerList"></ul>
+    <p id="timer"></p>
   </div>
 
   <!-- Scoreboard -->
@@ -64,16 +43,12 @@
     <button onclick="location.reload()">Play Again</button>
   </div>
 
-  <!-- Multiplayer script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
-      getFirestore, collection, getDocs, addDoc,
-      doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
+      getFirestore, doc, setDoc, getDoc, updateDoc,
+      addDoc, collection, onSnapshot, getDocs, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    import { ACTORS } from "./actors.js";
-    import { setupActorChainGame, resetGame, getGameState } from "./actor-chain.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
@@ -88,194 +63,132 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const $ = id => document.getElementById(id);
-    const username = "Player-" + Math.floor(Math.random()*10000);
     let currentLobby = null;
-    let playerRef = null;
+    let username = "Player-" + Math.floor(Math.random()*10000);
+
+    const $ = id => document.getElementById(id);
+
+    function getRandomActors() {
+      const actors = ["Tom Hanks","Denzel Washington","Meryl Streep","Leonardo DiCaprio","Scarlett Johansson","Morgan Freeman"];
+      let a = actors[Math.floor(Math.random()*actors.length)];
+      let b = actors[Math.floor(Math.random()*actors.length)];
+      while (b === a) b = actors[Math.floor(Math.random()*actors.length)];
+      return { startActor: a, targetActor: b };
+    }
+
     let nextRoundTimerSet = false;
-    let preRoundTimerSet = false;
-    let timerInterval = null;
 
-    function formatClock(ms) {
-      const secs = Math.floor(ms/1000);
-      const m = String(Math.floor(secs/60)).padStart(2,"0");
-      const s = String(secs%60).padStart(2,"0");
-      return `${m}:${s}`;
-    }
-
-    function startStopwatch(startMs) {
-      if (timerInterval) clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        $("roundTimer").textContent = formatClock(Date.now()-startMs);
-      }, 500);
-    }
-
-    // Lobby join/create
-    async function joinLobby() {
-      $("overlay").style.display = "flex";
-      $("status").textContent = `Hello ${username}, searching…`;
-
-      const snaps = await getDocs(collection(db,"lobbies"));
-      let chosen = null;
-      for (const d of snaps.docs) {
-        const l = d.data();
-        if (["waiting","countdown"].includes(l.status)) {
-          const ps = await getDocs(collection(db,"lobbies",d.id,"players"));
-          if (ps.size < 4) { chosen=d; break; }
+    async function findOrCreateLobby() {
+      const lobbiesSnap = await getDocs(collection(db, "lobbies"));
+      let joined = false;
+      for (let docSnap of lobbiesSnap.docs) {
+        const lobby = docSnap.data();
+        if (lobby.status === "waiting") {
+          currentLobby = docSnap.id;
+          await setDoc(doc(db,"lobbies",currentLobby,"players",username), { name: username, score:0, steps:0 });
+          joined = true;
+          break;
         }
       }
-
-      if (chosen) currentLobby = chosen.id;
-      else {
-        const ref = await addDoc(collection(db,"lobbies"), {
-          status:"waiting", round:0, createdAt:new Date(), ...pickActors()
+      if (!joined) {
+        const ref = await addDoc(collection(db, "lobbies"), {
+          status: "waiting",
+          round: 0,
+          host: username,
+          createdAt: new Date(),
+          ...getRandomActors()
         });
         currentLobby = ref.id;
+        await setDoc(doc(db,"lobbies",currentLobby,"players",username), { name: username, score:0, steps:0 });
       }
-
-      playerRef = doc(db,"lobbies",currentLobby,"players",username);
-      await setDoc(playerRef,{ name:username, steps:0, score:0 });
-      watchLobby();
-      watchPlayers();
+      listenLobby();
     }
 
-    function pickActors() {
-      const a = ACTORS[Math.floor(Math.random()*ACTORS.length)];
-      let b = ACTORS[Math.floor(Math.random()*ACTORS.length)];
-      while (b.name===a.name) b = ACTORS[Math.floor(Math.random()*ACTORS.length)];
-      return { startActor:a, endActor:b };
-    }
-
-    function watchPlayers() {
-      const playersCol = collection(db,"lobbies",currentLobby,"players");
-      onSnapshot(playersCol, async snap=>{
-        $("playerList").innerHTML="";
-        const players=[];
-        snap.forEach(d=>players.push(d.data()));
-        players.sort((a,b)=>(b.score||0)-(a.score||0));
-        for (const p of players) {
-          const li=document.createElement("li");
-          li.textContent=`${p.name} — ${p.score||0} pts`;
-          $("playerList").appendChild(li);
-        }
-        // 2+ players start
-        const lobbyRef = doc(db,"lobbies",currentLobby);
-        const lobbySnap = await getDoc(lobbyRef);
-        if (lobbySnap.exists() && lobbySnap.data().status==="waiting" && players.length>=2) {
-          await updateDoc(lobbyRef,{ status:"countdown", countdownEndsAt:new Date(Date.now()+10000), round:1, ...pickActors() });
-        }
-      });
-    }
-
-    function watchLobby() {
+    function listenLobby() {
       const lobbyRef = doc(db,"lobbies",currentLobby);
-      onSnapshot(lobbyRef, async snap=>{
-        if (!snap.exists()) return;
-        const data=snap.data();
+      onSnapshot(lobbyRef, async (snap) => {
+        const data = snap.data();
+        if (!data) return;
 
-        if (data.status==="waiting") {
-          $("overlay").style.display="flex";
-          $("status").textContent="Waiting for players…";
+        if (data.status === "waiting") {
+          $("gameArea").style.display = "none";
           return;
         }
 
-        if (data.status==="countdown") {
-          $("overlay").style.display="flex"; $("status").textContent="Round starting…";
-          const endMs = data.countdownEndsAt.toMillis();
-          const tick=()=>{ $("countdownBig").textContent=Math.max(0,Math.ceil((endMs-Date.now())/1000)); };
-          tick(); const iv=setInterval(()=>{tick(); if(Date.now()>=endMs)clearInterval(iv)},200);
-          if (!preRoundTimerSet) {
-            preRoundTimerSet=true;
-            setTimeout(async()=>{
-              const s2=await getDoc(lobbyRef);
-              if (s2.exists() && s2.data().status==="countdown") {
-                await updateDoc(lobbyRef,{ status:"playing", startTime:new Date() });
+        if (data.status === "playing") {
+          $("gameArea").style.display = "block";
+          $("scoreboardPopup").style.display = "none";
+          $("finalScoresPopup").style.display = "none";
+          $("roundInfo").textContent = `Round: ${data.round}/5`;
+          $("targetInfo").textContent = `Target: ${data.startActor} → ${data.targetActor}`;
+        }
+
+        if (data.status === "postRound") {
+          $("gameArea").style.display = "none";
+          $("scoreboardPopup").style.display = "flex";
+
+          const endTime = data.postRoundEndsAt?.toMillis ? data.postRoundEndsAt.toMillis() : Date.now() + 10000;
+          showScoreboard(endTime);
+
+          // ✅ FIX: Always schedule next round once
+          if (!nextRoundTimerSet) {
+            nextRoundTimerSet = true;
+            setTimeout(async () => {
+              const snap2 = await getDoc(lobbyRef);
+              const lobbyData = snap2.data();
+              if (!lobbyData) return;
+
+              if (lobbyData.round < 5) {
+                await updateDoc(lobbyRef, {
+                  status:"countdown",
+                  countdownEndsAt: new Date(Date.now()+10000),
+                  round:lobbyData.round+1,
+                  ...getRandomActors()
+                });
+              } else {
+                await updateDoc(lobbyRef, { status:"final" });
               }
-            }, Math.max(0,endMs-Date.now()));
+              nextRoundTimerSet = false;
+            }, Math.max(0, endTime - Date.now()));
           }
         }
 
-        if (data.status==="playing") {
-          $("overlay").style.display="none";
-          $("gameArea").style.display="block";
-          $("roundNum").textContent=data.round||1;
-          $("targetActors").textContent=`${data.startActor.name} → ${data.endActor.name}`;
-          const startMs=data.startTime.toMillis();
-          startStopwatch(startMs);
-          resetGame(data.startActor,data.endActor); // from actor-chain.js
-          nextRoundTimerSet=false;
-        }
-
-        if (data.status==="grace") {
-          $("roundTimer").style.color="tomato";
-          const end=data.graceEndsAt.toMillis();
-          const tick=()=>{ $("roundTimer").textContent=`00:${String(Math.max(0,Math.ceil((end-Date.now())/1000))).padStart(2,"0")}`; };
-          tick(); if(timerInterval)clearInterval(timerInterval);
-          timerInterval=setInterval(()=>{tick(); if(Date.now()>=end)clearInterval(timerInterval)},300);
-          setTimeout(async()=>{
-            const s2=await getDoc(lobbyRef);
-            if (s2.exists()&&s2.data().status==="grace") {
-              await updateDoc(lobbyRef,{ status:"postRound", postRoundEndsAt:new Date(Date.now()+10000) });
-            }
-          }, Math.max(0,end-Date.now()));
-        }
-
-        if (data.status==="postRound") {
-          $("gameArea").style.display="none";
-          $("scoreboardPopup").style.display="flex";
-          const end=data.postRoundEndsAt.toMillis();
-          showScoreboard(end);
-          if(!nextRoundTimerSet){
-            nextRoundTimerSet=true;
-            setTimeout(async()=>{
-              const s3=await getDoc(lobbyRef);
-              if(s3.exists()){
-                const d3=s3.data();
-                if(d3.round<5){
-                  await updateDoc(lobbyRef,{ status:"countdown", countdownEndsAt:new Date(Date.now()+10000), round:d3.round+1, ...pickActors() });
-                } else {
-                  await updateDoc(lobbyRef,{ status:"final" });
-                }
-              }
-              nextRoundTimerSet=false;
-            }, Math.max(0,end-Date.now()));
-          }
-        }
-
-        if (data.status==="final") {
-          $("scoreboardPopup").style.display="none";
-          $("finalScoresPopup").style.display="flex";
-          const ps=await getDocs(collection(db,"lobbies",currentLobby,"players"));
-          const all=ps.docs.map(d=>d.data()); all.sort((a,b)=>(b.score||0)-(a.score||0));
-          $("finalScoreList").innerHTML=all.map(p=>`<li>${p.name} — ${p.score||0} pts</li>`).join("");
+        if (data.status === "final") {
+          $("scoreboardPopup").style.display = "none";
+          $("finalScoresPopup").style.display = "flex";
+          const playersSnap = await getDocs(collection(db,"lobbies",currentLobby,"players"));
+          const allPlayers = playersSnap.docs.map(d=>d.data());
+          allPlayers.sort((a,b)=>(b.score||0)-(a.score||0));
+          $("finalScoreList").innerHTML = allPlayers.map(p=>`<li>${p.name} — ${p.score||0} pts</li>`).join("");
         }
       });
     }
 
-    async function showScoreboard(endTime){
-      const ps=await getDocs(collection(db,"lobbies",currentLobby,"players"));
-      const all=ps.docs.map(d=>d.data());
-      all.sort((a,b)=>(b.score||0)-(a.score||0));
-      $("scoreList").innerHTML=all.map((p,i)=>`<li>${i+1}. ${p.name} — ${p.score||0} pts</li>`).join("");
-      const tick=()=>{ $("scoreCountdown").textContent=`▶️ Next round starts in ${Math.max(0,Math.ceil((endTime-Date.now())/1000))}s`; };
-      tick(); const iv=setInterval(()=>{tick(); if(Date.now()>=endTime)clearInterval(iv)},500);
+    async function showScoreboard(endTime) {
+      const playersSnap = await getDocs(collection(db,"lobbies",currentLobby,"players"));
+      const allPlayers = playersSnap.docs.map(d=>d.data());
+      allPlayers.sort((a,b)=>(b.score||0)-(a.score||0));
+      $("scoreList").innerHTML = allPlayers.map((p,i)=>`<li>${i+1}. ${p.name} — ${p.score||0} pts</li>`).join("");
+
+      const el = $("scoreCountdown");
+      const update = () => {
+        const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
+        el.textContent = `▶️ Next round starts in ${secs}s`;
+      };
+      update();
+      const interval = setInterval(() => {
+        update();
+        if (Date.now() >= endTime) clearInterval(interval);
+      }, 500);
     }
 
-    // Hook your actor-chain submit
-    $("submitBtn").addEventListener("click", async()=>{
-      const { won, steps, points } = getGameState(); // actor-chain.js should expose this
-      await updateDoc(playerRef,{ steps, score:points });
-      if(won){
-        const lobbyRef=doc(db,"lobbies",currentLobby);
-        const snap=await getDoc(lobbyRef);
-        if(snap.exists() && snap.data().status==="playing"){
-          await updateDoc(lobbyRef,{ status:"grace", graceEndsAt:new Date(Date.now()+10000) });
-        }
+    findOrCreateLobby();
+
+    window.addEventListener("beforeunload", async () => {
+      if (currentLobby) {
+        await deleteDoc(doc(db,"lobbies",currentLobby,"players",username));
       }
     });
-
-    window.addEventListener("beforeunload", async()=>{ if(playerRef) await deleteDoc(playerRef); });
-    joinLobby();
   </script>
 </body>
 </html>
