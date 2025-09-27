@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LinkMovie Multiplayer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui,Arial,sans-serif;margin:24px;background:#fafafa;color:#111}
+    h1{margin:0 0 12px}
+    .card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:16px;max-width:720px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+    input{padding:10px;border:1px solid #ccc;border-radius:8px;min-width:200px}
+    button{padding:10px 14px;border:0;border-radius:999px;background:#4fa7ff;color:#fff;cursor:pointer}
+    ul{padding-left:18px}
+    #errorBox{white-space:pre-wrap;color:#b00020;margin-top:10px}
+    #game{display:none}
+    code{background:#f3f3f3;padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <h1>🎬 LinkMovie Multiplayer (Smoke Test)</h1>
+
+  <div class="card" id="setup">
+    <div class="row">
+      <input id="playerName" placeholder="Enter your name" />
+      <button id="createLobby">Create Lobby</button>
+    </div>
+    <div class="row">
+      <input id="lobbyIdInput" placeholder="Enter lobby ID to join" />
+      <button id="joinLobby">Join Lobby</button>
+    </div>
+    <p>After deploy, open this page in two tabs. Create a lobby in one, join it in the other.</p>
+    <div id="errorBox"></div>
+  </div>
+
+  <div class="card" id="game">
+    <p>Lobby ID: <code id="lobbyCode"></code></p>
+    <div class="row">
+      <button id="addStep">+1 Step</button>
+    </div>
+    <h3>Players</h3>
+    <ul id="playersList"></ul>
+  </div>
+
+  <!-- Error catcher so “white screen” shows errors inline -->
+  <script>
+    const errorBox = () => document.getElementById('errorBox');
+    window.addEventListener('error', (e) => {
+      if (errorBox()) errorBox().textContent = 'JS Error: ' + (e.error?.message || e.message);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      if (errorBox()) errorBox().textContent = 'Promise Rejection: ' + (e.reason?.message || e.reason);
+    });
+    console.log('Multiplayer shell loaded');
+  </script>
+
+  <!-- Firebase code -->
+  <script type="module">
+    console.log('Starting Firebase init…');
+
+    // 1) Import SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, collection, doc, setDoc, addDoc, updateDoc, increment, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // 2) Your config (copied from Firebase console)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
+      authDomain: "linkmovie-ef911.firebaseapp.com",
+      projectId: "linkmovie-ef911",
+      storageBucket: "linkmovie-ef911.firebasestorage.app",
+      messagingSenderId: "523659305871",
+      appId: "1:523659305871:web:129810d281b5cf9b33a1fa",
+      measurementId: "G-ZEW051T33S"
+    };
+
+    // 3) Init
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    console.log('✅ Firebase initialized');
+
+    // 4) Wire UI
+    const $ = (id) => document.getElementById(id);
+    let currentLobby = null;
+    let currentPlayer = null;
+
+    $('createLobby').onclick = async () => {
+      try {
+        const name = $('playerName').value.trim();
+        if (!name) return alert('Enter a name');
+        const lobbyRef = await addDoc(collection(db, 'lobbies'), {
+          createdAt: Date.now(),
+          status: 'waiting'
+        });
+        currentLobby = lobbyRef.id;
+        currentPlayer = name;
+        await setDoc(doc(db, 'lobbies', currentLobby, 'players', currentPlayer), {
+          name: currentPlayer, steps: 0, score: 0
+        });
+        startGame(currentLobby);
+      } catch (err) {
+        errorBox().textContent = 'Create lobby failed: ' + err.message;
+      }
+    };
+
+    $('joinLobby').onclick = async () => {
+      try {
+        const name = $('playerName').value.trim();
+        const lobbyId = $('lobbyIdInput').value.trim();
+        if (!name || !lobbyId) return alert('Enter name & lobby ID');
+        currentLobby = lobbyId;
+        currentPlayer = name;
+        await setDoc(doc(db, 'lobbies', currentLobby, 'players', currentPlayer), {
+          name: currentPlayer, steps: 0, score: 0
+        });
+        startGame(currentLobby);
+      } catch (err) {
+        errorBox().textContent = 'Join lobby failed: ' + err.message;
+      }
+    };
+
+    function startGame(lobbyId) {
+      $('setup').style.display = 'none';
+      $('game').style.display = 'block';
+      $('lobbyCode').textContent = lobbyId;
+
+      const playersRef = collection(db, 'lobbies', lobbyId, 'players');
+      onSnapshot(playersRef, (snap) => {
+        const ul = $('playersList');
+        ul.innerHTML = '';
+        snap.forEach((d) => {
+          const p = d.data();
+          const li = document.createElement('li');
+          li.textContent = `${p.name} — Steps: ${p.steps} | Score: ${p.score}`;
+          ul.appendChild(li);
+        });
+      });
+    }
+
+    $('addStep').onclick = async () => {
+      if (!currentLobby || !currentPlayer) return;
+      try {
+        const ref = doc(db, 'lobbies', currentLobby, 'players', currentPlayer);
+        await updateDoc(ref, { steps: increment(1) });
+      } catch (err) {
+        errorBox().textContent = 'Update step failed: ' + err.message;
+      }
+    };
+  </script>
+</body>
+</html>
