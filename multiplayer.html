@@ -195,7 +195,11 @@
         $('roundNumber').textContent = data.round || 0;
         $('targetActors').textContent = data.target || "-";
 
-        if (data.winner) {
+        // ✅ stricter winner check
+        if (
+          data.winner &&
+          ((data.round >= 5) || Object.values(data.finalScores || {}).some(s => s >= 400))
+        ) {
           showWinner(data.winner, data.finalScores || {});
         }
       });
