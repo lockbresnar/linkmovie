@@ -7,86 +7,30 @@
   <link rel="stylesheet" href="main-game.css" />
 </head>
 <body>
-  <!-- UI from your original file unchanged -->
-
   <div id="lobbyArea"></div>
   <div id="gameArea"></div>
   <div id="scoreboardPopup"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    // your firebase config/init unchanged
-    const firebaseConfig = { /* ... already present in your file ... */ };
+    // ✅ Full Firebase config snippet (replace placeholder values with your real ones)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID",
+      measurementId: "YOUR_MEASUREMENT_ID"
+    };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // === NEW helper for consistent ms handling ===
-    function ms(val) {
-      if (!val) return 0;
-      if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
-      const n = Number(val);
-      return Number.isFinite(n) ? n : 0;
-    }
+    // ... rest of your original multiplayer.html script content ...
 
-    // ... all your existing code remains here ...
-
-    // === PATCH inside grace -> postRound transition ===
-    async function endGrace(lobbyRef) {
-      await updateDoc(lobbyRef, {
-        status: "postRound",
-        postRoundEndsAt: Date.now() + 10000 // number not Date object
-      });
-    }
-
-    // === PATCH in snapshot listener: postRound branch ===
-    function handleLobbySnapshot(data, isHost, lobbyRef) {
-      if (data.status === "postRound") {
-        $("gameArea").style.display = "none";
-        $("scoreboardPopup").style.display = "flex";
-
-        const endMs = ms(data.postRoundEndsAt);
-        showScoreboard(endMs);
-
-        if (isHost && endMs) {
-          const msLeft = Math.max(0, endMs - Date.now());
-          if (!window._scheduledNext) {
-            window._scheduledNext = true;
-            setTimeout(async () => {
-              const snap2 = await getDoc(lobbyRef);
-              const lobbyData = snap2.data();
-              if ((lobbyData.round || 1) < 5) {
-                await updateDoc(lobbyRef, {
-                  status: "countdown",
-                  countdownEndsAt: new Date(Date.now() + 10000),
-                  round: (lobbyData.round || 1) + 1,
-                  winner: "",
-                  winnerPoints: 0,
-                  finishers: [],
-                  ...getRandomActors()
-                });
-              } else {
-                showFinalScores();
-              }
-              window._scheduledNext = false;
-            }, msLeft);
-          }
-        }
-      }
-
-      if (data.status === "playing") {
-        window._scheduledNext = false;
-        // ... existing playing logic ...
-      }
-
-      if (data.status === "countdown") {
-        window._scheduledNext = false;
-        // ... existing countdown logic ...
-      }
-    }
-
-    // ... rest of your file unchanged ...
   </script>
 </body>
 </html>
