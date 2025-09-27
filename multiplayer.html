@@ -23,6 +23,19 @@
       flex-direction: column;
       z-index: 1000;
     }
+
+    /* ✅ Winner popup (hidden by default) */
+    #winnerPopup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
@@ -45,7 +58,7 @@
     <ul id="players"></ul>
   </div>
 
-  <div id="winnerPopup" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+  <div id="winnerPopup">
     <h2 id="winnerText"></h2>
   </div>
 
@@ -55,9 +68,6 @@
       getFirestore, collection, getDocs, addDoc,
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // ✅ Your TMDb API key
-    const API_KEY = "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
@@ -78,7 +88,6 @@
     let playerRef = null;
     let isHost = false;
 
-    // --- Auto join or create lobby ---
     async function joinLobby() {
       $('status').textContent = `Hello ${username}, searching...`;
 
@@ -91,13 +100,10 @@
           if (["waiting", "countdown"].includes(data.status)) {
             const playersRef = collection(db, "lobbies", docSnap.id, "players");
             const playersSnap = await getDocs(playersRef);
-
             if (playersSnap.size === 0) {
-              console.log("🗑 Removing stale empty lobby:", docSnap.id);
               await deleteDoc(doc(db, "lobbies", docSnap.id));
               continue;
             }
-
             if (playersSnap.size < 4) {
               chosenLobby = docSnap;
               break;
@@ -109,11 +115,9 @@
           currentLobby = chosenLobby.id;
           playerRef = doc(db, "lobbies", currentLobby, "players", username);
           await setDoc(playerRef, { name: username, steps: 0, score: 0 });
-          console.log("✅ Joined lobby:", currentLobby);
           $('status').textContent = `Joined lobby ${currentLobby}`;
           watchLobby();
         } else {
-          // Create new lobby
           const ref = await addDoc(collection(db, "lobbies"), {
             status: "waiting",
             createdAt: Date.now(),
@@ -122,7 +126,6 @@
           currentLobby = ref.id;
           playerRef = doc(db, "lobbies", currentLobby, "players", username);
           await setDoc(playerRef, { name: username, steps: 0, score: 0 });
-          console.log("✅ Created new lobby:", currentLobby);
           $('status').textContent = `Created lobby ${currentLobby}, waiting...`;
           watchLobby();
         }
@@ -132,7 +135,6 @@
       }
     }
 
-    // --- Watch lobby + players ---
     function watchLobby() {
       const lobbyRef = doc(db, "lobbies", currentLobby);
 
@@ -147,14 +149,17 @@
 
         if (data.status === "playing") {
           const overlay = $('overlay');
-          if (overlay) overlay.remove();   // ✅ remove overlay completely
+          if (overlay) overlay.remove();
           $('gameArea').style.display = "block";
           $('roundNum').textContent = data.round;
           $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
         }
 
-        if (data.winner) {
+        // ✅ Only show winnerPopup if winner is set
+        if (data.winner && data.winner !== "") {
           showWinner(data.winner);
+        } else {
+          $('winnerPopup').style.display = "none";
         }
       });
 
@@ -162,8 +167,6 @@
       onSnapshot(playersRef, async (snap) => {
         const players = [];
         snap.forEach(d => players.push(d.id));
-
-        // ✅ Ensure first player alphabetically is host
         players.sort();
         isHost = (players[0] === username);
 
@@ -176,7 +179,6 @@
           ul.appendChild(li);
         });
 
-        // Only host can trigger countdown
         if (isHost && snap.size >= 2) {
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
@@ -190,15 +192,12 @@
           }
         }
 
-        // cleanup if no players left
         if (snap.size === 0) {
-          console.log("🗑 Deleting empty lobby:", currentLobby);
           await deleteDoc(lobbyRef);
         }
       });
     }
 
-    // --- Countdown before round ---
     function startCountdown(endTime) {
       const interval = setInterval(async () => {
         const now = Date.now();
@@ -207,12 +206,8 @@
         if (secs <= 0) {
           clearInterval(interval);
           $('countdown').textContent = "";
-
-          // ✅ Always remove overlay after countdown
           const overlay = $('overlay');
           if (overlay) overlay.remove();
-
-          // ✅ Only host transitions to playing
           if (isHost) {
             const lobbyRef = doc(db, "lobbies", currentLobby);
             await updateDoc(lobbyRef, { status: "playing" });
@@ -221,13 +216,11 @@
       }, 200);
     }
 
-    // --- Winner popup ---
     function showWinner(name) {
       $('winnerPopup').style.display = "flex";
       $('winnerText').textContent = `🏆 Winner: ${name}`;
     }
 
-    // --- Random actors for round ---
     function getRandomActors() {
       const pool = [
         {id: 31, name: "Tom Hanks"},
@@ -242,7 +235,6 @@
       return { startActor: a, endActor: b };
     }
 
-    // --- Cleanup on exit ---
     window.addEventListener("beforeunload", async () => {
       if (playerRef) {
         await deleteDoc(playerRef);
