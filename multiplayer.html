@@ -240,8 +240,8 @@
           $("scoreboardPopup").style.display = "flex";
           showScoreboard(data.postRoundEndsAt.toMillis());
 
-          if (isHost && data.postRoundEndsAt) {
-            const msLeft = data.postRoundEndsAt.toMillis() - Date.now();
+          // ✅ Fixed: host always starts next round after 10s
+          if (isHost) {
             setTimeout(async () => {
               const snap2 = await getDoc(lobbyRef);
               const lobbyData = snap2.data();
@@ -258,7 +258,7 @@
               } else {
                 showFinalScores();
               }
-            }, msLeft);
+            }, 10000); // always 10s after scoreboard appears
           }
         }
       });
