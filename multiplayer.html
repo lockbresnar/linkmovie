@@ -17,8 +17,6 @@
       flex-direction: column; z-index: 1000;
     }
     #winnerPopup { display: none; }
-
-    /* Autocomplete */
     #suggestions {
       position: absolute;
       background: #fff;
@@ -30,13 +28,8 @@
       display: none;
       text-align: left;
     }
-    #suggestions div {
-      padding: 6px;
-      cursor: pointer;
-    }
-    #suggestions div:hover {
-      background: #eee;
-    }
+    #suggestions div { padding: 6px; cursor: pointer; }
+    #suggestions div:hover { background: #eee; }
   </style>
 </head>
 <body>
@@ -50,19 +43,24 @@
   <div id="gameArea">
     <p>Round: <span id="roundNum"></span> / 5</p>
     <p>Target: <span id="targetActors"></span></p>
+    <p>⏱️ Time: <span id="roundTimer">00:00</span></p>
+
     <div style="position:relative; display:inline-block;">
       <input id="guessInput" placeholder="Enter movie..." autocomplete="off" />
       <div id="suggestions"></div>
     </div>
     <button id="submitGuess">Submit</button>
+
     <h3>Your Chain</h3>
     <ul id="guessLog"></ul>
+
     <h3>Players</h3>
     <ul id="players"></ul>
   </div>
 
   <div id="winnerPopup">
     <h2 id="winnerText"></h2>
+    <p id="pointsText"></p>
   </div>
 
   <script type="module">
@@ -94,6 +92,7 @@
     let currentStart = null;
     let currentTarget = null;
     let lastMovieCast = [];
+    let timerInterval = null;
 
     // ✅ Your TMDb API key
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
@@ -111,6 +110,21 @@
       const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${TMDB_API_KEY}`);
       const data = await res.json();
       return data.cast;
+    }
+
+    /** --------------------------
+     *  Stopwatch
+     * -------------------------- */
+    function startStopwatch(startTime) {
+      if (timerInterval) clearInterval(timerInterval);
+
+      timerInterval = setInterval(() => {
+        const now = Date.now();
+        const secs = Math.floor((now - startTime) / 1000);
+        const m = String(Math.floor(secs / 60)).padStart(2, "0");
+        const s = String(secs % 60).padStart(2, "0");
+        $("roundTimer").textContent = `${m}:${s}`;
+      }, 500);
     }
 
     /** --------------------------
@@ -159,7 +173,7 @@
       if (chosenLobby) {
         currentLobby = chosenLobby.id;
         playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username, steps: 0 });
+        await setDoc(playerRef, { name: username, steps: 0, score: 0 });
         watchLobby();
       } else {
         const ref = await addDoc(collection(db, "lobbies"), {
@@ -169,7 +183,7 @@
         });
         currentLobby = ref.id;
         playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username, steps: 0 });
+        await setDoc(playerRef, { name: username, steps: 0, score: 0 });
         watchLobby();
       }
     }
@@ -177,7 +191,7 @@
     function watchLobby() {
       const lobbyRef = doc(db, "lobbies", currentLobby);
 
-      onSnapshot(lobbyRef, (snap) => {
+      onSnapshot(lobbyRef, async (snap) => {
         if (!snap.exists()) return;
         const data = snap.data();
 
@@ -194,10 +208,32 @@
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
+
+          if (data.startTime) {
+            startStopwatch(data.startTime);
+          }
+        }
+
+        // Handle grace end -> next round
+        if (isHost && data.winner && data.graceEndsAt && Date.now() > data.graceEndsAt) {
+          if (data.round < 5) {
+            await updateDoc(lobbyRef, {
+              status: "countdown",
+              countdownEndsAt: new Date(Date.now() + 10000),
+              round: data.round + 1,
+              winner: "",
+              winnerPoints: 0,
+              ...getRandomActors()
+            });
+          } else {
+            $('winnerPopup').style.display = "flex";
+            $('winnerText').textContent = "🏆 Game Over!";
+            $('pointsText').textContent = "";
+          }
         }
 
         if (data.winner && data.winner !== "") {
-          showWinner(data.winner);
+          showWinner(data.winner, data.winnerPoints || 0);
         } else {
           $('winnerPopup').style.display = "none";
         }
@@ -215,10 +251,11 @@
         snap.forEach(d => {
           const p = d.data();
           const li = document.createElement("li");
-          li.textContent = `${p.name} — ${p.steps || 0} steps`;
+          li.textContent = `${p.name} — ${p.steps || 0} steps — ${p.score || 0} pts`;
           ul.appendChild(li);
         });
 
+        // Host starts countdown when enough players
         if (isHost && snap.size >= 2) {
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
@@ -249,15 +286,21 @@
           $('overlay')?.remove();
           if (isHost) {
             const lobbyRef = doc(db, "lobbies", currentLobby);
-            await updateDoc(lobbyRef, { status: "playing" });
+            await updateDoc(lobbyRef, {
+              status: "playing",
+              round: 1,
+              startTime: Date.now(), // stopwatch start
+              ...getRandomActors()
+            });
           }
         }
       }, 200);
     }
 
-    function showWinner(name) {
+    function showWinner(name, pts) {
       $('winnerPopup').style.display = "flex";
       $('winnerText').textContent = `🏆 Winner: ${name}`;
+      $('pointsText').textContent = `+${pts} points`;
     }
 
     function getRandomActors() {
@@ -291,10 +334,7 @@
       const data = snap.data();
       const isFirst = (data.steps || 0) === 0;
 
-      console.log("🔎 Validating guess:", guess);
       const result = await validateMovieGuess(guess, isFirst);
-      console.log("Result:", result);
-
       if (!result.valid) {
         alert("❌ " + result.reason);
         return;
@@ -309,7 +349,19 @@
 
       if (result.reachedTarget) {
         const lobbyRef = doc(db, "lobbies", currentLobby);
-        await updateDoc(lobbyRef, { winner: username });
+        const lobbySnap = await getDoc(lobbyRef);
+        const lobbyData = lobbySnap.data();
+
+        const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime) / 1000);
+        const pts = Math.max(10, 100 - newSteps * 10 - Math.floor(elapsedSecs / 10));
+        const newScore = (data.score || 0) + pts;
+        await updateDoc(playerRef, { score: newScore });
+
+        await updateDoc(lobbyRef, {
+          winner: username,
+          winnerPoints: pts,
+          graceEndsAt: Date.now() + 10000
+        });
       }
 
       $('guessInput').value = "";
