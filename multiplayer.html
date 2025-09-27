@@ -64,15 +64,15 @@
     <p id="scoreCountdown">▶️ Next round starts in 10s</p>
   </div>
 
+  <!-- ✅ Load your actors.js (provides global ACTOR_POOL array of names) -->
+  <script src="./actors.js"></script>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getFirestore, collection, getDocs, addDoc,
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // ✅ Import your full actors dataset
-    import { ACTORS } from "./actors.js";
 
     // ✅ Firebase config
     const firebaseConfig = {
@@ -98,7 +98,6 @@
     let lastMovieCast = [];
     let timerInterval = null;
 
-    // ✅ Your TMDb API key
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 
     /** --------------------------
@@ -114,6 +113,21 @@
       const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${TMDB_API_KEY}`);
       const data = await res.json();
       return data.cast;
+    }
+
+    /** --------------------------
+     *  Actor Selection
+     * -------------------------- */
+    function getRandomActors() {
+      const nameA = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)];
+      let nameB;
+      do {
+        nameB = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)];
+      } while (nameA === nameB);
+      return {
+        startActor: { id: nameA, name: nameA },
+        endActor: { id: nameB, name: nameB }
+      };
     }
 
     /** --------------------------
@@ -141,7 +155,7 @@
       const cast = await getMovieCast(movie.id);
 
       if (isFirstGuess) {
-        const ok = cast.some(a => a.id === currentStart.id);
+        const ok = cast.some(a => a.name === currentStart.name);
         if (!ok) return { valid: false, reason: "Must include start actor" };
       } else {
         const overlap = cast.some(a => lastMovieCast.some(b => b.id === a.id));
@@ -149,7 +163,7 @@
       }
 
       lastMovieCast = cast;
-      const reachedTarget = cast.some(a => a.id === currentTarget.id);
+      const reachedTarget = cast.some(a => a.name === currentTarget.name);
       return { valid: true, reachedTarget, movieTitle: movie.title };
     }
 
@@ -216,10 +230,8 @@
           if (data.startTime) startStopwatch(data.startTime);
         }
 
-        // ✅ Grace mode
         if (data.status === "grace" && data.winner) {
           highlightWinner(data.winner, data.winnerPoints || 0);
-
           if (isHost && data.graceEndsAt && Date.now() > data.graceEndsAt) {
             await updateDoc(lobbyRef, {
               status: "postRound",
@@ -228,10 +240,8 @@
           }
         }
 
-        // ✅ PostRound = scoreboard with countdown
         if (data.status === "postRound") {
           showScoreboard(data.postRoundEndsAt.toMillis());
-
           if (isHost && data.postRoundEndsAt && Date.now() > data.postRoundEndsAt.toMillis()) {
             if (data.round < 5) {
               await updateDoc(lobbyRef, {
@@ -318,7 +328,6 @@
     function showScoreboard(endTime) {
       $('scoreboardPopup').style.display = "flex";
       $('scoreList').innerHTML = $("players").innerHTML;
-
       const interval = setInterval(() => {
         const now = Date.now();
         const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
@@ -331,15 +340,6 @@
       $('scoreboardPopup').style.display = "flex";
       $('scoreList').innerHTML = $("players").innerHTML;
       $('scoreCountdown').textContent = "🏆 Game Over!";
-    }
-
-    function getRandomActors() {
-      const a = ACTORS[Math.floor(Math.random() * ACTORS.length)];
-      let b;
-      do {
-        b = ACTORS[Math.floor(Math.random() * ACTORS.length)];
-      } while (a.id === b.id);
-      return { startActor: a, endActor: b };
     }
 
     window.addEventListener("beforeunload", async () => {
