@@ -127,12 +127,16 @@
           $("gameArea").style.display = "none";
           $("scoreboardPopup").style.display = "flex";
 
-          const endTime = data.postRoundEndsAt?.toMillis ? data.postRoundEndsAt.toMillis() : Date.now() + 10000;
+          // normalize to number
+          const endTime = data.postRoundEndsAt?.toMillis
+            ? data.postRoundEndsAt.toMillis()
+            : data.postRoundEndsAt || (Date.now() + 10000);
+
           showScoreboard(endTime);
 
-          // ✅ FIX: Always schedule next round once
-          if (!nextRoundTimerSet) {
+          if (!nextRoundTimerSet && endTime) {
             nextRoundTimerSet = true;
+            const msLeft = endTime - Date.now();
             setTimeout(async () => {
               const snap2 = await getDoc(lobbyRef);
               const lobbyData = snap2.data();
@@ -143,13 +147,16 @@
                   status:"countdown",
                   countdownEndsAt: new Date(Date.now()+10000),
                   round:lobbyData.round+1,
+                  winner: "",
+                  winnerPoints: 0,
+                  finishers: [],
                   ...getRandomActors()
                 });
               } else {
                 await updateDoc(lobbyRef, { status:"final" });
               }
               nextRoundTimerSet = false;
-            }, Math.max(0, endTime - Date.now()));
+            }, Math.max(0, msLeft));
           }
         }
 
