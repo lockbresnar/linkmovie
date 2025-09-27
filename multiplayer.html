@@ -28,7 +28,7 @@
 <body>
   <h1>🎬 LinkMovie Multiplayer</h1>
 
-  <!-- Overlay now a fullscreen div -->
+  <!-- Overlay -->
   <div id="overlay">
     <p id="status">Joining lobby...</p>
     <div id="countdown"></div>
@@ -76,30 +76,33 @@
     const username = "Player-" + Math.floor(Math.random() * 10000);
     let currentLobby = null;
     let playerRef = null;
+    let isHost = false;
 
     // --- Auto join or create lobby ---
     async function joinLobby() {
       $('status').textContent = `Hello ${username}, searching...`;
 
       try {
-        const q = query(collection(db, "lobbies"), where("status", "==", "waiting"));
-        const snaps = await getDocs(q);
+        // ✅ Look for both waiting and countdown lobbies
+        const snaps = await getDocs(collection(db, "lobbies"));
 
         let chosenLobby = null;
         for (const docSnap of snaps.docs) {
-          const playersRef = collection(db, "lobbies", docSnap.id, "players");
-          const playersSnap = await getDocs(playersRef);
+          const data = docSnap.data();
+          if (["waiting", "countdown"].includes(data.status)) {
+            const playersRef = collection(db, "lobbies", docSnap.id, "players");
+            const playersSnap = await getDocs(playersRef);
 
-          // skip stale lobbies
-          if (playersSnap.size === 0) {
-            console.log("🗑 Removing stale empty lobby:", docSnap.id);
-            await deleteDoc(doc(db, "lobbies", docSnap.id));
-            continue;
-          }
+            if (playersSnap.size === 0) {
+              console.log("🗑 Removing stale empty lobby:", docSnap.id);
+              await deleteDoc(doc(db, "lobbies", docSnap.id));
+              continue;
+            }
 
-          if (playersSnap.size < 4) {
-            chosenLobby = docSnap;
-            break;
+            if (playersSnap.size < 4) {
+              chosenLobby = docSnap;
+              break;
+            }
           }
         }
 
@@ -111,16 +114,18 @@
           $('status').textContent = `Joined lobby ${currentLobby}`;
           watchLobby();
         } else {
-          // create new lobby
+          // ✅ Create new lobby, mark self as host
           const ref = await addDoc(collection(db, "lobbies"), {
             status: "waiting",
             createdAt: Date.now(),
-            round: 0
+            round: 0,
+            host: username
           });
           currentLobby = ref.id;
+          isHost = true;
           playerRef = doc(db, "lobbies", currentLobby, "players", username);
           await setDoc(playerRef, { name: username, steps: 0, score: 0 });
-          console.log("✅ Created new lobby:", currentLobby);
+          console.log("✅ Created new lobby as host:", currentLobby);
           $('status').textContent = `Created lobby ${currentLobby}, waiting...`;
           watchLobby();
         }
@@ -169,8 +174,8 @@
 
         const playerCount = snap.size;
 
-        // start game if 2+ players
-        if (playerCount >= 2) {
+        // ✅ Only host triggers game start
+        if (isHost && dataForHostStart(playerCount)) {
           await updateDoc(lobbyRef, {
             status: "countdown",
             countdownEndsAt: new Date(Date.now() + 10000),
@@ -187,6 +192,12 @@
       });
     }
 
+    // --- Host-only start logic ---
+    function dataForHostStart(playerCount) {
+      // Only start if at least 2 players, and not already counting down/playing
+      return playerCount >= 2;
+    }
+
     // --- Countdown before round ---
     function startCountdown(endTime) {
       const interval = setInterval(async () => {
@@ -196,8 +207,12 @@
         if (secs <= 0) {
           clearInterval(interval);
           $('countdown').textContent = "";
-          const lobbyRef = doc(db, "lobbies", currentLobby);
-          await updateDoc(lobbyRef, { status: "playing" });
+
+          // ✅ Only host transitions to playing
+          if (isHost) {
+            const lobbyRef = doc(db, "lobbies", currentLobby);
+            await updateDoc(lobbyRef, { status: "playing" });
+          }
         }
       }, 200);
     }
