@@ -10,12 +10,29 @@
     #gameArea { display:none; }
     ul { list-style:none; padding:0; }
     li { margin:4px 0; }
+
+    /* ✅ Fullscreen overlay */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <h1>🎬 LinkMovie Multiplayer</h1>
-  <p id="status">Joining lobby...</p>
-  <div id="countdown"></div>
+
+  <!-- Overlay now a fullscreen div -->
+  <div id="overlay">
+    <p id="status">Joining lobby...</p>
+    <div id="countdown"></div>
+  </div>
 
   <div id="gameArea">
     <p>Round: <span id="roundNum"></span> / 5</p>
@@ -127,7 +144,7 @@
         }
 
         if (data.status === "playing") {
-          $('status').style.display = "none";   // ✅ hide overlay
+          $('overlay').style.display = "none";   // ✅ hide the overlay
           $('gameArea').style.display = "block";
           $('roundNum').textContent = data.round;
           $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
