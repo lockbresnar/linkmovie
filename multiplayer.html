@@ -133,7 +133,7 @@
     }
 
     function startGraceCountdown(endTime) {
-      if (timerInterval) clearInterval(timerInterval); // ✅ stop stopwatch
+      if (timerInterval) clearInterval(timerInterval);
       if (graceInterval) clearInterval(graceInterval);
 
       $("roundTimer").style.color = "red";
@@ -143,7 +143,7 @@
         $("roundTimer").textContent = `00:${String(secs).padStart(2,"0")}`;
         if (secs <= 0) {
           clearInterval(graceInterval);
-          $("roundTimer").textContent = "00:00"; // freeze at 0
+          $("roundTimer").textContent = "00:00";
         }
       }, 500);
     }
@@ -213,7 +213,7 @@
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
-          $("roundTimer").style.color = "white"; // reset
+          $("roundTimer").style.color = "white";
           if (data.startTime) startStopwatch(data.startTime);
         }
 
@@ -222,7 +222,6 @@
         if (data.status === "grace") {
           startGraceCountdown(data.graceEndsAt);
 
-          // ✅ Host forces round end after grace finishes
           if (isHost && data.graceEndsAt) {
             const checkGrace = setInterval(async () => {
               if (Date.now() > data.graceEndsAt) {
@@ -239,26 +238,36 @@
         if (data.status === "postRound") {
           $("gameArea").style.display = "none";
           $("scoreboardPopup").style.display = "flex";
-          showScoreboard(data.postRoundEndsAt.toMillis(), data.finishers || []);
-          if (isHost && data.postRoundEndsAt && Date.now() > data.postRoundEndsAt.toMillis()) {
-            if (data.round < 5) {
-              await updateDoc(lobbyRef, {
-                status: "countdown",
-                countdownEndsAt: new Date(Date.now() + 10000),
-                round: data.round + 1,
-                winner: "",
-                winnerPoints: 0,
-                finishers: [],
-                ...getRandomActors()
-              });
-            } else { showFinalScores(); }
+          showScoreboard(data.postRoundEndsAt.toMillis());
+
+          if (isHost && data.postRoundEndsAt) {
+            const msLeft = data.postRoundEndsAt.toMillis() - Date.now();
+            setTimeout(async () => {
+              const snap2 = await getDoc(lobbyRef);
+              const lobbyData = snap2.data();
+              if (lobbyData.round < 5) {
+                await updateDoc(lobbyRef, {
+                  status: "countdown",
+                  countdownEndsAt: new Date(Date.now() + 10000),
+                  round: lobbyData.round + 1,
+                  winner: "",
+                  winnerPoints: 0,
+                  finishers: [],
+                  ...getRandomActors()
+                });
+              } else {
+                showFinalScores();
+              }
+            }, msLeft);
           }
         }
       });
 
       const playersRef = collection(db, "lobbies", currentLobby, "players");
       onSnapshot(playersRef, async (snap) => {
-        const players = []; snap.forEach(d => players.push(d.id)); players.sort();
+        const players = [];
+        snap.forEach(d => players.push(d.id));
+        players.sort();
         isHost = (players[0] === username);
 
         const ul = $('players'); ul.innerHTML = "";
@@ -282,7 +291,8 @@
 
     function startCountdown(endTime) {
       const interval = setInterval(async () => {
-        const now = Date.now(); const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
+        const now = Date.now();
+        const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
         $('countdown').textContent = secs;
         if (secs <= 0) {
           clearInterval(interval);
@@ -310,11 +320,18 @@
       });
     }
 
-    function showScoreboard(endTime, finishers) {
-      const medals = ["🥇","🥈","🥉","🎖️"];
-      $('scoreList').innerHTML = finishers.map((f,i) => `<li>${medals[i]||"#"+(i+1)} ${f.name} — ${f.points} pts</li>`).join("");
+    async function showScoreboard(endTime) {
+      const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
+      const allPlayers = playersSnap.docs.map(d => d.data());
+      allPlayers.sort((a,b) => (b.score||0) - (a.score||0));
+
+      $('scoreList').innerHTML = allPlayers
+        .map((p,i) => `<li>${i+1}. ${p.name} — ${p.score || 0} pts</li>`)
+        .join("");
+
       const interval = setInterval(() => {
-        const now = Date.now(); const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
+        const now = Date.now();
+        const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
         $('scoreCountdown').textContent = `▶️ Next round starts in ${secs}s`;
         if (secs <= 0) clearInterval(interval);
       }, 500);
