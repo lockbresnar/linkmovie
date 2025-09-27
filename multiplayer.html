@@ -10,38 +10,18 @@
     #gameArea { display:none; }
     ul { list-style:none; padding:0; }
     li { margin:4px 0; }
-
-    /* ✅ Fullscreen overlay */
-    #overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.8);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      z-index: 1000;
+    #overlay, #winnerPopup {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; z-index: 1000;
     }
-
-    /* ✅ Winner popup (hidden by default) */
-    #winnerPopup {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.8);
-      color: #fff;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      z-index: 1000;
-    }
+    #winnerPopup { display: none; }
   </style>
 </head>
 <body>
   <h1>🎬 LinkMovie Multiplayer</h1>
 
-  <!-- Overlay -->
   <div id="overlay">
     <p id="status">Joining lobby...</p>
     <div id="countdown"></div>
@@ -87,51 +67,89 @@
     let currentLobby = null;
     let playerRef = null;
     let isHost = false;
+    let currentStart = null;
+    let currentTarget = null;
+    let lastMovieCast = [];
 
+    const TMDB_API_KEY = "<<<YOUR_TMDB_API_KEY>>>"; // 🔑 use your existing key
+
+    /** --------------------------
+     *  TMDb Helpers (from actors.js)
+     * -------------------------- */
+    async function searchMovie(title) {
+      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
+      const data = await res.json();
+      return data.results.length ? data.results[0] : null;
+    }
+
+    async function getMovieCast(movieId) {
+      const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${TMDB_API_KEY}`);
+      const data = await res.json();
+      return data.cast;
+    }
+
+    /** --------------------------
+     *  Game Validation
+     * -------------------------- */
+    async function validateMovieGuess(title, isFirstGuess) {
+      const movie = await searchMovie(title);
+      if (!movie) return { valid: false, reason: "Movie not found" };
+
+      const cast = await getMovieCast(movie.id);
+
+      if (isFirstGuess) {
+        // first guess must include start actor
+        const ok = cast.some(a => a.id === currentStart.id);
+        if (!ok) return { valid: false, reason: "Must include start actor" };
+      } else {
+        // must share cast with last movie
+        const overlap = cast.some(a => lastMovieCast.some(b => b.id === a.id));
+        if (!overlap) return { valid: false, reason: "Must connect with previous movie" };
+      }
+
+      // store cast for next turn
+      lastMovieCast = cast;
+
+      // check win
+      const reachedTarget = cast.some(a => a.id === currentTarget.id);
+      return { valid: true, reachedTarget, movieTitle: movie.title };
+    }
+
+    /** --------------------------
+     *  Firestore
+     * -------------------------- */
     async function joinLobby() {
       $('status').textContent = `Hello ${username}, searching...`;
+      const snaps = await getDocs(collection(db, "lobbies"));
+      let chosenLobby = null;
 
-      try {
-        const snaps = await getDocs(collection(db, "lobbies"));
-
-        let chosenLobby = null;
-        for (const docSnap of snaps.docs) {
-          const data = docSnap.data();
-          if (["waiting", "countdown"].includes(data.status)) {
-            const playersRef = collection(db, "lobbies", docSnap.id, "players");
-            const playersSnap = await getDocs(playersRef);
-            if (playersSnap.size === 0) {
-              await deleteDoc(doc(db, "lobbies", docSnap.id));
-              continue;
-            }
-            if (playersSnap.size < 4) {
-              chosenLobby = docSnap;
-              break;
-            }
+      for (const docSnap of snaps.docs) {
+        const data = docSnap.data();
+        if (["waiting", "countdown"].includes(data.status)) {
+          const playersRef = collection(db, "lobbies", docSnap.id, "players");
+          const playersSnap = await getDocs(playersRef);
+          if (playersSnap.size < 4 && playersSnap.size > 0) {
+            chosenLobby = docSnap;
+            break;
           }
         }
+      }
 
-        if (chosenLobby) {
-          currentLobby = chosenLobby.id;
-          playerRef = doc(db, "lobbies", currentLobby, "players", username);
-          await setDoc(playerRef, { name: username, steps: 0, score: 0 });
-          $('status').textContent = `Joined lobby ${currentLobby}`;
-          watchLobby();
-        } else {
-          const ref = await addDoc(collection(db, "lobbies"), {
-            status: "waiting",
-            createdAt: Date.now(),
-            round: 0
-          });
-          currentLobby = ref.id;
-          playerRef = doc(db, "lobbies", currentLobby, "players", username);
-          await setDoc(playerRef, { name: username, steps: 0, score: 0 });
-          $('status').textContent = `Created lobby ${currentLobby}, waiting...`;
-          watchLobby();
-        }
-      } catch (err) {
-        console.error("❌ joinLobby failed:", err);
-        $('status').textContent = "Error creating/joining lobby (see console)";
+      if (chosenLobby) {
+        currentLobby = chosenLobby.id;
+        playerRef = doc(db, "lobbies", currentLobby, "players", username);
+        await setDoc(playerRef, { name: username, steps: 0, chain: [] });
+        watchLobby();
+      } else {
+        const ref = await addDoc(collection(db, "lobbies"), {
+          status: "waiting",
+          createdAt: Date.now(),
+          round: 0
+        });
+        currentLobby = ref.id;
+        playerRef = doc(db, "lobbies", currentLobby, "players", username);
+        await setDoc(playerRef, { name: username, steps: 0, chain: [] });
+        watchLobby();
       }
     }
 
@@ -143,19 +161,19 @@
         const data = snap.data();
 
         if (data.status === "countdown" && data.countdownEndsAt) {
-          $('status').textContent = "⏳ Round starting soon...";
           startCountdown(data.countdownEndsAt.toMillis());
         }
 
         if (data.status === "playing") {
-          const overlay = $('overlay');
-          if (overlay) overlay.remove();
+          $('overlay')?.remove();
           $('gameArea').style.display = "block";
           $('roundNum').textContent = data.round;
           $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
+          currentStart = data.startActor;
+          currentTarget = data.endActor;
+          lastMovieCast = [];
         }
 
-        // ✅ Only show winnerPopup if winner is set
         if (data.winner && data.winner !== "") {
           showWinner(data.winner);
         } else {
@@ -206,8 +224,7 @@
         if (secs <= 0) {
           clearInterval(interval);
           $('countdown').textContent = "";
-          const overlay = $('overlay');
-          if (overlay) overlay.remove();
+          $('overlay')?.remove();
           if (isHost) {
             const lobbyRef = doc(db, "lobbies", currentLobby);
             await updateDoc(lobbyRef, { status: "playing" });
@@ -239,6 +256,39 @@
       if (playerRef) {
         await deleteDoc(playerRef);
       }
+    });
+
+    /** --------------------------
+     *  Submit Guess
+     * -------------------------- */
+    $('submitGuess').addEventListener('click', async () => {
+      const guess = $('guessInput').value.trim();
+      if (!guess) return;
+
+      const snap = await getDoc(playerRef);
+      const data = snap.data();
+      const isFirst = (data.chain || []).length === 0;
+
+      const result = await validateMovieGuess(guess, isFirst);
+      if (!result.valid) {
+        alert("❌ " + result.reason);
+        return;
+      }
+
+      const newSteps = (data.steps || 0) + 1;
+      const newChain = [...(data.chain || []), result.movieTitle];
+      await updateDoc(playerRef, { steps: newSteps, chain: newChain });
+
+      const li = document.createElement("li");
+      li.textContent = result.movieTitle;
+      $('guessLog').appendChild(li);
+
+      if (result.reachedTarget) {
+        const lobbyRef = doc(db, "lobbies", currentLobby);
+        await updateDoc(lobbyRef, { winner: username });
+      }
+
+      $('guessInput').value = "";
     });
 
     joinLobby();
