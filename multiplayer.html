@@ -133,7 +133,6 @@
     }
 
     function startGraceCountdown(endTime) {
-      if (timerInterval) clearInterval(timerInterval); // stop stopwatch
       if (graceInterval) clearInterval(graceInterval);
       $("roundTimer").style.color = "red";
 
@@ -325,7 +324,7 @@
       const lobbyRef = doc(db, "lobbies", currentLobby); const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
 
       if (result.reachedTarget) {
-        const elapsedSecs = lobbyData.elapsedAtWin || Math.floor((Date.now() - lobbyData.startTime) / 1000);
+        const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime) / 1000);
         const pts = Math.max(10, 100 - newSteps * 10 - Math.floor(elapsedSecs / 10));
         const newScore = (data.score || 0) + pts; await updateDoc(playerRef, { score: newScore });
 
@@ -338,8 +337,7 @@
             winnerPoints: pts,
             finishers,
             status: "grace",
-            graceEndsAt: Date.now() + 10000,
-            elapsedAtWin: elapsedSecs
+            graceEndsAt: Date.now() + 10000
           });
         } else {
           await updateDoc(lobbyRef, { finishers });
