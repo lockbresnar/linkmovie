@@ -65,7 +65,6 @@
     <p id="scoreCountdown">▶️ Next round starts in 10s</p>
   </div>
 
-  <!-- ✅ Load your actors.js (global ACTOR_POOL) -->
   <script src="./actors.js"></script>
 
   <script type="module">
@@ -186,7 +185,7 @@
         await setDoc(playerRef, { name: username, steps: 0, score: 0 });
         watchLobby();
       } else {
-        const ref = await addDoc(collection(db, "lobbies"), { status: "waiting", createdAt: Date.now(), round: 0, host: username });
+        const ref = await addDoc(collection(db, "lobbies"), { status: "waiting", createdAt: Date.now(), round: 0 });
         currentLobby = ref.id;
         playerRef = doc(db, "lobbies", currentLobby, "players", username);
         await setDoc(playerRef, { name: username, steps: 0, score: 0 });
@@ -200,7 +199,6 @@
       onSnapshot(lobbyRef, async (snap) => {
         if (!snap.exists()) return;
         const data = snap.data();
-        isHost = (data.host === username);
 
         if (data.status === "countdown" && data.countdownEndsAt) {
           startCountdown(data.countdownEndsAt.toMillis());
@@ -229,7 +227,6 @@
             const checkGrace = setInterval(async () => {
               if (Date.now() > data.graceEndsAt) {
                 clearInterval(checkGrace);
-                console.log("Grace ended, moving to postRound");
                 await updateDoc(lobbyRef, {
                   status: "postRound",
                   postRoundEndsAt: new Date(Date.now() + 10000)
@@ -242,10 +239,11 @@
         if (data.status === "postRound") {
           $("gameArea").style.display = "none";
           $("scoreboardPopup").style.display = "flex";
-          showScoreboard(data.postRoundEndsAt?.toMillis() || (Date.now() + 10000));
+          showScoreboard(data.postRoundEndsAt ? data.postRoundEndsAt.toMillis() : (Date.now() + 10000));
 
+          // ✅ Host always triggers next round in 10s
           if (isHost) {
-            console.log("PostRound reached. Scheduling next round in 10s...");
+            console.log("Host scheduling next round in 10s...");
             setTimeout(async () => {
               const snap2 = await getDoc(lobbyRef);
               const lobbyData = snap2.data();
@@ -270,6 +268,11 @@
 
       const playersRef = collection(db, "lobbies", currentLobby, "players");
       onSnapshot(playersRef, async (snap) => {
+        const players = [];
+        snap.forEach(d => players.push(d.id));
+        players.sort();
+        isHost = (players[0] === username);
+
         const ul = $('players'); ul.innerHTML = "";
         snap.forEach(d => {
           const p = d.data();
@@ -282,7 +285,6 @@
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
           if (data.status === "waiting") {
-            console.log("Enough players, starting countdown...");
             await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: new Date(Date.now() + 10000), round: 1, ...getRandomActors() });
           }
         }
@@ -301,7 +303,6 @@
           $('overlay')?.remove();
           if (isHost) {
             const lobbyRef = doc(db, "lobbies", currentLobby);
-            console.log("Countdown finished, starting round 1...");
             await updateDoc(lobbyRef, { status: "playing", round: 1, startTime: Date.now(), ...getRandomActors() });
           }
         }
@@ -332,7 +333,7 @@
         .join("");
 
       const el = $('scoreCountdown');
-      if (!el) { console.warn("⚠️ scoreCountdown element missing in DOM"); return; }
+      if (!el) return;
 
       const interval = setInterval(() => {
         const now = Date.now();
@@ -369,7 +370,6 @@
         if (!finishers.find(f => f.name === username)) finishers.push({ name: username, points: pts });
 
         if (!lobbyData.winner) {
-          console.log("Winner declared:", username);
           await updateDoc(lobbyRef, {
             winner: username,
             winnerPoints: pts,
