@@ -216,7 +216,7 @@
         // COUNTDOWN
         if (data.status === "countdown" && data.countdownEndsAt) {
           window._scheduledNext = false; // reset guard entering countdown
-          startCountdown(ms(data.countdownEndsAt));
+          startCountdown(ms(data.countdownEndsAt));  /* <- tolerant read */
         }
 
         // PLAYING
@@ -225,8 +225,8 @@
           $('overlay')?.remove();
           $('scoreboardPopup').style.display = "none";
           $('gameArea').style.display = "block";
-const rn = $('roundNum'); if (rn) rn.textContent = data.round;
-const ta = $('targetActors'); if (ta) ta.textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
+          const rn = $('roundNum'); if (rn) rn.textContent = data.round; /* <- guard */
+          const ta = $('targetActors'); if (ta) ta.textContent = `${data.startActor?.name} → ${data.endActor?.name}`; /* <- guard */
           currentStart = data.startActor;
           currentTarget = data.endActor;
           lastMovieCast = [];
@@ -273,8 +273,7 @@ const ta = $('targetActors'); if (ta) ta.textContent = `${data.startActor?.name}
                 if (lobbyData.round < 5) {
                   await updateDoc(lobbyRef, {
                     status: "countdown",
-                  countdownEndsAt: Date.now() + 10000,
- // keep as Timestamp (original behavior)
+                    countdownEndsAt: Date.now() + 10000, // <- number, not Date()
                     round: lobbyData.round + 1,
                     winner: "",
                     winnerPoints: 0,
@@ -285,7 +284,7 @@ const ta = $('targetActors'); if (ta) ta.textContent = `${data.startActor?.name}
                   showFinalScores();
                 }
                 window._scheduledNext = false;
-              }, msLeft || 100); // fallback ensures timer always fires
+              }, msLeft || 100); // ✅ fallback ensures next round always fires
             }
           }
         }
@@ -311,7 +310,7 @@ const ta = $('targetActors'); if (ta) ta.textContent = `${data.startActor?.name}
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
           if (data.status === "waiting") {
-            await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: Date.now() + 10000, round: 1, ...getRandomActors() });
+            await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: Date.now() + 10000, round: 1, ...getRandomActors() }); /* <- number */
           }
         }
         if (snap.size === 0) {
