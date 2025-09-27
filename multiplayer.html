@@ -221,8 +221,18 @@
 
         if (data.status === "grace") {
           startGraceCountdown(data.graceEndsAt);
-          if (isHost && data.graceEndsAt && Date.now() > data.graceEndsAt) {
-            await updateDoc(lobbyRef, { status: "postRound", postRoundEndsAt: new Date(Date.now() + 10000) });
+
+          // ✅ Host forces round end after grace finishes
+          if (isHost && data.graceEndsAt) {
+            const checkGrace = setInterval(async () => {
+              if (Date.now() > data.graceEndsAt) {
+                clearInterval(checkGrace);
+                await updateDoc(lobbyRef, {
+                  status: "postRound",
+                  postRoundEndsAt: new Date(Date.now() + 10000)
+                });
+              }
+            }, 500);
           }
         }
 
