@@ -65,7 +65,7 @@
     <p id="scoreCountdown">▶️ Next round starts in 10s</p>
   </div>
 
-  <!-- ✅ Load your actors.js (global ACTOR_POOL) -->
+  <!-- ACTOR_POOL is defined here -->
   <script src="./actors.js"></script>
 
   <script type="module">
@@ -75,6 +75,7 @@
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    // Firebase config (kept as in your working file)
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -87,16 +88,18 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
     const $ = (id) => document.getElementById(id);
-    // Helper: returns milliseconds whether the value is a Firestore Timestamp or a number
-function ms(val) {
-  if (val == null) return 0;
-  if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
-  const n = Number(val);
-  return Number.isFinite(n) ? n : 0;
-}
 
+    // Helper: tolerant milliseconds (Timestamp or number)
+    function ms(val) {
+      if (val == null) return 0;
+      if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
+      const n = Number(val);
+      return Number.isFinite(n) ? n : 0;
+    }
 
+    // Safe DOM helpers to avoid null errors
     function setText(id, value) {
       const el = $(id);
       if (el) el.textContent = value;
@@ -115,7 +118,9 @@ function ms(val) {
     let lastMovieCast = [];
     let timerInterval = null;
     let graceInterval = null;
+    window._scheduledNext = false; // host guard
 
+    // TMDB key (as provided)
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 
     async function searchMovie(title) {
@@ -145,22 +150,20 @@ function ms(val) {
         const secs = Math.floor((now - startTime) / 1000);
         const m = String(Math.floor(secs / 60)).padStart(2, "0");
         const s = String(secs % 60).padStart(2, "0");
-        $("roundTimer").textContent = `${m}:${s}`;
+        setText("roundTimer", `${m}:${s}`);
       }, 500);
     }
 
     function startGraceCountdown(endTime) {
       if (timerInterval) clearInterval(timerInterval);
       if (graceInterval) clearInterval(graceInterval);
-
-      setStyle('roundTimer','color','red');
-
+      setStyle("roundTimer", "color", "red");
       graceInterval = setInterval(() => {
         const secs = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-        $("roundTimer").textContent = `00:${String(secs).padStart(2,"0")}`;
+        setText("roundTimer", `00:${String(secs).padStart(2,"0")}`);
         if (secs <= 0) {
           clearInterval(graceInterval);
-          $("roundTimer").textContent = "00:00";
+          setText("roundTimer", "00:00");
         }
       }, 500);
     }
@@ -186,7 +189,7 @@ function ms(val) {
     }
 
     async function joinLobby() {
-      $('status').textContent = `Hello ${username}, searching...`;
+      setText('status', `Hello ${username}, searching...`);
       const snaps = await getDocs(collection(db, "lobbies"));
       let chosenLobby = null;
       for (const docSnap of snaps.docs) {
@@ -218,10 +221,16 @@ function ms(val) {
         if (!snap.exists()) return;
         const data = snap.data();
 
-        if (data.status === "countdown" && data.countdownEndsAt) startCountdown(ms(data.countdownEndsAt));
+        // COUNTDOWN
+        if (data.status === "countdown" && data.countdownEndsAt) {
+          window._scheduledNext = false;
+          startCountdown(ms(data.countdownEndsAt)); // tolerant read
+        }
 
+        // PLAYING
         if (data.status === "playing") {
-          $('overlay')?.remove();
+          window._scheduledNext = false;
+          const ov = $('overlay'); if (ov) ov.remove();
           $('scoreboardPopup').style.display = "none";
           $('gameArea').style.display = "block";
           setText('roundNum', data.round);
@@ -230,12 +239,13 @@ function ms(val) {
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
-          setStyle('roundTimer','color','white');
+          setStyle("roundTimer", "color", "white");
           if (data.startTime) startStopwatch(data.startTime);
         }
 
         if (data.finishers) highlightFinishers(data.finishers);
 
+        // GRACE
         if (data.status === "grace") {
           startGraceCountdown(data.graceEndsAt);
 
@@ -245,37 +255,44 @@ function ms(val) {
                 clearInterval(checkGrace);
                 await updateDoc(lobbyRef, {
                   status: "postRound",
-                  postRoundEndsAt: new Date(Date.now() + 10000)
+                  postRoundEndsAt: Date.now() + 10000 // number
                 });
               }
             }, 500);
           }
         }
 
+        // POST-ROUND (SCOREBOARD)
         if (data.status === "postRound") {
-          $("gameArea").style.display = "none";
-          $("scoreboardPopup").style.display = "flex";
-          showScoreboard(data.postRoundEndsAt.toMillis());
+          $('gameArea').style.display = "none";
+          $('scoreboardPopup').style.display = "flex";
 
-          if (isHost && data.postRoundEndsAt) {
-            const msLeft = data.postRoundEndsAt.toMillis() - Date.now();
-            setTimeout(async () => {
-              const snap2 = await getDoc(lobbyRef);
-              const lobbyData = snap2.data();
-              if (lobbyData.round < 5) {
-                await updateDoc(lobbyRef, {
-                  status: "countdown",
-                  countdownEndsAt: Date.now() + 10000,
-                  round: lobbyData.round + 1,
-                  winner: "",
-                  winnerPoints: 0,
-                  finishers: [],
-                  ...getRandomActors()
-                });
-              } else {
-                showFinalScores();
-              }
-            }, msLeft || 100);
+          const endMs = ms(data.postRoundEndsAt);
+          showScoreboard(endMs);
+
+          if (isHost && endMs) {
+            const msLeft = Math.max(0, endMs - Date.now());
+            if (!window._scheduledNext) {
+              window._scheduledNext = true;
+              setTimeout(async () => {
+                const snap2 = await getDoc(lobbyRef);
+                const lobbyData = snap2.data();
+                if (lobbyData.round < 5) {
+                  await updateDoc(lobbyRef, {
+                    status: "countdown",
+                    countdownEndsAt: Date.now() + 10000, // number
+                    round: lobbyData.round + 1,
+                    winner: "",
+                    winnerPoints: 0,
+                    finishers: [],
+                    ...getRandomActors()
+                  });
+                } else {
+                  showFinalScores();
+                }
+                window._scheduledNext = false;
+              }, msLeft || 100); // fallback ensures timer always fires
+            }
           }
         }
       });
@@ -296,13 +313,23 @@ function ms(val) {
         });
 
         if (isHost && snap.size >= 2) {
+          const lobbyRef = doc(db, "lobbies", currentLobby);
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
           if (data.status === "waiting") {
-            await updateDoc(lobbyRef, { status: "countdown", countdownEndsAt: Date.now() + 10000, round: 1, ...getRandomActors() });
+            await updateDoc(lobbyRef, {
+              status: "countdown",
+              countdownEndsAt: Date.now() + 10000, // number
+              round: 1,
+              ...getRandomActors()
+            });
           }
         }
-        if (snap.size === 0) await deleteDoc(lobbyRef);
+
+        if (snap.size === 0) {
+          const lobbyRef = doc(db, "lobbies", currentLobby);
+          await deleteDoc(lobbyRef);
+        }
       });
     }
 
@@ -311,13 +338,24 @@ function ms(val) {
         const now = Date.now();
         const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
         setText('countdown', secs);
+
         if (secs <= 0) {
           clearInterval(interval);
-          $('countdown').textContent = "";
-          $('overlay')?.remove();
+          setText('countdown', "");
+          const ov = $('overlay'); if (ov) ov.remove();
+
           if (isHost) {
             const lobbyRef = doc(db, "lobbies", currentLobby);
-            await updateDoc(lobbyRef, { status: "playing", round: 1, startTime: Date.now(), ...getRandomActors() });
+            // Respect the round set for this countdown (don’t reset to 1)
+            const snap = await getDoc(lobbyRef);
+            const curRound = (snap.data()?.round) || 1;
+
+            await updateDoc(lobbyRef, {
+              status: "playing",
+              round: curRound,
+              startTime: Date.now(),
+              ...getRandomActors()
+            });
           }
         }
       }, 200);
@@ -356,17 +394,20 @@ function ms(val) {
 
     function showFinalScores() {
       $('scoreboardPopup').style.display = "flex";
-      $('scoreList').innerHTML = $("players").innerHTML;
       $('scoreCountdown').textContent = "🏆 Game Over!";
+      // (Optional) You can re-render a final sorted list here if you want.
     }
 
-    window.addEventListener("beforeunload", async () => { if (playerRef) await deleteDoc(playerRef); });
+    window.addEventListener("beforeunload", async () => {
+      if (playerRef) await deleteDoc(playerRef);
+    });
 
     $('submitGuess').addEventListener('click', async () => {
       const guess = $('guessInput').value.trim(); if (!guess) return;
       const snap = await getDoc(playerRef); const data = snap.data(); const isFirst = (data.steps || 0) === 0;
       const result = await validateMovieGuess(guess, isFirst);
       if (!result.valid) { alert("❌ " + result.reason); return; }
+
       const newSteps = (data.steps || 0) + 1; await updateDoc(playerRef, { steps: newSteps });
       const li = document.createElement("li"); li.textContent = result.movieTitle; $('guessLog').appendChild(li);
 
@@ -386,7 +427,7 @@ function ms(val) {
             winnerPoints: pts,
             finishers,
             status: "grace",
-            graceEndsAt: Date.now() + 10000
+            graceEndsAt: Date.now() + 10000  // number
           });
         } else {
           await updateDoc(lobbyRef, { finishers });
@@ -408,6 +449,7 @@ function ms(val) {
       box.style.display = results.length ? "block" : "none";
     });
 
+    // Start!
     joinLobby();
   </script>
 </body>
