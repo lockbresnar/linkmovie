@@ -2,26 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LinkMovie Multiplayer Auto</title>
+  <title>LinkMovie Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: system-ui, Arial, sans-serif; text-align:center; margin: 40px; }
     #countdown { font-size: 48px; margin: 20px 0; }
+    #gameArea { display:none; }
+    ul { list-style:none; padding:0; }
+    li { margin:4px 0; }
   </style>
 </head>
 <body>
   <h1>🎬 LinkMovie Multiplayer</h1>
   <p id="status">Joining lobby...</p>
   <div id="countdown"></div>
-  <ul id="players"></ul>
+
+  <div id="gameArea">
+    <p>Round: <span id="roundNum"></span> / 5</p>
+    <p>Target: <span id="targetActors"></span></p>
+    <input id="guessInput" placeholder="Enter movie..." />
+    <button id="submitGuess">Submit</button>
+    <h3>Your Chain</h3>
+    <ul id="guessLog"></ul>
+    <h3>Players</h3>
+    <ul id="players"></ul>
+  </div>
+
+  <div id="winnerPopup" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+    <h2 id="winnerText"></h2>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getFirestore, collection, query, where, getDocs, addDoc,
-      doc, setDoc, onSnapshot, updateDoc, serverTimestamp,
-      deleteDoc
+      doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // 🔑 Replace with your TMDb API key
+    const API_KEY = "YOUR_TMDB_API_KEY";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
@@ -37,17 +56,13 @@
     const db = getFirestore(app);
     const $ = (id) => document.getElementById(id);
 
-    // --- Random username
     const username = "Player-" + Math.floor(Math.random() * 10000);
-
     let currentLobby = null;
     let playerRef = null;
 
-    // --- Auto join or create lobby
+    // --- Auto join or create lobby ---
     async function joinLobby() {
-      $('status').textContent = `Hello ${username}, searching for lobby...`;
-
-      // look for waiting lobby with <4 players
+      $('status').textContent = `Hello ${username}, searching...`;
       const q = query(collection(db, "lobbies"), where("status", "==", "waiting"));
       const snaps = await getDocs(q);
 
@@ -55,34 +70,44 @@
         const lobby = snaps.docs[0];
         currentLobby = lobby.id;
         playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username });
+        await setDoc(playerRef, { name: username, steps: 0, score: 0 });
         $('status').textContent = `Joined lobby ${currentLobby}`;
         watchLobby();
       } else {
-        // create new lobby
         const ref = await addDoc(collection(db, "lobbies"), {
           status: "waiting",
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          round: 0
         });
         currentLobby = ref.id;
         playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username });
-        $('status').textContent = `Created lobby ${currentLobby}, waiting for players...`;
+        await setDoc(playerRef, { name: username, steps: 0, score: 0 });
+        $('status').textContent = `Created lobby ${currentLobby}, waiting...`;
         watchLobby();
       }
     }
 
-    // --- Watch lobby updates
+    // --- Watch lobby + players ---
     function watchLobby() {
       const lobbyRef = doc(db, "lobbies", currentLobby);
 
       onSnapshot(lobbyRef, (snap) => {
         if (!snap.exists()) return;
         const data = snap.data();
-        console.log("📡 Lobby update:", data);
 
         if (data.status === "countdown" && data.countdownEndsAt) {
           startCountdown(data.countdownEndsAt.toMillis());
+        }
+
+        if (data.status === "playing") {
+          $('status').textContent = "▶️ Round in progress!";
+          $('gameArea').style.display = "block";
+          $('roundNum').textContent = data.round;
+          $('targetActors').textContent = `${data.startActor?.name} → ${data.endActor?.name}`;
+        }
+
+        if (data.winner) {
+          showWinner(data.winner);
         }
       });
 
@@ -91,55 +116,132 @@
         const ul = $('players');
         ul.innerHTML = "";
         snap.forEach(d => {
+          const p = d.data();
           const li = document.createElement("li");
-          li.textContent = d.id;
+          li.textContent = `${p.name} — ${p.steps || 0} steps`;
           ul.appendChild(li);
         });
 
         const playerCount = snap.size;
-
-        // If lobby has at least 2 players and still waiting, start 10s join window
-        const lobbySnap = await getDocs(query(collection(db, "lobbies")));
         if (playerCount >= 2) {
-          const lobbyData = snap.docs[0];
           const lobbyRef = doc(db, "lobbies", currentLobby);
-          const lobbyDocSnap = await getDocs(query(collection(db, "lobbies")));
           await updateDoc(lobbyRef, {
             status: "countdown",
-            countdownEndsAt: new Date(Date.now() + 10000) // start 10s window
+            countdownEndsAt: new Date(Date.now() + 10000),
+            round: 1,
+            ...getRandomActors() // start + end actors
           });
         }
-
-        // If no players remain, delete lobby
         if (playerCount === 0) {
           await deleteDoc(lobbyRef);
-          console.log("🗑 Lobby deleted (no players left):", currentLobby);
         }
       });
     }
 
-    // --- 5-second countdown before round
+    // --- Countdown before round ---
     function startCountdown(endTime) {
-      const interval = setInterval(() => {
+      const interval = setInterval(async () => {
         const now = Date.now();
         const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
         $('countdown').textContent = secs;
         if (secs <= 0) {
           clearInterval(interval);
-          $('status').textContent = "▶️ Round started!";
           $('countdown').textContent = "";
+          const lobbyRef = doc(db, "lobbies", currentLobby);
+          await updateDoc(lobbyRef, { status: "playing" });
         }
       }, 200);
     }
 
-    // --- Cleanup on exit
-    window.addEventListener("beforeunload", async () => {
-      if (playerRef) {
-        await deleteDoc(playerRef);
-      }
-    });
+    // --- Submit guess ---
+    $('submitGuess').onclick = async () => {
+      const guess = $('guessInput').value.trim();
+      if (!guess) return;
 
-    joinLobby();
-  </script>
-</body>
-</html>
+      const lobbyRef = doc(db, "lobbies", currentLobby);
+      const lobbySnap = await getDoc(lobbyRef);
+      const lobby = lobbySnap.data();
+      const sActor = lobby.startActor;
+      const eActor = lobby.endActor;
+
+      // search movie
+      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(guess)}`);
+      const data = await res.json();
+      if (!data.results.length) return await logGuess(guess, "grey");
+
+      const movie = data.results[0];
+      const credRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${API_KEY}`);
+      const credits = await credRes.json();
+      const castIds = new Set(credits.cast.map(c => c.id));
+
+      const snap = await getDoc(playerRef);
+      const p = snap.data() || {};
+      const lastCastIds = p.lastCastIds || null;
+      let steps = p.steps || 0;
+
+      const includesStart  = sActor?.id && castIds.has(sActor.id);
+      const includesTarget = eActor?.id && castIds.has(eActor.id);
+
+      if (!lastCastIds) {
+        if (!includesStart) return await logGuess(movie.title, "grey");
+        steps++;
+        await logGuess(movie.title, "blue", castIds, steps);
+        if (includesTarget) await declareWinner(username);
+        return;
+      }
+
+      const sharesWithLast = lastCastIds.some(id => castIds.has(id));
+      if (!sharesWithLast) return await logGuess(movie.title, "grey");
+
+      steps++;
+      if (includesTarget) {
+        await logGuess(movie.title, "green", castIds, steps);
+        await declareWinner(username);
+      } else if (includesStart) {
+        await logGuess(movie.title, "blue", castIds, steps);
+      } else {
+        await logGuess(movie.title, "orange", castIds, steps);
+      }
+    };
+
+    async function logGuess(title, color, castIds=null, stepsInc=null) {
+      const snap = await getDoc(playerRef);
+      const chain = snap.exists() ? (snap.data().chain || []) : [];
+      chain.push({ title, color });
+
+      const updates = { chain };
+      if (castIds) updates.lastCastIds = [...castIds];
+      if (stepsInc) updates.steps = stepsInc;
+
+      await setDoc(playerRef, updates, { merge: true });
+
+      const li = document.createElement("li");
+      li.textContent = `${title} (${color})`;
+      $('guessLog').appendChild(li);
+    }
+
+    async function declareWinner(name) {
+      const lobbyRef = doc(db, "lobbies", currentLobby);
+      await updateDoc(lobbyRef, { winner: name });
+    }
+
+    function showWinner(name) {
+      $('winnerPopup').style.display = "flex";
+      $('winnerText').textContent = `🏆 Winner: ${name}`;
+    }
+
+    function getRandomActors() {
+      const pool = [
+        {id: 31, name: "Tom Hanks"},
+        {id: 3084, name: "Meryl Streep"},
+        {id: 287, name: "Brad Pitt"},
+        {id: 54693, name: "Emma Stone"},
+        {id: 5292, name: "Denzel Washington"}
+      ];
+      const a = pool[Math.floor(Math.random() * pool.length)];
+      let b;
+      do { b = pool[Math.floor(Math.random() * pool.length)]; } while (a.id === b.id);
+      return { startActor: a, endActor: b };
+    }
+
+    window.addEventListener("befor
