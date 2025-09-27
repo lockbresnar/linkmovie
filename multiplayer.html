@@ -60,7 +60,7 @@
       onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // ✅ Fixed config (storageBucket corrected to .appspot.com)
+    // ✅ Correct config (note storageBucket fixed to .appspot.com)
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -77,6 +77,13 @@
     const $ = (id) => document.getElementById(id);
     let currentLobby = null;
     let currentPlayer = null;
+
+    // --- Force initial state (setup visible, game/overlay hidden) ---
+    window.addEventListener("DOMContentLoaded", () => {
+      $('setup').style.display = "block";
+      $('game').style.display = "none";
+      $('winnerPopup').style.display = "none";
+    });
 
     // --- Create Lobby ---
     $('createLobby').onclick = async () => {
@@ -130,8 +137,8 @@
         $('roundNumber').textContent = data.round || 0;
         $('targetActors').textContent = data.target || "-";
 
-        if (data.winner) {
-          showWinner(data.winner, data.finalScores || {});
+        if (data.winner && data.finalScores) {
+          showWinner(data.winner, data.finalScores);
         }
       });
 
@@ -148,7 +155,7 @@
       });
     }
 
-    // --- Submit Answer (simulated +100 pts) ---
+    // --- Submit Answer (+100 pts) ---
     $('submitAnswer').onclick = async () => {
       const playerRef = doc(db, "lobbies", currentLobby, "players", currentPlayer);
       const snap = await getDoc(playerRef);
