@@ -1,0 +1,44 @@
+/* Lean layer on top of styles.css to align Multiplayer visuals */
+
+.visible-game { display: block; }
+
+.mp-big-count {
+  font-size: 56px;
+  font-weight: 900;
+  margin-top: 8px;
+}
+
+.mp-score-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+.mp-score-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+.mp-score-list li:last-child { border-bottom: 0; }
+
+.mp-muted { color: #555; }
+.mp-winner { margin-top: 8px; font-weight: 800; }
+
+.overlay.visible { display: flex; }
+
+.actor-card img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid #ddd;
+  background: #f9f9f9;
+}
+
+/* Suggestions keep site look */
+#suggestions { position: relative; z-index: 10; }
+
+/* Ensure scoreboard popup sizes nicely */
+#scoreboardPopup .overlay-card {
+  width: 360px;
+  max-width: calc(100vw - 40px);
+}

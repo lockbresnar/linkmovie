@@ -2,69 +2,112 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LinkMovie Multiplayer</title>
+  <title>LinkMovie — Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, Arial, sans-serif; text-align:center; margin: 40px; }
-    #countdown { font-size: 48px; margin: 20px 0; }
-    #gameArea { display:none; }
-    ul { list-style:none; padding:0; }
-    li { margin:4px 0; }
-    #overlay, #scoreboardPopup {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.85); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      flex-direction: column; z-index: 1000;
-    }
-    #scoreboardPopup { display: none; }
-    #roundTimer { font-weight: bold; font-size: 20px; }
-    #suggestions {
-      position: absolute;
-      background: #fff;
-      color: #000;
-      width: 250px;
-      max-height: 200px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      display: none;
-      text-align: left;
-    }
-    #suggestions div { padding: 6px; cursor: pointer; }
-    #suggestions div:hover { background: #eee; }
-  </style>
+  <link rel="stylesheet" href="styles.css?v=alpha2" />
+  <link rel="stylesheet" href="multiplayer.css?v=alpha2" />
 </head>
 <body>
-  <h1>🎬 LinkMovie Multiplayer</h1>
+  <!-- Header (same as other pages) -->
+  <header class="topbar">
+    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+    <nav class="topbar-right">
+      <a href="index.html" class="nav-link">Main Game</a>
+      <a href="actor-chain.html" class="nav-link">Actor Chain</a>
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon"
+           onclick="document.getElementById('mpHelp').classList.add('visible')" />
+    </nav>
+  </header>
 
-  <div id="overlay">
-    <p id="status">Joining lobby...</p>
-    <div id="countdown"></div>
+  <!-- Stats bar -->
+  <div class="stats">
+    <h1 class="page-title condensed">Multiplayer</h1>
+    <div class="counter-circle" id="roundBadge">R<span id="roundNum">0</span></div>
+    <div class="timer condensed" id="roundTimer">03:00</div>
   </div>
 
-  <div id="gameArea">
-    <p>Round: <span id="roundNum"></span> / 3</p>
-    <p>Target: <span id="targetActors"></span></p>
-    <p>⏱️ Time: <span id="roundTimer">03:00</span></p>
-    <div style="position:relative; display:inline-block;">
-      <input id="guessInput" placeholder="Enter movie..." autocomplete="off" />
-      <div id="suggestions"></div>
+  <!-- Two-column layout -->
+  <div class="layout">
+    <!-- LEFT -->
+    <div class="left-col">
+      <div class="actors-row">
+        <div class="actor-card">
+          <img id="actor1Img" alt="Start Actor" />
+          <p id="actor1" class="actor-name"></p>
+        </div>
+        <div class="actor-card">
+          <img id="actor2Img" alt="Target Actor" />
+          <p id="actor2" class="actor-name"></p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <input id="guessInput" placeholder="Enter a movie..." autocomplete="off" />
+        <div id="suggestions" class="suggestions"></div>
+        <div class="button-row">
+          <button id="submitGuess" class="btn btn-submit">Submit</button>
+        </div>
+        <p id="status" class="status"></p>
+      </div>
     </div>
-    <button id="submitGuess">Submit</button>
 
-    <h3>Your Chain</h3>
-    <ul id="guessLog"></ul>
+    <!-- RIGHT -->
+    <aside class="right-col">
+      <div class="chain-box">
+        <h3>Current Chain</h3>
+        <ul id="guessLog"></ul>
+      </div>
 
-    <h3>Players</h3>
-    <ul id="players"></ul>
+      <div class="chain-box" style="margin-top:12px;">
+        <h3>Players</h3>
+        <ul id="players"></ul>
+      </div>
+    </aside>
   </div>
 
-  <div id="scoreboardPopup">
-    <h2>Round Over</h2>
-    <ul id="scoreList"></ul>
-    <p id="scoreCountdown">▶️ Next round starts in 10s</p>
+  <!-- Lobby / countdown overlay -->
+  <div id="overlay" class="overlay visible">
+    <div class="overlay-card">
+      <h2 id="overlayTitle">Joining Lobby…</h2>
+      <p id="overlayMsg">Setting things up</p>
+      <div id="countdown" class="mp-big-count">—</div>
+    </div>
   </div>
 
-  <script src="./actors.js"></script>
+  <!-- Scoreboard popup -->
+  <div id="scoreboardPopup" class="overlay">
+    <div class="overlay-card">
+      <h2 id="scoreboardTitle">Round Over</h2>
+      <ul id="scoreList" class="mp-score-list"></ul>
+      <p id="scoreCountdown" class="mp-muted">Next round starts shortly…</p>
+      <p id="winnerLine" class="mp-winner" style="display:none;"></p>
+      <button id="playAgainBtn" class="btn btn-submit" style="display:none;">🔁 Play Again</button>
+    </div>
+  </div>
+
+  <!-- Help -->
+  <div id="mpHelp" class="overlay">
+    <div class="overlay-card">
+      <button class="popup-close" onclick="document.getElementById('mpHelp').classList.remove('visible')">✕</button>
+      <h2>How it works</h2>
+      <p style="text-align:left">
+        • Join a lobby (up to 4 players).<br/>
+        • First movie must include the start actor.<br/>
+        • Each next movie must share any actor with the previous movie.<br/>
+        • Include the target actor to finish — others have 10s grace.<br/>
+        • Each round lasts up to 3 minutes; 3 rounds total.<br/>
+        • First to 200 points instantly wins.<br/>
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    This product uses the TMDb API but is not endorsed or certified by TMDb.<br/>
+    <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
+  </footer>
+
+  <script src="actors.js?v=alpha2"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -73,7 +116,7 @@
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Firebase config (unchanged)
+    // ===== Config / Constants =====
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -83,464 +126,423 @@
       appId: "1:523659305871:web:129810d281b5cf9b33a1fa",
       measurementId: "G-ZEW051T33S"
     };
+    const ROUND_MS = 3 * 60 * 1000; // 3 minutes
+    const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
+    const IMG = "https://image.tmdb.org/t/p/w200";
 
+    // ===== App =====
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // ===== DOM helpers =====
     const $ = (id) => document.getElementById(id);
+    function ms(v){ if(v==null) return 0; if(typeof v==="object"&&typeof v.toMillis==="function") return v.toMillis(); const n=Number(v); return Number.isFinite(n)?n:0; }
+    function setText(id,v){ const el=$(id); if(el) el.textContent=v; }
+    function setStyle(id,p,v){ const el=$(id); if(el&&el.style) el.style[p]=v; }
 
-    // === Constants ===
-    const ROUND_MS = 3 * 60 * 1000; // 3 minutes per round
+    // ===== State =====
+    const username = "Player-" + Math.floor(Math.random()*10000);
+    let currentLobby = null, playerRef = null, isHost = false;
+    let currentStart = null, currentTarget = null;
+    let lastMovieCast = []; let timerInterval = null, graceInterval = null;
+    window._scheduledNext = false; window._roundEndInterval = null;
 
-    // Helper: tolerant ms from Timestamp or number
-    function ms(val) {
-      if (val == null) return 0;
-      if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
-      const n = Number(val);
-      return Number.isFinite(n) ? n : 0;
+    // ===== TMDB helpers =====
+    async function searchMovie(title){
+      const r = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
+      const d = await r.json(); return d.results || [];
+    }
+    async function getMovieCast(id){
+      const r = await fetch(`https://api.themoviedb.org/3/movie/${id}/credits?api_key=${TMDB_API_KEY}`);
+      const d = await r.json(); return d.cast || [];
+    }
+    async function searchPersonByName(name){
+      const r = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(name)}&include_adult=false`);
+      const d = await r.json(); return (d.results && d.results[0]) ? d.results[0] : null;
+    }
+    async function pickActorByName(name){
+      const p = await searchPersonByName(name);
+      return p ? { id: p.id, name: p.name, profile_path: p.profile_path || "" } : { id:null, name, profile_path:"" };
+    }
+    async function pickRandomHydratedActor(){
+      const name = ACTOR_POOL[Math.floor(Math.random()*ACTOR_POOL.length)];
+      return pickActorByName(name);
+    }
+    async function pickAndHydrateActors(){
+      let a1 = await pickRandomHydratedActor();
+      let a2 = await pickRandomHydratedActor();
+      while (a1.id && a2.id && a1.id === a2.id) a2 = await pickRandomHydratedActor();
+      return { startActor:a1, endActor:a2 };
+    }
+    function setActorsOnUI(a1,a2){
+      const i1 = $('actor1Img'), i2 = $('actor2Img');
+      if (i1) i1.src = a1?.profile_path ? IMG + a1.profile_path : "";
+      if (i2) i2.src = a2?.profile_path ? IMG + a2.profile_path : "";
+      setText('actor1', a1?.name || '—'); setText('actor2', a2?.name || '—');
     }
 
-    // Safe DOM helpers
-    function setText(id, value) {
-      const el = $(id);
-      if (el) el.textContent = value;
-    }
-    function setStyle(id, prop, value) {
-      const el = $(id);
-      if (el && el.style) el.style[prop] = value;
-    }
-
-    const username = "Player-" + Math.floor(Math.random() * 10000);
-    let currentLobby = null;
-    let playerRef = null;
-    let isHost = false;
-    let currentStart = null;
-    let currentTarget = null;
-    let lastMovieCast = [];
-    let timerInterval = null;
-    let graceInterval = null;
-    window._scheduledNext = false;     // host guard for scoreboard next
-    window._roundEndInterval = null;   // host guard for round max timer
-
-    const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
-
-    async function searchMovie(title) {
-      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
-      const data = await res.json();
-      return data.results;
-    }
-
-    async function getMovieCast(movieId) {
-      const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${TMDB_API_KEY}`);
-      const data = await res.json();
-      return data.cast;
-    }
-
-    function getRandomActors() {
-      const nameA = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)];
-      let nameB;
-      do { nameB = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)]; }
-      while (nameA === nameB);
-      return { startActor: { id: nameA, name: nameA }, endActor: { id: nameB, name: nameB } };
-    }
-
-    // Reset all players' steps to 0 (host only)
-    async function resetAllPlayerSteps(lobbyId) {
-      const playersSnap = await getDocs(collection(db, "lobbies", lobbyId, "players"));
-      await Promise.all(
-        playersSnap.docs.map(d =>
-          updateDoc(doc(db, "lobbies", lobbyId, "players", d.id), { steps: 0 })
-        )
-      );
-    }
-
-    // === Round countdown (mm:ss) while playing ===
-    function startRoundCountdown(endTime) {
+    // ===== Round timers =====
+    function startRoundCountdown(endTime){
       if (timerInterval) clearInterval(timerInterval);
-      setStyle("roundTimer", "color", "#111"); // visible during normal play
-      timerInterval = setInterval(() => {
-        const rem = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-        const m = String(Math.floor(rem / 60)).padStart(2, "0");
-        const s = String(rem % 60).padStart(2, "0");
-        setText("roundTimer", `${m}:${s}`);
-        if (rem <= 0) {
-          clearInterval(timerInterval);
-          setText("roundTimer", "00:00");
-        }
+      setStyle('roundTimer','color','#111');
+      timerInterval = setInterval(()=>{
+        const rem = Math.max(0, Math.ceil((endTime - Date.now())/1000));
+        const m = String(Math.floor(rem/60)).padStart(2,'0');
+        const s = String(rem%60).padStart(2,'0');
+        setText('roundTimer', `${m}:${s}`);
+        if (rem<=0){ clearInterval(timerInterval); setText('roundTimer','00:00'); }
       }, 500);
     }
-
-    function startGraceCountdown(endTime) {
+    function startGraceCountdown(endTime){
       if (timerInterval) clearInterval(timerInterval);
       if (graceInterval) clearInterval(graceInterval);
-      setStyle("roundTimer", "color", "red"); // red in grace
-      graceInterval = setInterval(() => {
-        const secs = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-        setText("roundTimer", `00:${String(secs).padStart(2,"0")}`);
-        if (secs <= 0) {
-          clearInterval(graceInterval);
-          setText("roundTimer", "00:00");
-        }
+      setStyle('roundTimer','color','red');
+      graceInterval = setInterval(()=>{
+        const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
+        setText('roundTimer', `00:${String(secs).padStart(2,'0')}`);
+        if (secs<=0){ clearInterval(graceInterval); setText('roundTimer','00:00'); }
       }, 500);
     }
 
-    async function validateMovieGuess(title, isFirstGuess) {
+    // ===== Validation =====
+    async function validateMovieGuess(title, isFirst){
       const results = await searchMovie(title);
-      if (!results || results.length === 0) return { valid: false, reason: "Movie not found" };
-
+      if (!results.length) return { valid:false, reason:"Movie not found" };
       const movie = results[0];
       const cast = await getMovieCast(movie.id);
 
-      if (isFirstGuess) {
-        const ok = cast.some(a => a.name === currentStart.name);
-        if (!ok) return { valid: false, reason: "Must include start actor" };
+      if (isFirst){
+        const ok = cast.some(a => a.name === (currentStart?.name));
+        if (!ok) return { valid:false, reason:"Must include start actor" };
       } else {
         const overlap = cast.some(a => lastMovieCast.some(b => b.id === a.id));
-        if (!overlap) return { valid: false, reason: "Must connect with previous movie" };
+        if (!overlap) return { valid:false, reason:"Must connect with previous movie" };
       }
-
       lastMovieCast = cast;
-      const reachedTarget = cast.some(a => a.name === currentTarget.name);
-      return { valid: true, reachedTarget, movieTitle: movie.title };
+      const reachedTarget = cast.some(a => a.name === (currentTarget?.name));
+      return { valid:true, reachedTarget, movieTitle: movie.title };
     }
 
-    async function joinLobby() {
-      setText('status', `Hello ${username}, searching...`);
-      const snaps = await getDocs(collection(db, "lobbies"));
-      let chosenLobby = null;
-      for (const docSnap of snaps.docs) {
-        const data = docSnap.data();
-        if (["waiting", "countdown"].includes(data.status)) {
-          const playersRef = collection(db, "lobbies", docSnap.id, "players");
-          const playersSnap = await getDocs(playersRef);
-          if (playersSnap.size < 4 && playersSnap.size > 0) { chosenLobby = docSnap; break; }
+    // ===== Utility =====
+    async function resetAllPlayerSteps(lobbyId){
+      const ps = await getDocs(collection(db,'lobbies',lobbyId,'players'));
+      await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',lobbyId,'players',d.id), { steps:0 })));
+    }
+
+    // ===== Lobby flow =====
+    async function joinLobby(){
+      setText('overlayTitle','Joining Lobby…'); setText('overlayMsg',`Hello ${username}, searching…`);
+      const snaps = await getDocs(collection(db,'lobbies'));
+      let chosen = null;
+      for (const s of snaps.docs){
+        const d = s.data();
+        if (["waiting","countdown"].includes(d.status)){
+          const ps = await getDocs(collection(db,'lobbies',s.id,'players'));
+          if (ps.size < 4 && ps.size > 0){ chosen = s; break; }
         }
       }
-      if (chosenLobby) {
-        currentLobby = chosenLobby.id;
-        playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username, steps: 0, score: 0 });
+      if (chosen){
+        currentLobby = chosen.id;
+        playerRef = doc(db,'lobbies',currentLobby,'players',username);
+        await setDoc(playerRef, { name:username, steps:0, score:0 });
         watchLobby();
       } else {
-        const ref = await addDoc(collection(db, "lobbies"), { status: "waiting", createdAt: Date.now(), round: 0 });
+        const ref = await addDoc(collection(db,'lobbies'), { status:'waiting', createdAt:Date.now(), round:0 });
         currentLobby = ref.id;
-        playerRef = doc(db, "lobbies", currentLobby, "players", username);
-        await setDoc(playerRef, { name: username, steps: 0, score: 0 });
+        playerRef = doc(db,'lobbies',currentLobby,'players',username);
+        await setDoc(playerRef, { name:username, steps:0, score:0 });
         watchLobby();
       }
     }
 
-    function watchLobby() {
-      const lobbyRef = doc(db, "lobbies", currentLobby);
+    function watchLobby(){
+      const lobbyRef = doc(db,'lobbies',currentLobby);
 
-      onSnapshot(lobbyRef, async (snap) => {
+      onSnapshot(lobbyRef, async (snap)=>{
         if (!snap.exists()) return;
         const data = snap.data();
 
-        // Clear any round-end watcher when not playing
-        if (data.status !== "playing" && window._roundEndInterval) {
-          clearInterval(window._roundEndInterval);
-          window._roundEndInterval = null;
+        // Clear max-round watcher when not playing
+        if (data.status !== 'playing' && window._roundEndInterval){
+          clearInterval(window._roundEndInterval); window._roundEndInterval=null;
         }
 
         // COUNTDOWN
-        if (data.status === "countdown" && data.countdownEndsAt) {
-          window._scheduledNext = false;
-          const ov = $('overlay'); if (ov) ov.style.display = "flex";
-          $('scoreboardPopup').style.display = "none";
+        if (data.status === 'countdown' && data.countdownEndsAt){
+          window._scheduledNext=false;
+          $('overlay').classList.add('visible');
+          $('scoreboardPopup').classList.remove('visible');
           startCountdown(ms(data.countdownEndsAt));
         }
 
         // PLAYING
-        if (data.status === "playing") {
-          window._scheduledNext = false;
-          const ov = $('overlay'); if (ov) ov.style.display = "none";
-          $('scoreboardPopup').style.display = "none";
-          $('gameArea').style.display = "block";
+        if (data.status === 'playing'){
+          window._scheduledNext=false;
+          $('overlay').classList.remove('visible');
+          $('scoreboardPopup').classList.remove('visible');
+          $('gameArea')?.classList.add('visible-game');
 
           setText('roundNum', data.round);
-          setText('targetActors', `${data.startActor?.name} → ${data.endActor?.name}`);
-          currentStart = data.startActor;
-          currentTarget = data.endActor;
-          lastMovieCast = [];
+          currentStart = data.startActor; currentTarget = data.endActor;
+          setActorsOnUI(currentStart, currentTarget);
           $('guessLog').innerHTML = "";
+          lastMovieCast = [];
 
-          // Start the visible in-round countdown (3:00 → 0:00)
           const endMs = ms(data.roundEndsAt) || (ms(data.startTime) + ROUND_MS);
           startRoundCountdown(endMs);
 
-          // Host watches for round expiry ⇒ postRound
-          if (isHost && endMs) {
+          // host: auto end when timer hits 0 → scoreboard immediately
+          if (isHost && endMs){
             if (window._roundEndInterval) clearInterval(window._roundEndInterval);
-            window._roundEndInterval = setInterval(async () => {
-              const now = Date.now();
-              if (now > endMs) {
-                clearInterval(window._roundEndInterval);
-                window._roundEndInterval = null;
-                // Only end if still playing (someone might have won & triggered grace)
+            window._roundEndInterval = setInterval(async ()=>{
+              if (Date.now() > endMs){
+                clearInterval(window._roundEndInterval); window._roundEndInterval=null;
                 const latest = await getDoc(lobbyRef);
-                if (latest.exists() && latest.data().status === "playing") {
-                  await updateDoc(lobbyRef, {
-                    status: "postRound",
-                    postRoundEndsAt: Date.now() + 10000
-                  });
+                if (latest.exists() && latest.data().status === 'playing'){
+                  await updateDoc(lobbyRef, { status:'postRound', postRoundEndsAt: Date.now()+10000 });
                 }
               }
             }, 500);
           }
         }
 
-        if (data.finishers) highlightFinishers(data.finishers);
-
-        // GRACE (10s, red timer)
-        if (data.status === "grace") {
-          // stop round-end watcher, grace will drive flow now
-          if (window._roundEndInterval) { clearInterval(window._roundEndInterval); window._roundEndInterval = null; }
+        // GRACE (10s red timer), then scoreboard immediately
+        if (data.status === 'grace'){
+          if (window._roundEndInterval){ clearInterval(window._roundEndInterval); window._roundEndInterval=null; }
           startGraceCountdown(data.graceEndsAt);
-          if (isHost && data.graceEndsAt) {
-            const checkGrace = setInterval(async () => {
-              if (Date.now() > data.graceEndsAt) {
-                clearInterval(checkGrace);
-                await updateDoc(lobbyRef, {
-                  status: "postRound",
-                  postRoundEndsAt: Date.now() + 10000
-                });
+          if (isHost && data.graceEndsAt){
+            const t = setInterval(async ()=>{
+              if (Date.now() > data.graceEndsAt){
+                clearInterval(t);
+                await updateDoc(lobbyRef, { status:'postRound', postRoundEndsAt: Date.now()+10000 });
               }
             }, 500);
           }
         }
 
-        // POST-ROUND (SCOREBOARD)
-        if (data.status === "postRound") {
-          $('gameArea').style.display = "none";
-          $('scoreboardPopup').style.display = "flex";
-          const ov = $('overlay'); if (ov) ov.style.display = "none";
+        // POST-ROUND (SCOREBOARD) — shows straight away
+        if (data.status === 'postRound'){
+          $('gameArea')?.classList.remove('visible-game');
+          $('overlay').classList.remove('visible');
+          $('scoreboardPopup').classList.add('visible');
 
           const endMs = ms(data.postRoundEndsAt);
-          showScoreboard(endMs);
+          await showScoreboard(endMs);
 
-          if (isHost && endMs) {
+          // schedule next round start (no extra “searching” countdown)
+          if (isHost && endMs){
             const msLeft = Math.max(0, endMs - Date.now());
-            if (!window._scheduledNext) {
+            if (!window._scheduledNext){
               window._scheduledNext = true;
-              setTimeout(async () => {
+              setTimeout(async ()=>{
                 const snap2 = await getDoc(lobbyRef);
-                const lobbyData = snap2.data();
+                const d2 = snap2.data();
 
-                if (lobbyData.round < 3) {
-                  const nextRound = lobbyData.round + 1;
-
-                  // Reset steps BEFORE starting next round
+                if (d2.round < 3){
+                  const nextRound = d2.round + 1;
                   await resetAllPlayerSteps(currentLobby);
-
-                  // Start next round immediately (no extra lobby countdown)
+                  const actors = await pickAndHydrateActors();
                   await updateDoc(lobbyRef, {
-                    status: "playing",
+                    status:'playing',
                     round: nextRound,
                     startTime: Date.now(),
                     roundEndsAt: Date.now() + ROUND_MS,
-                    winner: "",
-                    winnerPoints: 0,
-                    finishers: [],
-                    ...getRandomActors()
+                    winner:"",
+                    winnerPoints:0,
+                    finishers:[],
+                    ...actors
                   });
-                } else {
-                  await updateDoc(lobbyRef, { status: "final" });
+                }else{
+                  await updateDoc(lobbyRef, { status:'final' });
                 }
-                window._scheduledNext = false;
-              }, msLeft || 100); // fallback ensures timer always fires
+                window._scheduledNext=false;
+              }, msLeft || 100);
             }
           }
         }
 
-        // FINAL
-        if (data.status === "final") {
-          $('gameArea').style.display = "none";
-          const ov = $('overlay'); if (ov) ov.style.display = "none";
-          $('scoreboardPopup').style.display = "flex";
-          showFinalScores();
-          window._scheduledNext = false;
+        // FINAL — show winner + replay
+        if (data.status === 'final'){
+          $('gameArea')?.classList.remove('visible-game');
+          $('overlay').classList.remove('visible');
+          $('scoreboardPopup').classList.add('visible');
+          await showFinalScores(); // adds winner + shows replay (host)
+          window._scheduledNext=false;
         }
       });
 
-      const playersRef = collection(db, "lobbies", currentLobby, "players");
-      onSnapshot(playersRef, async (snap) => {
-        const players = [];
-        snap.forEach(d => players.push(d.id));
-        players.sort();
-        isHost = (players[0] === username);
+      // players list + host detection
+      const playersRef = collection(db,'lobbies',currentLobby,'players');
+      onSnapshot(playersRef, async (ps)=>{
+        const names=[]; ps.forEach(d=>names.push(d.id)); names.sort();
+        isHost = (names[0] === username);
 
-        const ul = $('players'); ul.innerHTML = "";
-        snap.forEach(d => {
-          const p = d.data();
-          const li = document.createElement("li");
-          li.textContent = `${p.name} — ${p.steps || 0} steps — ${p.score || 0} pts`;
+        const ul=$('players'); ul.innerHTML="";
+        ps.forEach(d=>{
+          const p=d.data();
+          const li=document.createElement('li');
+          li.textContent=`${p.name} — ${p.steps||0} steps — ${p.score||0} pts`;
           ul.appendChild(li);
         });
 
-        // Start first round when ready
-        if (isHost && snap.size >= 2) {
-          const lobbyRef = doc(db, "lobbies", currentLobby);
+        // kick off first round when ready
+        if (isHost && ps.size >= 2){
+          const lobbyRef = doc(db,'lobbies',currentLobby);
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
-          if (data.status === "waiting") {
+          if (data.status === 'waiting'){
+            setText('overlayTitle','Get Ready…'); setText('overlayMsg','Round starts soon');
             await updateDoc(lobbyRef, {
-              status: "countdown",
+              status:'countdown',
               countdownEndsAt: Date.now() + 10000,
-              round: 1,
-              ...getRandomActors()
+              round: 1
             });
           }
         }
 
-        if (snap.size === 0) {
-          const lobbyRef = doc(db, "lobbies", currentLobby);
+        // cleanup empty lobby
+        if (ps.size===0){
+          const lobbyRef = doc(db,'lobbies',currentLobby);
           await deleteDoc(lobbyRef);
         }
       });
     }
 
-    function startCountdown(endTime) {
-      const interval = setInterval(async () => {
-        const now = Date.now();
-        const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
+    // lobby countdown
+    function startCountdown(endTime){
+      const iv = setInterval(async ()=>{
+        const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
         setText('countdown', secs);
-
-        if (secs <= 0) {
-          clearInterval(interval);
-          setText('countdown', "");
-          const ov = $('overlay'); if (ov) ov.style.display = "none";
-
-          if (isHost) {
-            const lobbyRef = doc(db, "lobbies", currentLobby);
-            // Respect current round (don’t reset to 1)
+        if (secs<=0){
+          clearInterval(iv);
+          setText('countdown','');
+          $('overlay').classList.remove('visible');
+          if (isHost){
+            const lobbyRef = doc(db,'lobbies',currentLobby);
             const snap = await getDoc(lobbyRef);
-            const curRound = (snap.data()?.round) || 1;
-
-            // Reset steps BEFORE starting the round
+            const curRound = (snap.data()?.round)||1;
             await resetAllPlayerSteps(currentLobby);
-
-            await updateDoc(lobbyRef, {
-              status: "playing",
+            const actors = await pickAndHydrateActors();
+            await updateDoc(lobbyRef,{
+              status:'playing',
               round: curRound,
               startTime: Date.now(),
               roundEndsAt: Date.now() + ROUND_MS,
-              ...getRandomActors()
+              ...actors
             });
           }
         }
       }, 200);
     }
 
-    function highlightFinishers(finishers) {
-      const medals = ["🥇","🥈","🥉","🎖️"];
-      const ul = $("players");
-      Array.from(ul.children).forEach(li => {
-        const name = li.textContent.split(" — ")[0];
-        const finisher = finishers.find(f => f.name === name);
-        if (finisher) {
-          const place = finishers.indexOf(finisher);
-          const medal = medals[place] || `#${place+1}`;
-          li.textContent = `${name} — ${medal} ${finisher.points} pts`;
-        }
-      });
-    }
+    // scoreboard render
+    async function showScoreboard(endTime){
+      const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
+      const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
+      $('scoreList').innerHTML = arr.map((p,i)=>`<li><strong>${i+1}.</strong> ${p.name} — ${p.score||0} pts</li>`).join('');
+      $('winnerLine').style.display='none';
+      $('playAgainBtn').style.display='none';
 
-    async function showScoreboard(endTime) {
-      const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
-      const allPlayers = playersSnap.docs.map(d => d.data());
-      allPlayers.sort((a,b) => (b.score||0) - (a.score||0));
-
-      $('scoreList').innerHTML = allPlayers
-        .map((p,i) => `<li>${i+1}. ${p.name} — ${p.score || 0} pts</li>`)
-        .join("");
-
-      const interval = setInterval(() => {
-        const now = Date.now();
-        const secs = Math.max(0, Math.ceil((endTime - now) / 1000));
-        setText('scoreCountdown', `▶️ Next round starts in ${secs}s`);
-        if (secs <= 0) clearInterval(interval);
+      // tiny countdown text for context; round will auto-start quickly
+      const iv = setInterval(()=>{
+        const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
+        setText('scoreCountdown', `Next round in ${secs}s`);
+        if (secs<=0) clearInterval(iv);
       }, 500);
     }
 
-    function showFinalScores() {
-      (async () => {
-        const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
-        const allPlayers = playersSnap.docs.map(d => d.data());
-        allPlayers.sort((a,b) => (b.score||0) - (a.score||0));
-        $('scoreList').innerHTML = allPlayers
-          .map((p,i) => `<li>${i+1}. ${p.name} — ${p.score || 0} pts</li>`)
-          .join("");
-      })();
-      setText('scoreCountdown', "🏆 Game Over!");
+    async function showFinalScores(){
+      const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
+      const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
+      $('scoreList').innerHTML = arr.map((p,i)=>`<li><strong>${i+1}.</strong> ${p.name} — ${p.score||0} pts</li>`).join('');
+      const winner = arr[0];
+      if (winner){
+        const line = `🏆 Winner: ${winner.name} — ${winner.score||0} pts`;
+        $('winnerLine').style.display='block';
+        setText('winnerLine', line);
+      }
+      setText('scoreboardTitle','Final Scores');
+      setText('scoreCountdown','🏁 Game Over (3 rounds)');
+      $('playAgainBtn').style.display = isHost ? 'inline-block' : 'none';
     }
 
-    window.addEventListener("beforeunload", async () => {
-      if (playerRef) await deleteDoc(playerRef);
-    });
+    // teardown
+    window.addEventListener('beforeunload', async ()=>{ if (playerRef) await deleteDoc(playerRef); });
 
-    $('submitGuess').addEventListener('click', async () => {
+    // submit guess
+    $('submitGuess').addEventListener('click', async ()=>{
       const guess = $('guessInput').value.trim(); if (!guess) return;
-      const snap = await getDoc(playerRef); const data = snap.data();
-      const isFirst = (data.steps || 0) === 0; // correct each round (we reset steps)
+      const snap = await getDoc(playerRef); const me = snap.data();
+      const isFirst = (me.steps||0)===0;
       const result = await validateMovieGuess(guess, isFirst);
-      if (!result.valid) { alert("❌ " + result.reason); return; }
+      if (!result.valid){ alert("❌ "+result.reason); return; }
 
-      const newSteps = (data.steps || 0) + 1; await updateDoc(playerRef, { steps: newSteps });
-      const li = document.createElement("li"); li.textContent = result.movieTitle; $('guessLog').appendChild(li);
+      const newSteps = (me.steps||0)+1; await updateDoc(playerRef,{ steps:newSteps });
+      const li = document.createElement('li'); li.textContent = result.movieTitle; $('guessLog').appendChild(li);
 
-      const lobbyRef = doc(db, "lobbies", currentLobby);
-      const lobbySnap = await getDoc(lobbyRef);
-      const lobbyData = lobbySnap.data();
+      const lobbyRef = doc(db,'lobbies',currentLobby);
+      const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
 
-      if (result.reachedTarget) {
-        const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime) / 1000);
-        const pts = Math.max(10, 100 - newSteps * 10 - Math.floor(elapsedSecs / 10));
-        const newScore = (data.score || 0) + pts; await updateDoc(playerRef, { score: newScore });
+      if (result.reachedTarget){
+        const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime)/1000);
+        const pts = Math.max(10, 100 - newSteps*10 - Math.floor(elapsedSecs/10));
+        const newScore = (me.score||0) + pts; await updateDoc(playerRef,{ score:newScore });
 
         let finishers = lobbyData.finishers || [];
-        if (!finishers.find(f => f.name === username)) finishers.push({ name: username, points: pts });
+        if (!finishers.find(f=>f.name===username)) finishers.push({ name:username, points:pts });
 
-        // Instant win at 200+
-        if (newScore >= 200) {
-          await updateDoc(lobbyRef, {
-            winner: username,
-            winnerPoints: newScore,
-            finishers,
-            status: "final"
-          });
+        // instant win at 200+
+        if (newScore >= 200){
+          await updateDoc(lobbyRef, { winner: username, winnerPoints: newScore, finishers, status:'final' });
           return;
         }
 
-        if (!lobbyData.winner) {
+        if (!lobbyData.winner){
           await updateDoc(lobbyRef, {
             winner: username,
             winnerPoints: pts,
             finishers,
-            status: "grace",
-            graceEndsAt: Date.now() + 10000
+            status:'grace',
+            graceEndsAt: Date.now()+10000
           });
         } else {
           await updateDoc(lobbyRef, { finishers });
         }
       }
 
-      $('guessInput').value = ""; $('suggestions').style.display = "none";
+      $('guessInput').value=""; $('suggestions').style.display='none';
     });
 
-    $('guessInput').addEventListener('input', async (e) => {
-      const q = e.target.value.trim(); const box = $('suggestions'); box.innerHTML = "";
-      if (q.length < 2) { box.style.display = "none"; return; }
+    // autocomplete
+    $('guessInput').addEventListener('input', async (e)=>{
+      const q = e.target.value.trim(); const box = $('suggestions'); box.innerHTML="";
+      if (q.length < 2){ box.style.display='none'; return; }
       const results = await searchMovie(q);
-      results.slice(0, 5).forEach(movie => {
-        const div = document.createElement("div"); div.textContent = movie.title;
-        div.onclick = () => { $('guessInput').value = movie.title; box.style.display = "none"; };
+      results.slice(0,5).forEach(m=>{
+        const div=document.createElement('div');
+        div.textContent=m.title;
+        div.onclick=()=>{ $('guessInput').value=m.title; box.style.display='none'; };
         box.appendChild(div);
       });
-      box.style.display = results.length ? "block" : "none";
+      box.style.display = results.length?'block':'none';
     });
 
-    // Start!
+    // play again
+    $('playAgainBtn').addEventListener('click', async ()=>{
+      if (!isHost){ alert("Only host can restart."); return; }
+      const lobbyRef = doc(db,'lobbies',currentLobby);
+      const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
+      await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',currentLobby,'players',d.id), { score:0, steps:0 })));
+      await updateDoc(lobbyRef, {
+        status:'countdown',
+        countdownEndsAt: Date.now()+10000,
+        round:1
+      });
+      $('playAgainBtn').style.display='none';
+      setText('scoreboardTitle','Round Over');
+    });
+
+    // go!
     joinLobby();
   </script>
 </body>
