@@ -31,6 +31,17 @@
     }
     #suggestions div { padding: 6px; cursor: pointer; }
     #suggestions div:hover { background: #eee; }
+    #playAgainBtn {
+      margin-top: 12px;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: #00b894;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -63,6 +74,7 @@
     <h2>Round Over</h2>
     <ul id="scoreList"></ul>
     <p id="scoreCountdown">▶️ Next round starts in 10s</p>
+    <button id="playAgainBtn">🔁 Play Again</button>
   </div>
 
   <script src="./actors.js"></script>
@@ -90,15 +102,13 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // Helper: tolerant ms from Timestamp or number
+    // Helpers
     function ms(val) {
       if (val == null) return 0;
       if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
       const n = Number(val);
       return Number.isFinite(n) ? n : 0;
     }
-
-    // Safe DOM helpers
     function setText(id, value) {
       const el = $(id);
       if (el) el.textContent = value;
@@ -106,6 +116,9 @@
     function setStyle(id, prop, value) {
       const el = $(id);
       if (el && el.style) el.style[prop] = value;
+    }
+    function normName(s="") {
+      return s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
     }
 
     const username = "Player-" + Math.floor(Math.random() * 10000);
@@ -119,29 +132,39 @@
     let graceInterval = null;
     window._scheduledNext = false; // host guard
 
+    // TMDB key (as provided)
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 
+    // TMDB helpers
     async function searchMovie(title) {
       const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
       const data = await res.json();
       return data.results;
     }
-
     async function getMovieCast(movieId) {
       const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${TMDB_API_KEY}`);
       const data = await res.json();
-      return data.cast;
+      return data.cast || [];
+    }
+    async function searchPersonByName(name) {
+      const res = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(name)}&include_adult=false`);
+      const data = await res.json();
+      return (data.results && data.results[0]) ? data.results[0] : null;
     }
 
-    function getRandomActors() {
+    // Pick two names from ACTOR_POOL then hydrate to TMDB person IDs (for robust matching)
+    async function pickAndHydrateActors() {
       const nameA = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)];
       let nameB;
-      do { nameB = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)]; }
-      while (nameA === nameB);
-      return { startActor: { id: nameA, name: nameA }, endActor: { id: nameB, name: nameB } };
+      do { nameB = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)]; } while (nameA === nameB);
+
+      const [pA, pB] = await Promise.all([searchPersonByName(nameA), searchPersonByName(nameB)]);
+      const startActor = pA ? { id: pA.id, name: pA.name } : { id: null, name: nameA };
+      const endActor   = pB ? { id: pB.id, name: pB.name } : { id: null, name: nameB };
+      return { startActor, endActor };
     }
 
-    // 🔧 NEW: reset all players' steps to 0 (host only)
+    // Reset all players' steps (so round N first guess is truly the first)
     async function resetAllPlayerSteps(lobbyId) {
       const playersSnap = await getDocs(collection(db, "lobbies", lobbyId, "players"));
       await Promise.all(
@@ -176,6 +199,7 @@
       }, 500);
     }
 
+    // Use TMDB person ID when available for first-guess validation; fall back to robust name compare
     async function validateMovieGuess(title, isFirstGuess) {
       const results = await searchMovie(title);
       if (!results || results.length === 0) return { valid: false, reason: "Movie not found" };
@@ -184,15 +208,32 @@
       const cast = await getMovieCast(movie.id);
 
       if (isFirstGuess) {
-        const ok = cast.some(a => a.name === currentStart.name);
+        let ok = false;
+        if (currentStart?.id != null) {
+          ok = cast.some(a => a.id === currentStart.id);
+        }
+        if (!ok) {
+          const want = normName(currentStart?.name || "");
+          ok = cast.some(a => normName(a.name) === want);
+        }
         if (!ok) return { valid: false, reason: "Must include start actor" };
       } else {
+        // Require overlap with previous movie cast by TMDB person id
         const overlap = cast.some(a => lastMovieCast.some(b => b.id === a.id));
         if (!overlap) return { valid: false, reason: "Must connect with previous movie" };
       }
 
       lastMovieCast = cast;
-      const reachedTarget = cast.some(a => a.name === currentTarget.name);
+      // Reaching target: prefer TMDB id, fallback to name
+      let reachedTarget = false;
+      if (currentTarget?.id != null) {
+        reachedTarget = cast.some(a => a.id === currentTarget.id);
+      }
+      if (!reachedTarget) {
+        const wantT = normName(currentTarget?.name || "");
+        reachedTarget = cast.some(a => normName(a.name) === wantT);
+      }
+
       return { valid: true, reachedTarget, movieTitle: movie.title };
     }
 
@@ -249,7 +290,7 @@
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
-          setStyle("roundTimer", "color", "#111"); // visible
+          setStyle("roundTimer", "color", "#111");
           if (data.startTime) startStopwatch(data.startTime);
         }
 
@@ -290,19 +331,16 @@
 
                 if (lobbyData.round < 3) {
                   const nextRound = lobbyData.round + 1;
-
-                  // ✅ Reset steps BEFORE starting next round
                   await resetAllPlayerSteps(currentLobby);
-
-                  // ✅ Start next round immediately (no extra countdown)
+                  const actors = await pickAndHydrateActors(); // hydrate to TMDB IDs
                   await updateDoc(lobbyRef, {
-                    status: "playing",
+                    status: "playing",                 // start right away after scoreboard
                     round: nextRound,
                     startTime: Date.now(),
                     winner: "",
                     winnerPoints: 0,
                     finishers: [],
-                    ...getRandomActors()
+                    ...actors
                   });
                 } else {
                   await updateDoc(lobbyRef, { status: "final" });
@@ -318,7 +356,7 @@
           $('gameArea').style.display = "none";
           const ov = $('overlay'); if (ov) ov.style.display = "none";
           $('scoreboardPopup').style.display = "flex";
-          showFinalScores();
+          showFinalScores(true); // show Play Again
           window._scheduledNext = false;
         }
       });
@@ -348,7 +386,7 @@
               status: "countdown",
               countdownEndsAt: Date.now() + 10000,
               round: 1,
-              ...getRandomActors()
+              ...(await pickAndHydrateActors()) // use hydrated actors from the start
             });
           }
         }
@@ -373,18 +411,16 @@
 
           if (isHost) {
             const lobbyRef = doc(db, "lobbies", currentLobby);
-            // Respect current round (don’t reset to 1)
             const snap = await getDoc(lobbyRef);
             const curRound = (snap.data()?.round) || 1;
 
-            // ✅ Reset steps BEFORE starting the round
             await resetAllPlayerSteps(currentLobby);
-
+            const actors = await pickAndHydrateActors();
             await updateDoc(lobbyRef, {
               status: "playing",
               round: curRound,
               startTime: Date.now(),
-              ...getRandomActors()
+              ...actors
             });
           }
         }
@@ -422,17 +458,46 @@
       }, 500);
     }
 
-    function showFinalScores() {
-      (async () => {
-        const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
-        const allPlayers = playersSnap.docs.map(d => d.data());
-        allPlayers.sort((a,b) => (b.score||0) - (a.score||0));
-        $('scoreList').innerHTML = allPlayers
-          .map((p,i) => `<li>${i+1}. ${p.name} — ${p.score || 0} pts</li>`)
-          .join("");
-      })();
-      setText('scoreCountdown', "🏆 Game Over!");
+    async function recomputeFinalList() {
+      const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
+      const allPlayers = playersSnap.docs.map(d => d.data());
+      allPlayers.sort((a,b) => (b.score||0) - (a.score||0));
+      $('scoreList').innerHTML = allPlayers
+        .map((p,i) => `<li>${i+1}. ${p.name} — ${p.score || 0} pts</li>`)
+        .join("");
     }
+
+    function showFinalScores(showPlayAgain=false) {
+      (async () => { await recomputeFinalList(); })();
+      setText('scoreCountdown', "🏆 Game Over!");
+      const btn = $('playAgainBtn');
+      if (btn) btn.style.display = showPlayAgain ? "inline-block" : "none";
+    }
+
+    // Play Again: host resets scores + steps and starts fresh countdown with hydrated actors
+    $('playAgainBtn').addEventListener('click', async () => {
+      if (!isHost) {
+        alert("Only the host can start a new game. Sit tight!");
+        return;
+      }
+      const lobbyRef = doc(db, "lobbies", currentLobby);
+      // Reset all players scores & steps
+      const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
+      await Promise.all(playersSnap.docs.map(d =>
+        updateDoc(doc(db, "lobbies", currentLobby, "players", d.id), { score: 0, steps: 0 })
+      ));
+      // Start new game
+      await updateDoc(lobbyRef, {
+        status: "countdown",
+        countdownEndsAt: Date.now() + 10000,
+        round: 1,
+        ...(await pickAndHydrateActors()),
+        winner: "",
+        winnerPoints: 0,
+        finishers: []
+      });
+      $('playAgainBtn').style.display = "none";
+    });
 
     window.addEventListener("beforeunload", async () => {
       if (playerRef) await deleteDoc(playerRef);
@@ -441,7 +506,7 @@
     $('submitGuess').addEventListener('click', async () => {
       const guess = $('guessInput').value.trim(); if (!guess) return;
       const snap = await getDoc(playerRef); const data = snap.data();
-      const isFirst = (data.steps || 0) === 0; // now correct each round (we reset steps)
+      const isFirst = (data.steps || 0) === 0; // reset each round
       const result = await validateMovieGuess(guess, isFirst);
       if (!result.valid) { alert("❌ " + result.reason); return; }
 
