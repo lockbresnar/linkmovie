@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <title>LinkMovie — Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css?v=alpha3" />
-  <link rel="stylesheet" href="multiplayer.css?v=alpha3" />
+  <link rel="stylesheet" href="styles.css?v=alpha4" />
+  <link rel="stylesheet" href="multiplayer.css?v=alpha4" />
 </head>
 <body>
   <!-- Header -->
@@ -19,10 +19,10 @@
     </nav>
   </header>
 
-  <!-- Stats -->
+  <!-- Stats (Steps badge replaces round number) -->
   <div class="stats">
     <h1 class="page-title condensed">Multiplayer</h1>
-    <div class="counter-circle" id="roundBadge">R<span id="roundNum">0</span></div>
+    <div class="counter-circle" id="stepBadge"><span id="stepNum">0</span></div>
     <div class="timer condensed" id="roundTimer">03:00</div>
   </div>
 
@@ -105,7 +105,7 @@
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <script src="actors.js?v=alpha3"></script>
+  <script src="actors.js?v=alpha4"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -226,6 +226,9 @@
       const ps = await getDocs(collection(db,'lobbies',lobbyId,'players'));
       await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',lobbyId,'players',d.id), { steps:0 })));
     }
+    function setMyStepsBadge(n){
+      setText('stepNum', String(n));
+    }
 
     // ===== Lobby flow =====
     async function joinLobby(){
@@ -280,7 +283,6 @@
           $('scoreboardPopup').classList.remove('visible');
           $('gameArea')?.classList.add('visible-game');
 
-          setText('roundNum', data.round);
           currentStart = data.startActor; currentTarget = data.endActor;
           setActorsOnUI(currentStart, currentTarget);
           $('guessLog').innerHTML = "";
@@ -324,13 +326,13 @@
           $('overlay').classList.remove('visible');
           $('scoreboardPopup').classList.add('visible');
 
-          const endMs = ms(data.postRoundEndsAt);
-
-          // If this was round 3, go straight to FINAL (no wait)
-          if (isHost && data.round >= 3) {
-            await updateDoc(lobbyRef, { status:'final' });
+          // If this was round 3, jump straight to FINAL view for everyone
+          if (data.round >= 3){
+            await showFinalScores();                 // render final immediately (no “next round” text)
+            if (isHost) await updateDoc(lobbyRef, { status:'final' }); // sync state
           } else {
-            await showScoreboard(endMs);
+            const endMs = ms(data.postRoundEndsAt);
+            await showScoreboard(endMs);            // inter-round scoreboard with tiny countdown
 
             // schedule next round start (no extra lobby countdown)
             if (isHost && endMs){
@@ -367,25 +369,31 @@
           $('gameArea')?.classList.remove('visible-game');
           $('overlay').classList.remove('visible');
           $('scoreboardPopup').classList.add('visible');
-          await showFinalScores(); // adds winner + shows replay (for all)
+          await showFinalScores();
           window._scheduledNext=false;
         }
       });
 
-      // players list + host detection
+      // players list + host detection + badges
       const playersRef = collection(db,'lobbies',currentLobby,'players');
       onSnapshot(playersRef, async (ps)=>{
         const names=[]; ps.forEach(d=>names.push(d.id)); names.sort();
         isHost = (names[0] === username);
 
         const ul=$('players'); ul.innerHTML="";
+        let mySteps = 0;
         ps.forEach(d=>{
           const p=d.data();
           const isMe = p.name === username;
+          if (isMe) mySteps = p.steps || 0;
           const li=document.createElement('li');
-          li.innerHTML = `${isMe ? '<strong>'+p.name+'</strong>' : p.name} — ${p.steps||0} steps — ${p.score||0} pts`;
+          li.innerHTML = `
+            ${isMe ? '<strong>'+p.name+'</strong>' : p.name}
+            <span class="counter-circle counter-sm">${p.steps||0}</span>
+            — ${p.score||0} pts`;
           ul.appendChild(li);
         });
+        setMyStepsBadge(mySteps); // update title-line steps badge
 
         // start first round when ready
         if (isHost && ps.size >= 2){
@@ -397,7 +405,8 @@
             await updateDoc(lobbyRef, {
               status:'countdown',
               countdownEndsAt: Date.now() + 10000,
-              round: 1
+              round: 1,
+              ...(await pickAndHydrateActors())
             });
           }
         }
@@ -448,11 +457,13 @@
       $('winnerLine').style.display='none';
       $('playAgainBtn').style.display='none';
 
+      // tiny inter-round countdown
       const iv = setInterval(()=>{
         const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
         setText('scoreCountdown', `Next round in ${secs}s`);
         if (secs<=0) clearInterval(iv);
       }, 500);
+      setText('scoreboardTitle','Round Over');
     }
 
     // final scoreboard
@@ -473,8 +484,7 @@
         setText('winnerLine', line);
       }
       setText('scoreCountdown','🏁 Game Over (3 rounds)');
-      // Play Again available to everyone
-      $('playAgainBtn').style.display = 'inline-block';
+      $('playAgainBtn').style.display = 'inline-block'; // everyone can replay
     }
 
     // teardown
@@ -489,6 +499,9 @@
       if (!result.valid){ alert("❌ "+result.reason); return; }
 
       const newSteps = (me.steps||0)+1; await updateDoc(playerRef,{ steps:newSteps });
+      // Update badge immediately (UI snappy; snapshot will confirm)
+      setMyStepsBadge(newSteps);
+
       const li = document.createElement('li');
       li.className = 'grey';
       li.textContent = result.movieTitle;
@@ -545,7 +558,6 @@
     // play again — anyone can trigger
     $('playAgainBtn').addEventListener('click', async ()=>{
       const lobbyRef = doc(db,'lobbies',currentLobby);
-      // try to guard against double-click races
       $('playAgainBtn').disabled = true;
       const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
       await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',currentLobby,'players',d.id), { score:0, steps:0 })));
