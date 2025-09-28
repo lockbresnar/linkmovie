@@ -65,7 +65,6 @@
     <p id="scoreCountdown">▶️ Next round starts in 10s</p>
   </div>
 
-  <!-- ACTOR_POOL is defined here -->
   <script src="./actors.js"></script>
 
   <script type="module">
@@ -75,7 +74,7 @@
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Firebase config (kept from your working file)
+    // Firebase config (unchanged)
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -91,7 +90,7 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // Helper: tolerant milliseconds (Timestamp or number)
+    // Helper: tolerant ms from Timestamp or number
     function ms(val) {
       if (val == null) return 0;
       if (typeof val === "object" && typeof val.toMillis === "function") return val.toMillis();
@@ -99,7 +98,7 @@
       return Number.isFinite(n) ? n : 0;
     }
 
-    // Safe DOM helpers to avoid null errors
+    // Safe DOM helpers
     function setText(id, value) {
       const el = $(id);
       if (el) el.textContent = value;
@@ -140,6 +139,16 @@
       do { nameB = ACTOR_POOL[Math.floor(Math.random() * ACTOR_POOL.length)]; }
       while (nameA === nameB);
       return { startActor: { id: nameA, name: nameA }, endActor: { id: nameB, name: nameB } };
+    }
+
+    // 🔧 NEW: reset all players' steps to 0 (host only)
+    async function resetAllPlayerSteps(lobbyId) {
+      const playersSnap = await getDocs(collection(db, "lobbies", lobbyId, "players"));
+      await Promise.all(
+        playersSnap.docs.map(d =>
+          updateDoc(doc(db, "lobbies", lobbyId, "players", d.id), { steps: 0 })
+        )
+      );
     }
 
     function startStopwatch(startTime) {
@@ -225,7 +234,7 @@
           window._scheduledNext = false;
           const ov = $('overlay'); if (ov) ov.style.display = "flex";
           $('scoreboardPopup').style.display = "none";
-          startCountdown(ms(data.countdownEndsAt)); // tolerant read
+          startCountdown(ms(data.countdownEndsAt));
         }
 
         // PLAYING
@@ -240,7 +249,7 @@
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
-          setStyle("roundTimer", "color", "#111"); // visible timer
+          setStyle("roundTimer", "color", "#111"); // visible
           if (data.startTime) startStopwatch(data.startTime);
         }
 
@@ -255,7 +264,7 @@
                 clearInterval(checkGrace);
                 await updateDoc(lobbyRef, {
                   status: "postRound",
-                  postRoundEndsAt: Date.now() + 10000 // number
+                  postRoundEndsAt: Date.now() + 10000
                 });
               }
             }, 500);
@@ -278,27 +287,33 @@
               setTimeout(async () => {
                 const snap2 = await getDoc(lobbyRef);
                 const lobbyData = snap2.data();
+
                 if (lobbyData.round < 3) {
+                  const nextRound = lobbyData.round + 1;
+
+                  // ✅ Reset steps BEFORE starting next round
+                  await resetAllPlayerSteps(currentLobby);
+
+                  // ✅ Start next round immediately (no extra countdown)
                   await updateDoc(lobbyRef, {
-                    status: "countdown",
-                    countdownEndsAt: Date.now() + 10000, // number
-                    round: lobbyData.round + 1,
+                    status: "playing",
+                    round: nextRound,
+                    startTime: Date.now(),
                     winner: "",
                     winnerPoints: 0,
                     finishers: [],
                     ...getRandomActors()
                   });
                 } else {
-                  // End after 3 rounds
                   await updateDoc(lobbyRef, { status: "final" });
                 }
                 window._scheduledNext = false;
-              }, msLeft || 100); // fallback ensures timer always fires
+              }, msLeft || 100);
             }
           }
         }
 
-        // FINAL (game over)
+        // FINAL
         if (data.status === "final") {
           $('gameArea').style.display = "none";
           const ov = $('overlay'); if (ov) ov.style.display = "none";
@@ -323,6 +338,7 @@
           ul.appendChild(li);
         });
 
+        // Start first round when ready
         if (isHost && snap.size >= 2) {
           const lobbyRef = doc(db, "lobbies", currentLobby);
           const lobbySnap = await getDoc(lobbyRef);
@@ -330,7 +346,7 @@
           if (data.status === "waiting") {
             await updateDoc(lobbyRef, {
               status: "countdown",
-              countdownEndsAt: Date.now() + 10000, // number
+              countdownEndsAt: Date.now() + 10000,
               round: 1,
               ...getRandomActors()
             });
@@ -357,9 +373,12 @@
 
           if (isHost) {
             const lobbyRef = doc(db, "lobbies", currentLobby);
-            // Respect the round set for this countdown (don’t reset to 1)
+            // Respect current round (don’t reset to 1)
             const snap = await getDoc(lobbyRef);
             const curRound = (snap.data()?.round) || 1;
+
+            // ✅ Reset steps BEFORE starting the round
+            await resetAllPlayerSteps(currentLobby);
 
             await updateDoc(lobbyRef, {
               status: "playing",
@@ -404,7 +423,6 @@
     }
 
     function showFinalScores() {
-      // Recompute final, sorted scoreboard
       (async () => {
         const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
         const allPlayers = playersSnap.docs.map(d => d.data());
@@ -422,7 +440,8 @@
 
     $('submitGuess').addEventListener('click', async () => {
       const guess = $('guessInput').value.trim(); if (!guess) return;
-      const snap = await getDoc(playerRef); const data = snap.data(); const isFirst = (data.steps || 0) === 0;
+      const snap = await getDoc(playerRef); const data = snap.data();
+      const isFirst = (data.steps || 0) === 0; // now correct each round (we reset steps)
       const result = await validateMovieGuess(guess, isFirst);
       if (!result.valid) { alert("❌ " + result.reason); return; }
 
@@ -439,7 +458,7 @@
         let finishers = lobbyData.finishers || [];
         if (!finishers.find(f => f.name === username)) finishers.push({ name: username, points: pts });
 
-        // ✅ Instant win at 200+ points
+        // Instant win at 200+
         if (newScore >= 200) {
           await updateDoc(lobbyRef, {
             winner: username,
@@ -456,7 +475,7 @@
             winnerPoints: pts,
             finishers,
             status: "grace",
-            graceEndsAt: Date.now() + 10000  // number
+            graceEndsAt: Date.now() + 10000
           });
         } else {
           await updateDoc(lobbyRef, { finishers });
