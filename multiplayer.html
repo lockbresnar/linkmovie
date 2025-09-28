@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <title>LinkMovie — Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css?v=alpha4" />
-  <link rel="stylesheet" href="multiplayer.css?v=alpha4" />
+  <link rel="stylesheet" href="styles.css?v=alpha5" />
+  <link rel="stylesheet" href="multiplayer.css?v=alpha5" />
 </head>
 <body>
   <!-- Header -->
@@ -19,7 +19,7 @@
     </nav>
   </header>
 
-  <!-- Stats (Steps badge replaces round number) -->
+  <!-- Stats (Steps badge) -->
   <div class="stats">
     <h1 class="page-title condensed">Multiplayer</h1>
     <div class="counter-circle" id="stepBadge"><span id="stepNum">0</span></div>
@@ -45,6 +45,7 @@
         <div id="suggestions" class="suggestions"></div>
         <div class="button-row">
           <button id="submitGuess" class="btn btn-submit">Submit</button>
+          <button id="resetChain" class="btn btn-reset" title="Clear your current chain">Reset</button>
         </div>
         <p id="status" class="status"></p>
       </div>
@@ -52,7 +53,11 @@
 
     <aside class="right-col">
       <div class="chain-box">
-        <h3>Current Chain</h3>
+        <h3>
+          Current Chain
+          <span class="round-sep">|</span>
+          <span id="roundPill" class="round-pill">Round <span id="roundPillNum">1</span></span>
+        </h3>
         <ul id="guessLog"></ul>
       </div>
 
@@ -105,7 +110,7 @@
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <script src="actors.js?v=alpha4"></script>
+  <script src="actors.js?v=alpha5"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -283,6 +288,9 @@
           $('scoreboardPopup').classList.remove('visible');
           $('gameArea')?.classList.add('visible-game');
 
+          // Round pill
+          setText('roundPillNum', data.round || 1);
+
           currentStart = data.startActor; currentTarget = data.endActor;
           setActorsOnUI(currentStart, currentTarget);
           $('guessLog').innerHTML = "";
@@ -306,7 +314,7 @@
           }
         }
 
-        // GRACE (10s red timer), then scoreboard immediately
+        // GRACE (10s), then scoreboard
         if (data.status === 'grace'){
           if (window._roundEndInterval){ clearInterval(window._roundEndInterval); window._roundEndInterval=null; }
           startGraceCountdown(data.graceEndsAt);
@@ -320,21 +328,19 @@
           }
         }
 
-        // POST-ROUND (SCOREBOARD) — shows straight away
+        // POST-ROUND
         if (data.status === 'postRound'){
           $('gameArea')?.classList.remove('visible-game');
           $('overlay').classList.remove('visible');
           $('scoreboardPopup').classList.add('visible');
 
-          // If this was round 3, jump straight to FINAL view for everyone
           if (data.round >= 3){
-            await showFinalScores();                 // render final immediately (no “next round” text)
-            if (isHost) await updateDoc(lobbyRef, { status:'final' }); // sync state
+            await showFinalScores();
+            if (isHost) await updateDoc(lobbyRef, { status:'final' });
           } else {
             const endMs = ms(data.postRoundEndsAt);
-            await showScoreboard(endMs);            // inter-round scoreboard with tiny countdown
+            await showScoreboard(endMs);
 
-            // schedule next round start (no extra lobby countdown)
             if (isHost && endMs){
               const msLeft = Math.max(0, endMs - Date.now());
               if (!window._scheduledNext){
@@ -364,7 +370,7 @@
           }
         }
 
-        // FINAL — show winner + replay for everyone
+        // FINAL — winner + replay for everyone
         if (data.status === 'final'){
           $('gameArea')?.classList.remove('visible-game');
           $('overlay').classList.remove('visible');
@@ -393,7 +399,7 @@
             — ${p.score||0} pts`;
           ul.appendChild(li);
         });
-        setMyStepsBadge(mySteps); // update title-line steps badge
+        setMyStepsBadge(mySteps);
 
         // start first round when ready
         if (isHost && ps.size >= 2){
@@ -456,14 +462,13 @@
       }).join('');
       $('winnerLine').style.display='none';
       $('playAgainBtn').style.display='none';
+      setText('scoreboardTitle','Round Over');
 
-      // tiny inter-round countdown
       const iv = setInterval(()=>{
         const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
         setText('scoreCountdown', `Next round in ${secs}s`);
         if (secs<=0) clearInterval(iv);
       }, 500);
-      setText('scoreboardTitle','Round Over');
     }
 
     // final scoreboard
@@ -499,7 +504,6 @@
       if (!result.valid){ alert("❌ "+result.reason); return; }
 
       const newSteps = (me.steps||0)+1; await updateDoc(playerRef,{ steps:newSteps });
-      // Update badge immediately (UI snappy; snapshot will confirm)
       setMyStepsBadge(newSteps);
 
       const li = document.createElement('li');
@@ -539,6 +543,20 @@
       }
 
       $('guessInput').value=""; $('suggestions').style.display='none';
+    });
+
+    // RESET chain (like other game): clear UI, steps=0, next guess becomes first
+    $('resetChain').addEventListener('click', async ()=>{
+      $('guessLog').innerHTML = "";
+      lastMovieCast = [];
+      try {
+        if (playerRef) {
+          await updateDoc(playerRef, { steps: 0 });
+          setMyStepsBadge(0);
+        }
+      } catch (e) {
+        console.warn('Reset failed:', e);
+      }
     });
 
     // autocomplete
