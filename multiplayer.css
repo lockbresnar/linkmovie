@@ -42,3 +42,19 @@
   width: 360px;
   max-width: calc(100vw - 40px);
 }
+
+/* Status alignment */
+.status { margin-top: 8px; min-height: 22px; }
+
+/* Make the chain answers follow the other game's pill style */
+#guessLog { list-style: none; margin: 0; padding: 0; }
+#guessLog li {
+  margin: 8px 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+#guessLog li.grey { background: #ddd; }
+#guessLog li.blue { background: var(--blue); color: #fff; }
+#guessLog li.orange { background: var(--orange); color: #fff; }
+#guessLog li.green { background: var(--green); color: #fff; }

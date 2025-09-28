@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <title>LinkMovie — Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css?v=alpha2" />
-  <link rel="stylesheet" href="multiplayer.css?v=alpha2" />
+  <link rel="stylesheet" href="styles.css?v=alpha3" />
+  <link rel="stylesheet" href="multiplayer.css?v=alpha3" />
 </head>
 <body>
-  <!-- Header (same as other pages) -->
+  <!-- Header -->
   <header class="topbar">
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
     <nav class="topbar-right">
@@ -19,16 +19,15 @@
     </nav>
   </header>
 
-  <!-- Stats bar -->
+  <!-- Stats -->
   <div class="stats">
     <h1 class="page-title condensed">Multiplayer</h1>
     <div class="counter-circle" id="roundBadge">R<span id="roundNum">0</span></div>
     <div class="timer condensed" id="roundTimer">03:00</div>
   </div>
 
-  <!-- Two-column layout -->
+  <!-- Layout -->
   <div class="layout">
-    <!-- LEFT -->
     <div class="left-col">
       <div class="actors-row">
         <div class="actor-card">
@@ -51,7 +50,6 @@
       </div>
     </div>
 
-    <!-- RIGHT -->
     <aside class="right-col">
       <div class="chain-box">
         <h3>Current Chain</h3>
@@ -65,7 +63,7 @@
     </aside>
   </div>
 
-  <!-- Lobby / countdown overlay -->
+  <!-- Countdown overlay -->
   <div id="overlay" class="overlay visible">
     <div class="overlay-card">
       <h2 id="overlayTitle">Joining Lobby…</h2>
@@ -107,7 +105,7 @@
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <script src="actors.js?v=alpha2"></script>
+  <script src="actors.js?v=alpha3"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -327,46 +325,49 @@
           $('scoreboardPopup').classList.add('visible');
 
           const endMs = ms(data.postRoundEndsAt);
-          await showScoreboard(endMs);
 
-          // schedule next round start (no extra “searching” countdown)
-          if (isHost && endMs){
-            const msLeft = Math.max(0, endMs - Date.now());
-            if (!window._scheduledNext){
-              window._scheduledNext = true;
-              setTimeout(async ()=>{
-                const snap2 = await getDoc(lobbyRef);
-                const d2 = snap2.data();
+          // If this was round 3, go straight to FINAL (no wait)
+          if (isHost && data.round >= 3) {
+            await updateDoc(lobbyRef, { status:'final' });
+          } else {
+            await showScoreboard(endMs);
 
-                if (d2.round < 3){
-                  const nextRound = d2.round + 1;
-                  await resetAllPlayerSteps(currentLobby);
-                  const actors = await pickAndHydrateActors();
-                  await updateDoc(lobbyRef, {
-                    status:'playing',
-                    round: nextRound,
-                    startTime: Date.now(),
-                    roundEndsAt: Date.now() + ROUND_MS,
-                    winner:"",
-                    winnerPoints:0,
-                    finishers:[],
-                    ...actors
-                  });
-                }else{
-                  await updateDoc(lobbyRef, { status:'final' });
-                }
-                window._scheduledNext=false;
-              }, msLeft || 100);
+            // schedule next round start (no extra lobby countdown)
+            if (isHost && endMs){
+              const msLeft = Math.max(0, endMs - Date.now());
+              if (!window._scheduledNext){
+                window._scheduledNext = true;
+                setTimeout(async ()=>{
+                  const snap2 = await getDoc(lobbyRef);
+                  const d2 = snap2.data();
+                  if (d2.round < 3){
+                    const nextRound = d2.round + 1;
+                    await resetAllPlayerSteps(currentLobby);
+                    const actors = await pickAndHydrateActors();
+                    await updateDoc(lobbyRef, {
+                      status:'playing',
+                      round: nextRound,
+                      startTime: Date.now(),
+                      roundEndsAt: Date.now() + ROUND_MS,
+                      winner:"",
+                      winnerPoints:0,
+                      finishers:[],
+                      ...actors
+                    });
+                  }
+                  window._scheduledNext=false;
+                }, msLeft || 100);
+              }
             }
           }
         }
 
-        // FINAL — show winner + replay
+        // FINAL — show winner + replay for everyone
         if (data.status === 'final'){
           $('gameArea')?.classList.remove('visible-game');
           $('overlay').classList.remove('visible');
           $('scoreboardPopup').classList.add('visible');
-          await showFinalScores(); // adds winner + shows replay (host)
+          await showFinalScores(); // adds winner + shows replay (for all)
           window._scheduledNext=false;
         }
       });
@@ -380,12 +381,13 @@
         const ul=$('players'); ul.innerHTML="";
         ps.forEach(d=>{
           const p=d.data();
+          const isMe = p.name === username;
           const li=document.createElement('li');
-          li.textContent=`${p.name} — ${p.steps||0} steps — ${p.score||0} pts`;
+          li.innerHTML = `${isMe ? '<strong>'+p.name+'</strong>' : p.name} — ${p.steps||0} steps — ${p.score||0} pts`;
           ul.appendChild(li);
         });
 
-        // kick off first round when ready
+        // start first round when ready
         if (isHost && ps.size >= 2){
           const lobbyRef = doc(db,'lobbies',currentLobby);
           const lobbySnap = await getDoc(lobbyRef);
@@ -435,15 +437,17 @@
       }, 200);
     }
 
-    // scoreboard render
+    // scoreboard render (inter-round)
     async function showScoreboard(endTime){
       const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
       const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
-      $('scoreList').innerHTML = arr.map((p,i)=>`<li><strong>${i+1}.</strong> ${p.name} — ${p.score||0} pts</li>`).join('');
+      $('scoreList').innerHTML = arr.map((p,i)=>{
+        const name = p.name === username ? `<strong>${p.name}</strong>` : p.name;
+        return `<li><strong>${i+1}.</strong> ${name} — ${p.score||0} pts</li>`;
+      }).join('');
       $('winnerLine').style.display='none';
       $('playAgainBtn').style.display='none';
 
-      // tiny countdown text for context; round will auto-start quickly
       const iv = setInterval(()=>{
         const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
         setText('scoreCountdown', `Next round in ${secs}s`);
@@ -451,19 +455,26 @@
       }, 500);
     }
 
+    // final scoreboard
     async function showFinalScores(){
       const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
       const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
-      $('scoreList').innerHTML = arr.map((p,i)=>`<li><strong>${i+1}.</strong> ${p.name} — ${p.score||0} pts</li>`).join('');
+      $('scoreList').innerHTML = arr.map((p,i)=>{
+        const name = p.name === username ? `<strong>${p.name}</strong>` : p.name;
+        return `<li><strong>${i+1}.</strong> ${name} — ${p.score||0} pts</li>`;
+      }).join('');
+
       const winner = arr[0];
+      const youWon = winner && (winner.name === username);
+      setText('scoreboardTitle', youWon ? 'Nice!' : 'Unlucky!');
       if (winner){
         const line = `🏆 Winner: ${winner.name} — ${winner.score||0} pts`;
         $('winnerLine').style.display='block';
         setText('winnerLine', line);
       }
-      setText('scoreboardTitle','Final Scores');
       setText('scoreCountdown','🏁 Game Over (3 rounds)');
-      $('playAgainBtn').style.display = isHost ? 'inline-block' : 'none';
+      // Play Again available to everyone
+      $('playAgainBtn').style.display = 'inline-block';
     }
 
     // teardown
@@ -478,12 +489,16 @@
       if (!result.valid){ alert("❌ "+result.reason); return; }
 
       const newSteps = (me.steps||0)+1; await updateDoc(playerRef,{ steps:newSteps });
-      const li = document.createElement('li'); li.textContent = result.movieTitle; $('guessLog').appendChild(li);
+      const li = document.createElement('li');
+      li.className = 'grey';
+      li.textContent = result.movieTitle;
+      $('guessLog').appendChild(li);
 
       const lobbyRef = doc(db,'lobbies',currentLobby);
       const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
 
       if (result.reachedTarget){
+        li.className = 'green';
         const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime)/1000);
         const pts = Math.max(10, 100 - newSteps*10 - Math.floor(elapsedSecs/10));
         const newScore = (me.score||0) + pts; await updateDoc(playerRef,{ score:newScore });
@@ -527,17 +542,24 @@
       box.style.display = results.length?'block':'none';
     });
 
-    // play again
+    // play again — anyone can trigger
     $('playAgainBtn').addEventListener('click', async ()=>{
-      if (!isHost){ alert("Only host can restart."); return; }
       const lobbyRef = doc(db,'lobbies',currentLobby);
+      // try to guard against double-click races
+      $('playAgainBtn').disabled = true;
       const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
       await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',currentLobby,'players',d.id), { score:0, steps:0 })));
+      const actors = await pickAndHydrateActors();
       await updateDoc(lobbyRef, {
         status:'countdown',
         countdownEndsAt: Date.now()+10000,
-        round:1
+        round:1,
+        winner:"",
+        winnerPoints:0,
+        finishers:[],
+        ...actors
       });
+      $('playAgainBtn').disabled = false;
       $('playAgainBtn').style.display='none';
       setText('scoreboardTitle','Round Over');
     });
