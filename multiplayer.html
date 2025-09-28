@@ -44,8 +44,7 @@
   <div id="gameArea">
     <p>Round: <span id="roundNum"></span> / 3</p>
     <p>Target: <span id="targetActors"></span></p>
-    <p>⏱️ Time: <span id="roundTimer">00:00</span></p>
-
+    <p>⏱️ Time: <span id="roundTimer">03:00</span></p>
     <div style="position:relative; display:inline-block;">
       <input id="guessInput" placeholder="Enter movie..." autocomplete="off" />
       <div id="suggestions"></div>
@@ -90,6 +89,9 @@
 
     const $ = (id) => document.getElementById(id);
 
+    // === Constants ===
+    const ROUND_MS = 3 * 60 * 1000; // 3 minutes per round
+
     // Helper: tolerant ms from Timestamp or number
     function ms(val) {
       if (val == null) return 0;
@@ -117,7 +119,8 @@
     let lastMovieCast = [];
     let timerInterval = null;
     let graceInterval = null;
-    window._scheduledNext = false; // host guard
+    window._scheduledNext = false;     // host guard for scoreboard next
+    window._roundEndInterval = null;   // host guard for round max timer
 
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 
@@ -141,7 +144,7 @@
       return { startActor: { id: nameA, name: nameA }, endActor: { id: nameB, name: nameB } };
     }
 
-    // 🔧 NEW: reset all players' steps to 0 (host only)
+    // Reset all players' steps to 0 (host only)
     async function resetAllPlayerSteps(lobbyId) {
       const playersSnap = await getDocs(collection(db, "lobbies", lobbyId, "players"));
       await Promise.all(
@@ -151,21 +154,26 @@
       );
     }
 
-    function startStopwatch(startTime) {
+    // === Round countdown (mm:ss) while playing ===
+    function startRoundCountdown(endTime) {
       if (timerInterval) clearInterval(timerInterval);
+      setStyle("roundTimer", "color", "#111"); // visible during normal play
       timerInterval = setInterval(() => {
-        const now = Date.now();
-        const secs = Math.floor((now - startTime) / 1000);
-        const m = String(Math.floor(secs / 60)).padStart(2, "0");
-        const s = String(secs % 60).padStart(2, "0");
+        const rem = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+        const m = String(Math.floor(rem / 60)).padStart(2, "0");
+        const s = String(rem % 60).padStart(2, "0");
         setText("roundTimer", `${m}:${s}`);
+        if (rem <= 0) {
+          clearInterval(timerInterval);
+          setText("roundTimer", "00:00");
+        }
       }, 500);
     }
 
     function startGraceCountdown(endTime) {
       if (timerInterval) clearInterval(timerInterval);
       if (graceInterval) clearInterval(graceInterval);
-      setStyle("roundTimer", "color", "red");
+      setStyle("roundTimer", "color", "red"); // red in grace
       graceInterval = setInterval(() => {
         const secs = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
         setText("roundTimer", `00:${String(secs).padStart(2,"0")}`);
@@ -229,6 +237,12 @@
         if (!snap.exists()) return;
         const data = snap.data();
 
+        // Clear any round-end watcher when not playing
+        if (data.status !== "playing" && window._roundEndInterval) {
+          clearInterval(window._roundEndInterval);
+          window._roundEndInterval = null;
+        }
+
         // COUNTDOWN
         if (data.status === "countdown" && data.countdownEndsAt) {
           window._scheduledNext = false;
@@ -243,20 +257,45 @@
           const ov = $('overlay'); if (ov) ov.style.display = "none";
           $('scoreboardPopup').style.display = "none";
           $('gameArea').style.display = "block";
+
           setText('roundNum', data.round);
           setText('targetActors', `${data.startActor?.name} → ${data.endActor?.name}`);
           currentStart = data.startActor;
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
-          setStyle("roundTimer", "color", "#111"); // visible
-          if (data.startTime) startStopwatch(data.startTime);
+
+          // Start the visible in-round countdown (3:00 → 0:00)
+          const endMs = ms(data.roundEndsAt) || (ms(data.startTime) + ROUND_MS);
+          startRoundCountdown(endMs);
+
+          // Host watches for round expiry ⇒ postRound
+          if (isHost && endMs) {
+            if (window._roundEndInterval) clearInterval(window._roundEndInterval);
+            window._roundEndInterval = setInterval(async () => {
+              const now = Date.now();
+              if (now > endMs) {
+                clearInterval(window._roundEndInterval);
+                window._roundEndInterval = null;
+                // Only end if still playing (someone might have won & triggered grace)
+                const latest = await getDoc(lobbyRef);
+                if (latest.exists() && latest.data().status === "playing") {
+                  await updateDoc(lobbyRef, {
+                    status: "postRound",
+                    postRoundEndsAt: Date.now() + 10000
+                  });
+                }
+              }
+            }, 500);
+          }
         }
 
         if (data.finishers) highlightFinishers(data.finishers);
 
-        // GRACE
+        // GRACE (10s, red timer)
         if (data.status === "grace") {
+          // stop round-end watcher, grace will drive flow now
+          if (window._roundEndInterval) { clearInterval(window._roundEndInterval); window._roundEndInterval = null; }
           startGraceCountdown(data.graceEndsAt);
           if (isHost && data.graceEndsAt) {
             const checkGrace = setInterval(async () => {
@@ -291,14 +330,15 @@
                 if (lobbyData.round < 3) {
                   const nextRound = lobbyData.round + 1;
 
-                  // ✅ Reset steps BEFORE starting next round
+                  // Reset steps BEFORE starting next round
                   await resetAllPlayerSteps(currentLobby);
 
-                  // ✅ Start next round immediately (no extra countdown)
+                  // Start next round immediately (no extra lobby countdown)
                   await updateDoc(lobbyRef, {
                     status: "playing",
                     round: nextRound,
                     startTime: Date.now(),
+                    roundEndsAt: Date.now() + ROUND_MS,
                     winner: "",
                     winnerPoints: 0,
                     finishers: [],
@@ -308,7 +348,7 @@
                   await updateDoc(lobbyRef, { status: "final" });
                 }
                 window._scheduledNext = false;
-              }, msLeft || 100);
+              }, msLeft || 100); // fallback ensures timer always fires
             }
           }
         }
@@ -377,13 +417,14 @@
             const snap = await getDoc(lobbyRef);
             const curRound = (snap.data()?.round) || 1;
 
-            // ✅ Reset steps BEFORE starting the round
+            // Reset steps BEFORE starting the round
             await resetAllPlayerSteps(currentLobby);
 
             await updateDoc(lobbyRef, {
               status: "playing",
               round: curRound,
               startTime: Date.now(),
+              roundEndsAt: Date.now() + ROUND_MS,
               ...getRandomActors()
             });
           }
@@ -441,14 +482,16 @@
     $('submitGuess').addEventListener('click', async () => {
       const guess = $('guessInput').value.trim(); if (!guess) return;
       const snap = await getDoc(playerRef); const data = snap.data();
-      const isFirst = (data.steps || 0) === 0; // now correct each round (we reset steps)
+      const isFirst = (data.steps || 0) === 0; // correct each round (we reset steps)
       const result = await validateMovieGuess(guess, isFirst);
       if (!result.valid) { alert("❌ " + result.reason); return; }
 
       const newSteps = (data.steps || 0) + 1; await updateDoc(playerRef, { steps: newSteps });
       const li = document.createElement("li"); li.textContent = result.movieTitle; $('guessLog').appendChild(li);
 
-      const lobbyRef = doc(db, "lobbies", currentLobby); const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
+      const lobbyRef = doc(db, "lobbies", currentLobby);
+      const lobbySnap = await getDoc(lobbyRef);
+      const lobbyData = lobbySnap.data();
 
       if (result.reachedTarget) {
         const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime) / 1000);
