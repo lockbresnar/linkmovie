@@ -42,7 +42,7 @@
   </div>
 
   <div id="gameArea">
-    <p>Round: <span id="roundNum"></span> / 5</p>
+    <p>Round: <span id="roundNum"></span> / 3</p>
     <p>Target: <span id="targetActors"></span></p>
     <p>⏱️ Time: <span id="roundTimer">00:00</span></p>
 
@@ -75,7 +75,7 @@
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Firebase config (kept as in your working file)
+    // Firebase config (kept from your working file)
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -120,7 +120,6 @@
     let graceInterval = null;
     window._scheduledNext = false; // host guard
 
-    // TMDB key (as provided)
     const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
 
     async function searchMovie(title) {
@@ -224,13 +223,15 @@
         // COUNTDOWN
         if (data.status === "countdown" && data.countdownEndsAt) {
           window._scheduledNext = false;
+          const ov = $('overlay'); if (ov) ov.style.display = "flex";
+          $('scoreboardPopup').style.display = "none";
           startCountdown(ms(data.countdownEndsAt)); // tolerant read
         }
 
         // PLAYING
         if (data.status === "playing") {
           window._scheduledNext = false;
-          const ov = $('overlay'); if (ov) ov.remove();
+          const ov = $('overlay'); if (ov) ov.style.display = "none";
           $('scoreboardPopup').style.display = "none";
           $('gameArea').style.display = "block";
           setText('roundNum', data.round);
@@ -239,7 +240,7 @@
           currentTarget = data.endActor;
           lastMovieCast = [];
           $('guessLog').innerHTML = "";
-          setStyle("roundTimer", "color", "white");
+          setStyle("roundTimer", "color", "#111"); // visible timer
           if (data.startTime) startStopwatch(data.startTime);
         }
 
@@ -248,7 +249,6 @@
         // GRACE
         if (data.status === "grace") {
           startGraceCountdown(data.graceEndsAt);
-
           if (isHost && data.graceEndsAt) {
             const checkGrace = setInterval(async () => {
               if (Date.now() > data.graceEndsAt) {
@@ -266,6 +266,7 @@
         if (data.status === "postRound") {
           $('gameArea').style.display = "none";
           $('scoreboardPopup').style.display = "flex";
+          const ov = $('overlay'); if (ov) ov.style.display = "none";
 
           const endMs = ms(data.postRoundEndsAt);
           showScoreboard(endMs);
@@ -277,7 +278,7 @@
               setTimeout(async () => {
                 const snap2 = await getDoc(lobbyRef);
                 const lobbyData = snap2.data();
-                if (lobbyData.round < 5) {
+                if (lobbyData.round < 3) {
                   await updateDoc(lobbyRef, {
                     status: "countdown",
                     countdownEndsAt: Date.now() + 10000, // number
@@ -288,12 +289,22 @@
                     ...getRandomActors()
                   });
                 } else {
-                  showFinalScores();
+                  // End after 3 rounds
+                  await updateDoc(lobbyRef, { status: "final" });
                 }
                 window._scheduledNext = false;
               }, msLeft || 100); // fallback ensures timer always fires
             }
           }
+        }
+
+        // FINAL (game over)
+        if (data.status === "final") {
+          $('gameArea').style.display = "none";
+          const ov = $('overlay'); if (ov) ov.style.display = "none";
+          $('scoreboardPopup').style.display = "flex";
+          showFinalScores();
+          window._scheduledNext = false;
         }
       });
 
@@ -342,7 +353,7 @@
         if (secs <= 0) {
           clearInterval(interval);
           setText('countdown', "");
-          const ov = $('overlay'); if (ov) ov.remove();
+          const ov = $('overlay'); if (ov) ov.style.display = "none";
 
           if (isHost) {
             const lobbyRef = doc(db, "lobbies", currentLobby);
@@ -393,9 +404,16 @@
     }
 
     function showFinalScores() {
-      $('scoreboardPopup').style.display = "flex";
-      $('scoreCountdown').textContent = "🏆 Game Over!";
-      // (Optional) You can re-render a final sorted list here if you want.
+      // Recompute final, sorted scoreboard
+      (async () => {
+        const playersSnap = await getDocs(collection(db, "lobbies", currentLobby, "players"));
+        const allPlayers = playersSnap.docs.map(d => d.data());
+        allPlayers.sort((a,b) => (b.score||0) - (a.score||0));
+        $('scoreList').innerHTML = allPlayers
+          .map((p,i) => `<li>${i+1}. ${p.name} — ${p.score || 0} pts</li>`)
+          .join("");
+      })();
+      setText('scoreCountdown', "🏆 Game Over!");
     }
 
     window.addEventListener("beforeunload", async () => {
@@ -420,6 +438,17 @@
 
         let finishers = lobbyData.finishers || [];
         if (!finishers.find(f => f.name === username)) finishers.push({ name: username, points: pts });
+
+        // ✅ Instant win at 200+ points
+        if (newScore >= 200) {
+          await updateDoc(lobbyRef, {
+            winner: username,
+            winnerPoints: newScore,
+            finishers,
+            status: "final"
+          });
+          return;
+        }
 
         if (!lobbyData.winner) {
           await updateDoc(lobbyRef, {
