@@ -1,48 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Actor Chain</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="actors.js" defer></script>
-  <script src="actor-chain.js" defer></script>
+  <meta charset="UTF-8" />
+  <title>LinkMovie — Actor Chain</title>
+  <link rel="stylesheet" href="styles.css?v=alpha1" />
 </head>
 <body>
-  <!-- Topbar -->
-  <div class="topbar">
-    <div class="topbar-left">
-      <a href="index.html" class="nav-link">Link Movie</a>
-      <a href="actor-chain.html" class="nav-link active">Link Actor</a>
-      <a href="multiplayer.html" class="nav-link">Multiplayer</a>
-    </div>
-    <img src="logo.png" alt="Logo" class="logo">
-    <div class="topbar-right">
-      <a href="#" id="dailyLink" class="nav-link">Daily</a>
-      <a href="#" id="infiniteLink" class="nav-link">Infinite</a>
-      <img src="help.svg" alt="Help" class="help-icon" onclick="openHelp()">
-    </div>
-  </div>
+  <!-- Header -->
+  <header class="topbar">
+  <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+
+  <!-- Left side -->
+  <nav class="topbar-left">
+    <a href="index.html" class="nav-link">Link Movie</a>
+    <a href="actor-chain.html" class="nav-link active">Link Actor</a>
+    <a href="multiplayer.html" class="nav-link">Multiplayer</a>
+  </nav>
+
+  <!-- Right side -->
+  <nav class="topbar-right">
+    <a href="actor-chain.html" id="dailyLink" class="nav-link">Daily</a>
+    <a href="actor-chain.html" id="infiniteLink" class="nav-link">Infinite</a>
+    <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
+  </nav>
+</header>
+
 
   <!-- Stats -->
   <div class="stats">
     <h1 class="page-title condensed">Actor Chain</h1>
     <div id="counterCircle" class="counter-circle">0</div>
-    <div id="timer" class="timer">00:00</div>
+    <div id="timer" class="timer condensed">00:00</div>
   </div>
 
-  <!-- Layout -->
+  <!-- Two-column layout -->
   <div class="layout">
+    <!-- LEFT: actors + controls -->
     <div class="left-col">
       <div class="actors-row">
         <div class="actor-card">
-          <img id="actor1Img" src="" alt="">
-          <div id="actor1" class="actor-name"></div>
+          <img id="actor1Img" alt="Start Actor" />
+          <p id="actor1" class="actor-name"></p>
         </div>
         <div class="actor-card">
-          <img id="actor2Img" src="" alt="">
-          <div id="actor2" class="actor-name"></div>
+          <img id="actor2Img" alt="Target Actor" />
+          <p id="actor2" class="actor-name"></p>
         </div>
       </div>
+
       <div class="controls">
         <input id="movieInput" placeholder="Enter a movie..." />
         <div id="suggestions" class="suggestions"></div>
@@ -51,48 +56,53 @@
           <button class="btn btn-red">Reset</button>
         </div>
       </div>
-      <div id="status" class="status"></div>
     </div>
-    <div class="right-col">
+
+    <!-- RIGHT: chain -->
+    <aside class="right-col">
       <div class="chain-box">
-        <h3>Chain</h3>
+        <h3>Current Chain:</h3>
         <ul id="chainList"></ul>
       </div>
-    </div>
+      <p id="status" class="status"></p>
+    </aside>
   </div>
 
-  <!-- Intro Overlay -->
+  <!-- Intro overlay -->
   <div id="introOverlay" class="overlay visible">
     <div class="overlay-card">
-      <p>Connect the two actors through shared movies!</p>
-      <button onclick="startGame()">Start</button>
+      <h2>🎬 Actor Chain Challenge</h2>
+      <p>Connect the two actors through movies. Press Start to begin.</p>
+      <button class="btn btn-submit" onclick="startGame()">Start</button>
     </div>
   </div>
 
-  <!-- End Popup -->
+  <!-- Popups -->
   <div id="popup" class="popup">
-    <button class="popup-close" onclick="closePopup()">×</button>
-    <h2 id="popupTitle" class="page-title"></h2>
-    <div id="popupMovie" class="popup-movie"></div>
-    <div class="popup-stats">
-      <div id="popupSteps" class="mini-circle">0</div>
-      <div id="popupTime">00:00</div>
-      <div id="popupPoints">0 pts</div>
-      <button class="share-btn" onclick="shareActorResult()">🔗</button>
-    </div>
-    <img id="popupPoster" class="popup-poster" src="" alt="">
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    <h2 id="popupTitle"></h2>
+    <p id="popupMsg"></p>
   </div>
 
-  <!-- Help Popup -->
   <div id="helpPopup" class="popup">
-    <button class="popup-close" onclick="closeHelp()">×</button>
-    <h2 class="page-title">How to Play</h2>
-    <p>Enter movies that link the two actors through shared cast members.</p>
+    <button class="popup-close" onclick="closeHelp()">✕</button>
+    <h2>How to Play</h2>
+    <p>
+      1) First movie must include the start actor (blue).<br/>
+      2) Each next movie must share any actor with the previous accepted movie (follows the chain).<br/>
+      3) If it also includes the target actor, you win (green).<br/>
+      4) If it follows the chain but has neither start nor target actor, it’s orange.<br/>
+      5) Wrong guesses (no link) are grey and don’t increment the counter.
+    </p>
   </div>
 
-  <div class="footer">
-    <p>Made with TMDB API</p>
-    <img src="tmdb.svg" alt="TMDB">
-  </div>
+  <!-- Footer -->
+  <footer class="footer">
+    This product uses the TMDb API but is not endorsed or certified by TMDb.<br/>
+    <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
+  </footer>
+
+  <script src="actors.js?v=alpha1"></script>
+  <script src="actor-chain.js?v=alpha1"></script>
 </body>
 </html>
