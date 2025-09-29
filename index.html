@@ -7,21 +7,15 @@
 </head>
 <body>
   <!-- Header -->
-<header class="topbar">
-  <div class="topbar-left">
+  <header class="topbar">
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
-    <nav class="nav-group">
-      <a href="index.html" class="nav-pill is-active">Link Movie</a>
-      <a href="actor-chain.html" class="nav-pill">Link Actor</a>
-      <a href="multiplayer.html" class="nav-pill">Multiplayer</a>
+    <nav class="topbar-right">
+      <a href="actor-chain.html" class="nav-link">Actor Chain</a>
+      <a href="index.html" id="dailyLink" class="nav-link">Daily</a>
+      <a href="index.html" id="infiniteLink" class="nav-link">Infinite</a>
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
     </nav>
-  </div>
-  <nav class="topbar-right nav-group">
-    <a href="index.html?mode=daily" id="dailyLink" class="nav-pill">Daily</a>
-    <a href="index.html?mode=infinite" id="infiniteLink" class="nav-pill">Infinite</a>
-    <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
-  </nav>
-</header>
+  </header>
 
   <!-- Stats -->
   <div class="stats">
@@ -103,18 +97,5 @@
   </footer>
 
   <script src="main-game.js?v=14"></script>
-<script>
-  (function () {
-    try {
-      const p = new URLSearchParams(location.search);
-      const m = p.get('mode');
-      const d = document.getElementById('dailyLink');
-      const i = document.getElementById('infiniteLink');
-      if (m === 'daily' && d) d.classList.add('is-active');
-      else if (m === 'infinite' && i) i.classList.add('is-active');
-    } catch (e) {}
-  })();
-</script>
-
 </body>
 </html>
