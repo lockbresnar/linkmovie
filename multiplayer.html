@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <title>LinkMovie — Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css?v=alpha6" />
-  <link rel="stylesheet" href="multiplayer.css?v=alpha6" />
+  <link rel="stylesheet" href="styles.css?v=alpha7" />
+  <link rel="stylesheet" href="multiplayer.css?v=alpha7" />
 </head>
 <body>
   <!-- Header -->
@@ -45,7 +45,8 @@
         <div id="suggestions" class="suggestions"></div>
         <div class="button-row">
           <button id="submitGuess" class="btn btn-submit">Submit</button>
-          <button id="resetChain" class="btn btn-reset" title="Clear your current chain">Reset</button>
+          <!-- Reset now matches other game style -->
+          <button id="resetChain" class="btn btn-red" title="Clear your current chain">Reset</button>
         </div>
         <p id="status" class="status"></p>
       </div>
@@ -80,6 +81,7 @@
   <!-- Scoreboard popup -->
   <div id="scoreboardPopup" class="overlay">
     <div class="overlay-card">
+      <!-- Title uses site title styling -->
       <h2 id="scoreboardTitle" class="page-title condensed">Round Over</h2>
       <ul id="scoreList" class="mp-score-list"></ul>
       <p id="scoreCountdown" class="mp-muted">Next round starts shortly…</p>
@@ -110,7 +112,7 @@
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <script src="actors.js?v=alpha6"></script>
+  <script src="actors.js?v=alpha7"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -231,9 +233,7 @@
       const ps = await getDocs(collection(db,'lobbies',lobbyId,'players'));
       await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',lobbyId,'players',d.id), { steps:0 })));
     }
-    function setMyStepsBadge(n){
-      setText('stepNum', String(n));
-    }
+    function setMyStepsBadge(n){ setText('stepNum', String(n)); }
 
     // ===== Lobby flow =====
     async function joinLobby(){
@@ -392,12 +392,14 @@
           const p=d.data();
           const isMe = p.name === username;
           if (isMe) mySteps = p.steps || 0;
+
           const nameHtml = `<span class="name-pill">${p.name}</span>`;
           const li=document.createElement('li');
           li.innerHTML = `
             ${isMe ? '<strong>'+nameHtml+'</strong>' : nameHtml}
             <span class="counter-circle counter-sm">${p.steps||0}</span>
             <span class="points-pill">${p.score||0} pts</span>`;
+          if (isMe) li.classList.add('me');    // show a single bullet only for yourself
           ul.appendChild(li);
         });
         setMyStepsBadge(mySteps);
@@ -508,7 +510,8 @@
       setMyStepsBadge(newSteps);
 
       const li = document.createElement('li');
-      li.className = 'grey';
+      // Colour to match other game: first = blue, middle = orange; final turns green
+      li.className = isFirst ? 'blue' : 'orange';
       li.textContent = result.movieTitle;
       $('guessLog').appendChild(li);
 
@@ -516,7 +519,7 @@
       const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
 
       if (result.reachedTarget){
-        li.className = 'green'; // keep winner as green with white text
+        li.className = 'green'; // winner stays green with white text
         const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime)/1000);
         const pts = Math.max(10, 100 - newSteps*10 - Math.floor(elapsedSecs/10));
         const newScore = (me.score||0) + pts; await updateDoc(playerRef,{ score:newScore });

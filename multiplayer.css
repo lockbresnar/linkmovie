@@ -50,7 +50,7 @@
 /* Status alignment */
 .status { margin-top: 8px; min-height: 22px; }
 
-/* Chain answers: match other game pills; keep green with white text for win */
+/* Chain answers: match other game pills; first=blue, middle=orange, final=green */
 #guessLog { list-style: none; margin: 0; padding: 0; }
 #guessLog li {
   margin: 8px 0;
@@ -58,7 +58,6 @@
   border-radius: 999px;
   font-weight: 600;
 }
-#guessLog li.grey   { background: #ddd; }
 #guessLog li.blue   { background: var(--blue);   color: #fff; }
 #guessLog li.orange { background: var(--orange); color: #fff; }
 #guessLog li.green  { background: var(--green);  color: #fff; } /* winner */
@@ -108,12 +107,18 @@
   margin-left: 8px;
 }
 
-/* Reset button look (neutral) */
-.btn-reset {
-  background: transparent;
-  border: 2px solid #2f2f2f;
-  color: #2f2f2f;
-  font-weight: 600;
-  margin-left: 8px;
+/* Player list: no bullets by default, show a single bullet only for yourself */
+#players { list-style: none; margin: 0; padding: 0; }
+#players li { position: relative; padding-left: 14px; }
+#players li::before { content: ''; }
+#players li.me::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--black);
+  font-weight: 900;
 }
-.btn-reset:hover { filter: brightness(0.9); }
+
+/* Reset button now uses .btn-red from styles.css; no extra overrides here */
