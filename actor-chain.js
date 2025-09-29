@@ -11,6 +11,9 @@ let steps = 0;
 let timerInterval = null;
 let lastCastIds = null;
 let dailyMode = true;
+let ended = false;                 // <-- added: prevent re-trigger after completion
+let _acFirstMovie = null;          // <-- first accepted film
+let _acLastMovie = null;           // <-- last accepted film (updates each step)
 
 const LS_MODE_KEY       = "mode";                // "daily" | "infinite"
 const LS_AC_STARTED     = "ac_started";
@@ -167,6 +170,7 @@ function wireControls() {
 
 // ===== Game logic =====
 async function submitGuess() {
+  if (ended) return; // don't process after completion
   const q = document.getElementById("movieInput").value.trim();
   if (!q) return;
 
@@ -196,6 +200,10 @@ async function submitGuess() {
     addChainItem(movie.title, "blue");
     steps += 1; setCounter(steps);
     lastCastIds = castIds;
+
+    if (!_acFirstMovie) _acFirstMovie = movie;
+    _acLastMovie = movie;
+
     if (includesTarget) winNow();
     clearInput(); persistDaily();
     return;
@@ -211,15 +219,25 @@ async function submitGuess() {
   if (includesTarget) {
     addChainItem(movie.title, "green");
     steps += 1; setCounter(steps);
+
+    if (!_acFirstMovie) _acFirstMovie = movie;
+    _acLastMovie = movie;
+
     winNow();
   } else if (includesStart) {
     addChainItem(movie.title, "blue");
     steps += 1; setCounter(steps);
     lastCastIds = castIds;
+
+    if (!_acFirstMovie) _acFirstMovie = movie;
+    _acLastMovie = movie;
   } else {
     addChainItem(movie.title, "orange");
     steps += 1; setCounter(steps);
     lastCastIds = castIds;
+
+    if (!_acFirstMovie) _acFirstMovie = movie;
+    _acLastMovie = movie;
   }
   clearInput(); persistDaily();
 }
@@ -232,6 +250,8 @@ function resetChain() {
   steps = 0; setCounter(steps);
   lastCastIds = null;
   document.getElementById("status").textContent = "";
+  _acFirstMovie = null;
+  _acLastMovie = null;
   if (dailyMode) {
     localStorage.setItem(LS_AC_CHAIN_HTML, "");
     localStorage.setItem(LS_AC_STEPS, "0");
@@ -242,9 +262,56 @@ function persistDaily() {
   localStorage.setItem(LS_AC_STEPS, String(steps));
   localStorage.setItem(LS_AC_CHAIN_HTML, document.getElementById("chainList").innerHTML);
 }
+
+// ===== End-game popup (performance titles + two posters) =====
 function winNow() {
+  if (ended) return;
+  ended = true;
   stopTimer();
-  showPopup("🎉 You linked them!", `Steps: ${steps}\nTime: ${document.getElementById("timer").textContent}`);
+
+  const timeStr = document.getElementById("timer").textContent;
+  const timeSecs = timeStr.split(":").reduce((m,s)=>m*60 + +s, 0);
+
+  let title;
+  if (steps === 1 && timeSecs < 60) title = "Perfect!";
+  else if (steps === 2) title = "Excellent!";
+  else if (steps <= 5) title = "Nice!";
+  else if (steps <= 9) title = "Not Bad!";
+  else title = "You Got There!";
+
+  const points = Math.max(0, 200 - steps*10);
+
+  document.getElementById("popupTitle").textContent = title;
+  document.getElementById("popupMovie").textContent = `${startActor.name} → ${endActor.name}`;
+  document.getElementById("popupSteps").textContent = steps;
+  document.getElementById("popupTime").textContent = timeStr;
+  document.getElementById("popupPoints").textContent = `${points} pts`;
+
+  // mini-circle colour by steps (green → amber → red)
+  let c = "#2ecc71";
+  if (steps >= 4 && steps <= 6) c = "#f39c12";
+  else if (steps > 6) c = "#e74c3c";
+  document.getElementById("popupSteps").style.backgroundColor = c;
+
+  // two posters (first + last accepted films, if available)
+  const ps = document.getElementById("popupPosterStart");
+  const pe = document.getElementById("popupPosterEnd");
+  if (_acFirstMovie && _acFirstMovie.poster_path) ps.src = IMG + _acFirstMovie.poster_path;
+  if (_acLastMovie  && _acLastMovie.poster_path)  pe.src = IMG + _acLastMovie.poster_path;
+
+  // Daily only share button
+  document.querySelector(".share-btn").style.display = dailyMode ? "inline-block" : "none";
+
+  document.getElementById("popup").style.display = "block";
+}
+
+function shareActorResult() {
+  const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit",year:"2-digit"});
+  const stepsStr = document.getElementById("popupSteps").textContent;
+  const timeStr = document.getElementById("popupTime").textContent;
+  const pointsStr = document.getElementById("popupPoints").textContent;
+  const text = `Actor.Link ${dateStr} | Steps: ${stepsStr} | Time: ${timeStr} | ${pointsStr}`;
+  navigator.clipboard.writeText(text).then(()=>alert("Result copied to clipboard!"));
 }
 
 // ===== Start & Bootstrap =====
@@ -288,7 +355,7 @@ window.startGame = startGame;
     }
   } else {
     document.getElementById("introOverlay").classList.add("visible");
-    // ❌ no longer clearing daily state here
+    // no daily-state clearing here (preserve your original behaviour)
   }
 
   // Highlight active mode

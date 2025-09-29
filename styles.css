@@ -371,3 +371,14 @@ body {
   font-size: 20px;
   color: #fff;
 }
+/* Two small posters side-by-side for Actor Chain popup only */
+.popup-posters {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.popup-posters .popup-poster {
+  width: 100px;      /* smaller than default poster */
+  border-radius: 8px;
+}

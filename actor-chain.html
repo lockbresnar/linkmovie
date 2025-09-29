@@ -80,8 +80,22 @@
   <!-- Popups -->
   <div id="popup" class="popup">
     <button class="popup-close" onclick="closePopup()">✕</button>
-    <h2 id="popupTitle"></h2>
-    <p id="popupMsg"></p>
+    <!-- performance title -->
+    <h2 id="popupTitle" class="page-title condensed"></h2>
+    <!-- actor pair -->
+    <p id="popupMovie" class="popup-movie"></p>
+    <!-- stats row -->
+    <div class="popup-stats">
+      <div class="mini-circle" id="popupSteps">0</div>
+      <span id="popupTime">00:00</span>
+      <span id="popupPoints">0 pts</span>
+      <button class="share-btn" onclick="shareActorResult()">🔗</button>
+    </div>
+    <!-- two posters -->
+    <div class="popup-posters">
+      <img id="popupPosterStart" class="popup-poster" alt="Start film" />
+      <img id="popupPosterEnd" class="popup-poster" alt="End film" />
+    </div>
   </div>
 
   <div id="helpPopup" class="popup">
