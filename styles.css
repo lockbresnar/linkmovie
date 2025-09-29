@@ -73,3 +73,16 @@ body{margin:0;background:var(--bg);color:var(--black);font-family:Arial, sans-se
   display: block;
   margin: 8px auto 0;      /* center image */
 }
+.topbar-left {
+  position: absolute;
+  left: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.nav-link.active {
+  border: 2px solid #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
