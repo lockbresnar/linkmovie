@@ -317,6 +317,7 @@ body {
   border-radius: 999px;
   padding: 4px 10px;
 }
+
 /* ---------- End Popup Enhancements ---------- */
 #popup .page-title {
   font-size: 26px;
@@ -362,4 +363,19 @@ body {
   border: none;
   cursor: pointer;
   font-size: 20px;
+}
+
+/* Popup color + alignment tweaks (ONLY for end popup) */
+#popup {
+  background: #111;   /* dark popup */
+  color: #fff;        /* white text */
+}
+
+#popup .page-title {
+  text-align: center; /* center title */
+}
+
+.popup-poster {
+  display: block;
+  margin: 12px auto 0; /* center poster */
 }

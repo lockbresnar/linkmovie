@@ -227,10 +227,7 @@ function doStartGame() {
   startTimer();
 }
 function endGame(win) {
-  if (ended) {
-    showPopup(lastPopupTitle, lastPopupMsg);
-    return;
-  }
+  if (ended) return; // prevent duplicate popup
   ended = true;
   stopTimer();
   els.movieInput.disabled = true;
@@ -251,10 +248,21 @@ function endGame(win) {
   document.getElementById("popupPoints").textContent = `${points} pts`;
   if (posterUrl) document.getElementById("popupPoster").src = posterUrl;
 
+  // Mini counter colour: match main counter (green→amber→red based on used tries)
+  const used = tries;
+  let color;
+  if (used <= 2) color = "#2ecc71";
+  else if (used <= 4) color = "#f39c12";
+  else color = "#e74c3c";
+  document.getElementById("popupTries").style.backgroundColor = color;
+
+  // Share button only in Daily mode
+  const shareBtn = document.querySelector(".share-btn");
+  if (shareBtn) shareBtn.style.display = dailyMode ? "inline-block" : "none";
+
   els.popup.style.display = "block";
   saveDailyState();
 }
-
 function consumeTry() {
   triesLeft--;
   updateCounter();
@@ -264,7 +272,7 @@ function consumeTry() {
 
 // ---------- Events ----------
 els.submitBtn.addEventListener("click", () => {
-  if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
+  if (ended) return; // don't reopen popup
   if (!started) return;
   const guess = (els.movieInput.value || "").trim();
   if (!guess) return;
@@ -280,7 +288,7 @@ els.submitBtn.addEventListener("click", () => {
   saveDailyState();
 });
 els.hintSkipBtn.addEventListener("click", () => {
-  if (ended) { showPopup(lastPopupTitle, lastPopupMsg); return; }
+  if (ended) return; // don't reopen popup
   if (!started) return;
   const remaining = hintsPool.filter(h => !usedHints.has(h));
   if (remaining.length) {
@@ -382,6 +390,7 @@ els.movieInput.addEventListener("blur", () => {
     suggestionsBox.innerHTML = "";
   }, 200);
 });
+
 function shareResult() {
   const dateStr = new Date().toLocaleDateString("en-GB", {
     day: "2-digit", month: "2-digit", year: "2-digit"
