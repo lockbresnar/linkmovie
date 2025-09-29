@@ -1,4 +1,4 @@
-/* Movie Link Game Logic (Daily + Infinite, global actors, persistent timer, no overlay repeat, with autocomplete) */
+/* Movie Link Game Logic (Daily + Infinite, global actors, persistent timer, with autocomplete) */
 
 const API_KEY = "455bd5e0331130bf58534b98e8c2b901"; 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w300";
@@ -62,11 +62,6 @@ function formatTime(secTotal) {
   const s = secTotal % 60;
   return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
-function showPopup(title, msg) {
-  els.popupTitle.textContent = title;
-  els.popupMsg.innerHTML = msg;
-  els.popup.style.display = "block";
-}
 window.closePopup = () => { els.popup.style.display = "none"; };
 window.openHelp = () => { document.getElementById("helpPopup").style.display = "block"; };
 window.closeHelp = () => { document.getElementById("helpPopup").style.display = "none"; };
@@ -121,10 +116,7 @@ async function restoreDailyState() {
   usedHints = new Set(savedState.usedHints);
   lastPopupTitle = savedState.lastPopupTitle;
   lastPopupMsg = savedState.lastPopupMsg;
-
-  if (ended && lastPopupTitle) {
-    showPopup(lastPopupTitle, lastPopupMsg);
-  }
+  // Do NOT auto-show popup again when ended
 }
 
 // ---------- Load Top 250 English Films ----------
@@ -248,7 +240,7 @@ function endGame(win) {
   document.getElementById("popupPoints").textContent = `${points} pts`;
   if (posterUrl) document.getElementById("popupPoster").src = posterUrl;
 
-  // Mini counter colour: match main counter (green→amber→red based on used tries)
+  // Mini counter colour
   const used = tries;
   let color;
   if (used <= 2) color = "#2ecc71";
@@ -272,7 +264,7 @@ function consumeTry() {
 
 // ---------- Events ----------
 els.submitBtn.addEventListener("click", () => {
-  if (ended) return; // don't reopen popup
+  if (ended) return; // don’t reopen popup
   if (!started) return;
   const guess = (els.movieInput.value || "").trim();
   if (!guess) return;
@@ -288,7 +280,7 @@ els.submitBtn.addEventListener("click", () => {
   saveDailyState();
 });
 els.hintSkipBtn.addEventListener("click", () => {
-  if (ended) return; // don't reopen popup
+  if (ended) return; // don’t reopen popup
   if (!started) return;
   const remaining = hintsPool.filter(h => !usedHints.has(h));
   if (remaining.length) {
@@ -331,6 +323,16 @@ window.startGame = async function() {
 (async function bootstrap() {
   const savedMode = localStorage.getItem("mode");
   if (savedMode === "infinite") dailyMode = false;
+
+  // Clear daily state if day changed
+  if (dailyMode) {
+    const todaySeed = getTodaySeed();
+    const lastSeed = localStorage.getItem("lastSeed");
+    if (lastSeed !== String(todaySeed)) {
+      localStorage.removeItem("dailyState");
+      localStorage.setItem("lastSeed", todaySeed);
+    }
+  }
 
   updateCounter();
   els.timer.textContent = "00:00";
