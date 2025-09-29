@@ -67,9 +67,23 @@ body{margin:0;background:var(--bg);color:var(--black);font-family:Arial, sans-se
   margin: 28px 0;
   font-size: 12px;
   color: #555;
-  text-align: center;      /* center text */
+  text-align: center;
 }
 .footer img {
   display: block;
-  margin: 8px auto 0;      /* center image */
+  margin: 8px auto 0;
 }
+
+/* === Pill nav (non-invasive; RIGHT side only) === */
+.topbar-right .nav-pill{
+  background:#2f2f2f;
+  color:#fff;
+  padding:8px 12px;
+  border-radius:999px;
+  text-decoration:none;
+  font-weight:700;
+  border:2px solid transparent; /* white outline for active */
+  line-height:1;
+  display:inline-block;
+}
+.topbar-right .nav-pill.is-active{ border-color:#fff; }

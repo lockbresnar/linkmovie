@@ -6,16 +6,20 @@
   <link rel="stylesheet" href="styles.css?v=alpha1" />
 </head>
 <body>
-  <!-- Header -->
+    <!-- Header -->
   <header class="topbar">
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
     <nav class="topbar-right">
-      <a href="index.html" class="nav-link">Main Game</a>
-      <!-- ✅ Added links -->
-      <a href="actor-chain.html" id="dailyLink" class="nav-link">Daily</a>
-      <a href="actor-chain.html" id="infiniteLink" class="nav-link">Infinite</a>
-      <!-- End added links -->
-      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
+      <!-- Game group (right) -->
+      <a href="index.html" class="nav-pill">Link Movie</a>
+      <a href="actor-chain.html" class="nav-pill is-active">Link Actor</a>
+      <a href="multiplayer.html" class="nav-pill">Multiplayer</a>
+
+      <!-- Mode group (right) -->
+      <a href="actor-chain.html?mode=daily" id="dailyLink" class="nav-pill">Daily</a>
+      <a href="actor-chain.html?mode=infinite" id="infiniteLink" class="nav-pill">Infinite</a>
+
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp && openHelp()" />
     </nav>
   </header>
 
@@ -49,15 +53,14 @@
           <button class="btn btn-red">Reset</button>
         </div>
       </div>
-    </div>
 
     <!-- RIGHT: chain -->
+    </div>
     <aside class="right-col">
       <div class="chain-box">
-        <h3>Current Chain:</h3>
+        <h3>Current Chain</h3>
         <ul id="chainList"></ul>
       </div>
-      <p id="status" class="status"></p>
     </aside>
   </div>
 
@@ -97,5 +100,19 @@
 
   <script src="actors.js?v=alpha1"></script>
   <script src="actor-chain.js?v=alpha1"></script>
+
+  <!-- Outline the active mode pill on the right -->
+  <script>
+    (function () {
+      try {
+        const p = new URLSearchParams(location.search);
+        const m = p.get('mode');
+        const d = document.getElementById('dailyLink');
+        const i = document.getElementById('infiniteLink');
+        if (m === 'daily' && d) d.classList.add('is-active');
+        else if (m === 'infinite' && i) i.classList.add('is-active');
+      } catch (e) {}
+    })();
+  </script>
 </body>
 </html>
