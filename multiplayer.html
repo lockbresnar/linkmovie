@@ -10,14 +10,22 @@
 <body>
   <!-- Header -->
   <header class="topbar">
-    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
-    <nav class="topbar-right">
-      <a href="index.html" class="nav-link">Main Game</a>
-      <a href="actor-chain.html" class="nav-link">Actor Chain</a>
-      <img src="assets/help-icon.svg" alt="Help" class="help-icon"
-           onclick="document.getElementById('mpHelp').classList.add('visible')" />
-    </nav>
-  </header>
+  <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+
+  <!-- Left nav -->
+  <nav class="topbar-left">
+    <a href="index.html" class="nav-link">Link Movie</a>
+    <a href="actor-chain.html" class="nav-link">Link Actor</a>
+    <a href="multiplayer.html" class="nav-link active">Multiplayer</a>
+  </nav>
+
+  <!-- Right nav -->
+  <nav class="topbar-right">
+    <img src="assets/help-icon.svg" alt="Help" class="help-icon"
+         onclick="document.getElementById('mpHelp').classList.add('visible')" />
+  </nav>
+</header>
+
 
   <!-- Stats (Steps badge) -->
   <div class="stats">
