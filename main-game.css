@@ -302,8 +302,3 @@ body {
   display: block;
   margin: 8px auto 0;
 }
-.nav-link.active {
-  border: 2px solid #fff;
-  border-radius: 999px;
-  padding: 4px 10px;
-}
