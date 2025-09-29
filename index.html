@@ -3,19 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <title>LinkMovie — Movie Link</title>
-  <link rel="stylesheet" href="main-game.css?v=13" />
+  <link rel="stylesheet" href="main-game.css?v=14" />
 </head>
 <body>
   <!-- Header -->
   <header class="topbar">
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
     <nav class="topbar-right">
-  <a href="index.html" class="nav-link active">Link Movie</a>
-  <a href="actor-chain.html" class="nav-link">Link Actor</a>
-  <a href="multiplayer.html" class="nav-link">Multiplayer</a>
-  <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
-</nav>
-
+      <a href="index.html" class="nav-link active">Link Movie</a>
+      <a href="actor-chain.html" class="nav-link">Link Actor</a>
+      <a href="multiplayer.html" class="nav-link">Multiplayer</a>
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
+    </nav>
   </header>
 
   <!-- Stats -->
@@ -42,7 +41,6 @@
 
       <div class="controls">
         <input type="text" id="movieInput" placeholder="Guess the movie..." />
-        <!-- ✅ Added for autocomplete -->
         <div id="suggestions" class="suggestions"></div>
         <div class="button-row">
           <button id="submitBtn" class="btn btn-submit">Submit</button>

@@ -12,23 +12,22 @@
   <header class="topbar">
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
     <nav class="topbar-right">
-  <a href="index.html" class="nav-link">Link Movie</a>
-  <a href="actor-chain.html" class="nav-link">Link Actor</a>
-  <a href="multiplayer.html" class="nav-link active">Multiplayer</a>
-  <img src="assets/help-icon.svg" alt="Help" class="help-icon"
-       onclick="document.getElementById('mpHelp').classList.add('visible')" />
-</nav>
-
+      <a href="index.html" class="nav-link">Link Movie</a>
+      <a href="actor-chain.html" class="nav-link">Link Actor</a>
+      <a href="multiplayer.html" class="nav-link active">Multiplayer</a>
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon"
+           onclick="document.getElementById('mpHelp').classList.add('visible')" />
+    </nav>
   </header>
 
-  <!-- Stats (Steps badge) -->
+  <!-- Stats -->
   <div class="stats">
     <h1 class="page-title condensed">Multiplayer</h1>
     <div class="counter-circle" id="stepBadge"><span id="stepNum">0</span></div>
     <div class="timer condensed" id="roundTimer">03:00</div>
   </div>
 
-  <!-- Layout -->
+  <!-- Game area etc (unchanged) -->
   <div class="layout">
     <div class="left-col">
       <div class="actors-row">
@@ -47,7 +46,6 @@
         <div id="suggestions" class="suggestions"></div>
         <div class="button-row">
           <button id="submitGuess" class="btn btn-submit">Submit</button>
-          <!-- Reset now matches other game style -->
           <button id="resetChain" class="btn btn-red" title="Clear your current chain">Reset</button>
         </div>
         <p id="status" class="status"></p>
@@ -71,7 +69,7 @@
     </aside>
   </div>
 
-  <!-- Countdown overlay -->
+  <!-- Overlays / popups (unchanged) -->
   <div id="overlay" class="overlay visible">
     <div class="overlay-card">
       <h2 id="overlayTitle">Joining Lobby…</h2>
@@ -80,10 +78,8 @@
     </div>
   </div>
 
-  <!-- Scoreboard popup -->
   <div id="scoreboardPopup" class="overlay">
     <div class="overlay-card">
-      <!-- Title uses site title styling -->
       <h2 id="scoreboardTitle" class="page-title condensed">Round Over</h2>
       <ul id="scoreList" class="mp-score-list"></ul>
       <p id="scoreCountdown" class="mp-muted">Next round starts shortly…</p>
@@ -92,7 +88,6 @@
     </div>
   </div>
 
-  <!-- Help -->
   <div id="mpHelp" class="overlay">
     <div class="overlay-card">
       <button class="popup-close" onclick="document.getElementById('mpHelp').classList.remove('visible')">✕</button>
@@ -115,493 +110,6 @@
   </footer>
 
   <script src="actors.js?v=alpha7"></script>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getFirestore, collection, getDocs, addDoc,
-      doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // ===== Config / Constants =====
-    const firebaseConfig = {
-      apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
-      authDomain: "linkmovie-ef911.firebaseapp.com",
-      projectId: "linkmovie-ef911",
-      storageBucket: "linkmovie-ef911.appspot.com",
-      messagingSenderId: "523659305871",
-      appId: "1:523659305871:web:129810d281b5cf9b33a1fa",
-      measurementId: "G-ZEW051T33S"
-    };
-    const ROUND_MS = 3 * 60 * 1000; // 3 minutes
-    const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
-    const IMG = "https://image.tmdb.org/t/p/w200";
-
-    // ===== App =====
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // ===== DOM helpers =====
-    const $ = (id) => document.getElementById(id);
-    function ms(v){ if(v==null) return 0; if(typeof v==="object"&&typeof v.toMillis==="function") return v.toMillis(); const n=Number(v); return Number.isFinite(n)?n:0; }
-    function setText(id,v){ const el=$(id); if(el) el.textContent=v; }
-    function setStyle(id,p,v){ const el=$(id); if(el&&el.style) el.style[p]=v; }
-
-    // ===== State =====
-    const username = "Player-" + Math.floor(Math.random()*10000);
-    let currentLobby = null, playerRef = null, isHost = false;
-    let currentStart = null, currentTarget = null;
-    let lastMovieCast = []; let timerInterval = null, graceInterval = null;
-    window._scheduledNext = false; window._roundEndInterval = null;
-
-    // ===== TMDB helpers =====
-    async function searchMovie(title){
-      const r = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
-      const d = await r.json(); return d.results || [];
-    }
-    async function getMovieCast(id){
-      const r = await fetch(`https://api.themoviedb.org/3/movie/${id}/credits?api_key=${TMDB_API_KEY}`);
-      const d = await r.json(); return d.cast || [];
-    }
-    async function searchPersonByName(name){
-      const r = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(name)}&include_adult=false`);
-      const d = await r.json(); return (d.results && d.results[0]) ? d.results[0] : null;
-    }
-    async function pickActorByName(name){
-      const p = await searchPersonByName(name);
-      return p ? { id: p.id, name: p.name, profile_path: p.profile_path || "" } : { id:null, name, profile_path:"" };
-    }
-    async function pickRandomHydratedActor(){
-      const name = ACTOR_POOL[Math.floor(Math.random()*ACTOR_POOL.length)];
-      return pickActorByName(name);
-    }
-    async function pickAndHydrateActors(){
-      let a1 = await pickRandomHydratedActor();
-      let a2 = await pickRandomHydratedActor();
-      while (a1.id && a2.id && a1.id === a2.id) a2 = await pickRandomHydratedActor();
-      return { startActor:a1, endActor:a2 };
-    }
-    function setActorsOnUI(a1,a2){
-      const i1 = $('actor1Img'), i2 = $('actor2Img');
-      if (i1) i1.src = a1?.profile_path ? IMG + a1.profile_path : "";
-      if (i2) i2.src = a2?.profile_path ? IMG + a2.profile_path : "";
-      setText('actor1', a1?.name || '—'); setText('actor2', a2?.name || '—');
-    }
-
-    // ===== Round timers =====
-    function startRoundCountdown(endTime){
-      if (timerInterval) clearInterval(timerInterval);
-      setStyle('roundTimer','color','#111');
-      timerInterval = setInterval(()=>{
-        const rem = Math.max(0, Math.ceil((endTime - Date.now())/1000));
-        const m = String(Math.floor(rem/60)).padStart(2,'0');
-        const s = String(rem%60).padStart(2,'0');
-        setText('roundTimer', `${m}:${s}`);
-        if (rem<=0){ clearInterval(timerInterval); setText('roundTimer','00:00'); }
-      }, 500);
-    }
-    function startGraceCountdown(endTime){
-      if (timerInterval) clearInterval(timerInterval);
-      if (graceInterval) clearInterval(graceInterval);
-      setStyle('roundTimer','color','red');
-      graceInterval = setInterval(()=>{
-        const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
-        setText('roundTimer', `00:${String(secs).padStart(2,'0')}`);
-        if (secs<=0){ clearInterval(graceInterval); setText('roundTimer','00:00'); }
-      }, 500);
-    }
-
-    // ===== Validation =====
-    async function validateMovieGuess(title, isFirst){
-      const results = await searchMovie(title);
-      if (!results.length) return { valid:false, reason:"Movie not found" };
-      const movie = results[0];
-      const cast = await getMovieCast(movie.id);
-
-      if (isFirst){
-        const ok = cast.some(a => a.name === (currentStart?.name));
-        if (!ok) return { valid:false, reason:"Must include start actor" };
-      } else {
-        const overlap = cast.some(a => lastMovieCast.some(b => b.id === a.id));
-        if (!overlap) return { valid:false, reason:"Must connect with previous movie" };
-      }
-      lastMovieCast = cast;
-      const reachedTarget = cast.some(a => a.name === (currentTarget?.name));
-      return { valid:true, reachedTarget, movieTitle: movie.title };
-    }
-
-    // ===== Utility =====
-    async function resetAllPlayerSteps(lobbyId){
-      const ps = await getDocs(collection(db,'lobbies',lobbyId,'players'));
-      await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',lobbyId,'players',d.id), { steps:0 })));
-    }
-    function setMyStepsBadge(n){ setText('stepNum', String(n)); }
-
-    // ===== Lobby flow =====
-    async function joinLobby(){
-      setText('overlayTitle','Joining Lobby…'); setText('overlayMsg',`Hello ${username}, searching…`);
-      const snaps = await getDocs(collection(db,'lobbies'));
-      let chosen = null;
-      for (const s of snaps.docs){
-        const d = s.data();
-        if (["waiting","countdown"].includes(d.status)){
-          const ps = await getDocs(collection(db,'lobbies',s.id,'players'));
-          if (ps.size < 4 && ps.size > 0){ chosen = s; break; }
-        }
-      }
-      if (chosen){
-        currentLobby = chosen.id;
-        playerRef = doc(db,'lobbies',currentLobby,'players',username);
-        await setDoc(playerRef, { name:username, steps:0, score:0 });
-        watchLobby();
-      } else {
-        const ref = await addDoc(collection(db,'lobbies'), { status:'waiting', createdAt:Date.now(), round:0 });
-        currentLobby = ref.id;
-        playerRef = doc(db,'lobbies',currentLobby,'players',username);
-        await setDoc(playerRef, { name:username, steps:0, score:0 });
-        watchLobby();
-      }
-    }
-
-    function watchLobby(){
-      const lobbyRef = doc(db,'lobbies',currentLobby);
-
-      onSnapshot(lobbyRef, async (snap)=>{
-        if (!snap.exists()) return;
-        const data = snap.data();
-
-        // Clear max-round watcher when not playing
-        if (data.status !== 'playing' && window._roundEndInterval){
-          clearInterval(window._roundEndInterval); window._roundEndInterval=null;
-        }
-
-        // COUNTDOWN
-        if (data.status === 'countdown' && data.countdownEndsAt){
-          window._scheduledNext=false;
-          $('overlay').classList.add('visible');
-          $('scoreboardPopup').classList.remove('visible');
-          startCountdown(ms(data.countdownEndsAt));
-        }
-
-        // PLAYING
-        if (data.status === 'playing'){
-          window._scheduledNext=false;
-          $('overlay').classList.remove('visible');
-          $('scoreboardPopup').classList.remove('visible');
-          $('gameArea')?.classList.add('visible-game');
-
-          // Round pill
-          setText('roundPillNum', data.round || 1);
-
-          currentStart = data.startActor; currentTarget = data.endActor;
-          setActorsOnUI(currentStart, currentTarget);
-          $('guessLog').innerHTML = "";
-          lastMovieCast = [];
-
-          const endMs = ms(data.roundEndsAt) || (ms(data.startTime) + ROUND_MS);
-          startRoundCountdown(endMs);
-
-          // host: auto end when timer hits 0 → scoreboard immediately
-          if (isHost && endMs){
-            if (window._roundEndInterval) clearInterval(window._roundEndInterval);
-            window._roundEndInterval = setInterval(async ()=>{
-              if (Date.now() > endMs){
-                clearInterval(window._roundEndInterval); window._roundEndInterval=null;
-                const latest = await getDoc(lobbyRef);
-                if (latest.exists() && latest.data().status === 'playing'){
-                  await updateDoc(lobbyRef, { status:'postRound', postRoundEndsAt: Date.now()+10000 });
-                }
-              }
-            }, 500);
-          }
-        }
-
-        // GRACE (10s), then scoreboard
-        if (data.status === 'grace'){
-          if (window._roundEndInterval){ clearInterval(window._roundEndInterval); window._roundEndInterval=null; }
-          startGraceCountdown(data.graceEndsAt);
-          if (isHost && data.graceEndsAt){
-            const t = setInterval(async ()=>{
-              if (Date.now() > data.graceEndsAt){
-                clearInterval(t);
-                await updateDoc(lobbyRef, { status:'postRound', postRoundEndsAt: Date.now()+10000 });
-              }
-            }, 500);
-          }
-        }
-
-        // POST-ROUND
-        if (data.status === 'postRound'){
-          $('gameArea')?.classList.remove('visible-game');
-          $('overlay').classList.remove('visible');
-          $('scoreboardPopup').classList.add('visible');
-
-          if (data.round >= 3){
-            await showFinalScores();
-            if (isHost) await updateDoc(lobbyRef, { status:'final' });
-          } else {
-            const endMs = ms(data.postRoundEndsAt);
-            await showScoreboard(endMs);
-
-            if (isHost && endMs){
-              const msLeft = Math.max(0, endMs - Date.now());
-              if (!window._scheduledNext){
-                window._scheduledNext = true;
-                setTimeout(async ()=>{
-                  const snap2 = await getDoc(lobbyRef);
-                  const d2 = snap2.data();
-                  if (d2.round < 3){
-                    const nextRound = d2.round + 1;
-                    await resetAllPlayerSteps(currentLobby);
-                    const actors = await pickAndHydrateActors();
-                    await updateDoc(lobbyRef, {
-                      status:'playing',
-                      round: nextRound,
-                      startTime: Date.now(),
-                      roundEndsAt: Date.now() + ROUND_MS,
-                      winner:"",
-                      winnerPoints:0,
-                      finishers:[],
-                      ...actors
-                    });
-                  }
-                  window._scheduledNext=false;
-                }, msLeft || 100);
-              }
-            }
-          }
-        }
-
-        // FINAL — winner + replay for everyone
-        if (data.status === 'final'){
-          $('gameArea')?.classList.remove('visible-game');
-          $('overlay').classList.remove('visible');
-          $('scoreboardPopup').classList.add('visible');
-          await showFinalScores();
-          window._scheduledNext=false;
-        }
-      });
-
-      // players list + host detection + badges
-      const playersRef = collection(db,'lobbies',currentLobby,'players');
-      onSnapshot(playersRef, async (ps)=>{
-        const names=[]; ps.forEach(d=>names.push(d.id)); names.sort();
-        isHost = (names[0] === username);
-
-        const ul=$('players'); ul.innerHTML="";
-        let mySteps = 0;
-        ps.forEach(d=>{
-          const p=d.data();
-          const isMe = p.name === username;
-          if (isMe) mySteps = p.steps || 0;
-
-          const nameHtml = `<span class="name-pill">${p.name}</span>`;
-          const li=document.createElement('li');
-          li.innerHTML = `
-            ${isMe ? '<strong>'+nameHtml+'</strong>' : nameHtml}
-            <span class="counter-circle counter-sm">${p.steps||0}</span>
-            <span class="points-pill">${p.score||0} pts</span>`;
-          if (isMe) li.classList.add('me');    // show a single bullet only for yourself
-          ul.appendChild(li);
-        });
-        setMyStepsBadge(mySteps);
-
-        // start first round when ready
-        if (isHost && ps.size >= 2){
-          const lobbyRef = doc(db,'lobbies',currentLobby);
-          const lobbySnap = await getDoc(lobbyRef);
-          const data = lobbySnap.data();
-          if (data.status === 'waiting'){
-            setText('overlayTitle','Get Ready…'); setText('overlayMsg','Round starts soon');
-            await updateDoc(lobbyRef, {
-              status:'countdown',
-              countdownEndsAt: Date.now() + 10000,
-              round: 1,
-              ...(await pickAndHydrateActors())
-            });
-          }
-        }
-
-        // cleanup empty lobby
-        if (ps.size===0){
-          const lobbyRef = doc(db,'lobbies',currentLobby);
-          await deleteDoc(lobbyRef);
-        }
-      });
-    }
-
-    // lobby countdown
-    function startCountdown(endTime){
-      const iv = setInterval(async ()=>{
-        const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
-        setText('countdown', secs);
-        if (secs<=0){
-          clearInterval(iv);
-          setText('countdown','');
-          $('overlay').classList.remove('visible');
-          if (isHost){
-            const lobbyRef = doc(db,'lobbies',currentLobby);
-            const snap = await getDoc(lobbyRef);
-            const curRound = (snap.data()?.round)||1;
-            await resetAllPlayerSteps(currentLobby);
-            const actors = await pickAndHydrateActors();
-            await updateDoc(lobbyRef,{
-              status:'playing',
-              round: curRound,
-              startTime: Date.now(),
-              roundEndsAt: Date.now() + ROUND_MS,
-              ...actors
-            });
-          }
-        }
-      }, 200);
-    }
-
-    // scoreboard render (inter-round)
-    async function showScoreboard(endTime){
-      const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
-      const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
-      $('scoreList').innerHTML = arr.map((p,i)=>{
-        const name = p.name === username ? `<strong><span class="name-pill">${p.name}</span></strong>` : `<span class="name-pill">${p.name}</span>`;
-        return `<li><strong>${i+1}.</strong> ${name} <span class="points-pill">${p.score||0} pts</span></li>`;
-      }).join('');
-      $('winnerLine').style.display='none';
-      $('playAgainBtn').style.display='none';
-      setText('scoreboardTitle','Round Over');
-
-      const iv = setInterval(()=>{
-        const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
-        setText('scoreCountdown', `Next round in ${secs}s`);
-        if (secs<=0) clearInterval(iv);
-      }, 500);
-    }
-
-    // final scoreboard
-    async function showFinalScores(){
-      const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
-      const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
-      $('scoreList').innerHTML = arr.map((p,i)=>{
-        const name = p.name === username ? `<strong><span class="name-pill">${p.name}</span></strong>` : `<span class="name-pill">${p.name}</span>`;
-        return `<li><strong>${i+1}.</strong> ${name} <span class="points-pill">${p.score||0} pts</span></li>`;
-      }).join('');
-
-      const winner = arr[0];
-      const youWon = winner && (winner.name === username);
-      setText('scoreboardTitle', youWon ? 'Nice!' : 'Unlucky!');
-      if (winner){
-        const line = `🏆 Winner: ${winner.name} — ${winner.score||0} pts`;
-        $('winnerLine').style.display='block';
-        setText('winnerLine', line);
-      }
-      setText('scoreCountdown','🏁 Game Over (3 rounds)');
-      $('playAgainBtn').style.display = 'inline-block'; // everyone can replay
-    }
-
-    // teardown
-    window.addEventListener('beforeunload', async ()=>{ if (playerRef) await deleteDoc(playerRef); });
-
-    // submit guess
-    $('submitGuess').addEventListener('click', async ()=>{
-      const guess = $('guessInput').value.trim(); if (!guess) return;
-      const snap = await getDoc(playerRef); const me = snap.data();
-      const isFirst = (me.steps||0)===0;
-      const result = await validateMovieGuess(guess, isFirst);
-      if (!result.valid){ alert("❌ "+result.reason); return; }
-
-      const newSteps = (me.steps||0)+1; await updateDoc(playerRef,{ steps:newSteps });
-      setMyStepsBadge(newSteps);
-
-      const li = document.createElement('li');
-      // Colour to match other game: first = blue, middle = orange; final turns green
-      li.className = isFirst ? 'blue' : 'orange';
-      li.textContent = result.movieTitle;
-      $('guessLog').appendChild(li);
-
-      const lobbyRef = doc(db,'lobbies',currentLobby);
-      const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
-
-      if (result.reachedTarget){
-        li.className = 'green'; // winner stays green with white text
-        const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime)/1000);
-        const pts = Math.max(10, 100 - newSteps*10 - Math.floor(elapsedSecs/10));
-        const newScore = (me.score||0) + pts; await updateDoc(playerRef,{ score:newScore });
-
-        let finishers = lobbyData.finishers || [];
-        if (!finishers.find(f=>f.name===username)) finishers.push({ name:username, points:pts });
-
-        // instant win at 200+
-        if (newScore >= 200){
-          await updateDoc(lobbyRef, { winner: username, winnerPoints: newScore, finishers, status:'final' });
-          return;
-        }
-
-        if (!lobbyData.winner){
-          await updateDoc(lobbyRef, {
-            winner: username,
-            winnerPoints: pts,
-            finishers,
-            status:'grace',
-            graceEndsAt: Date.now()+10000
-          });
-        } else {
-          await updateDoc(lobbyRef, { finishers });
-        }
-      }
-
-      $('guessInput').value=""; $('suggestions').style.display='none';
-    });
-
-    // RESET chain (like other game)
-    $('resetChain').addEventListener('click', async ()=>{
-      $('guessLog').innerHTML = "";
-      lastMovieCast = [];
-      try {
-        if (playerRef) {
-          await updateDoc(playerRef, { steps: 0 });
-          setMyStepsBadge(0);
-        }
-      } catch (e) {
-        console.warn('Reset failed:', e);
-      }
-    });
-
-    // autocomplete
-    $('guessInput').addEventListener('input', async (e)=>{
-      const q = e.target.value.trim(); const box = $('suggestions'); box.innerHTML="";
-      if (q.length < 2){ box.style.display='none'; return; }
-      const results = await searchMovie(q);
-      results.slice(0,5).forEach(m=>{
-        const div=document.createElement('div');
-        div.textContent=m.title;
-        div.onclick=()=>{ $('guessInput').value=m.title; box.style.display='none'; };
-        box.appendChild(div);
-      });
-      box.style.display = results.length?'block':'none';
-    });
-
-    // play again — anyone can trigger
-    $('playAgainBtn').addEventListener('click', async ()=>{
-      const lobbyRef = doc(db,'lobbies',currentLobby);
-      $('playAgainBtn').disabled = true;
-      const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
-      await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',currentLobby,'players',d.id), { score:0, steps:0 })));
-      const actors = await pickAndHydrateActors();
-      await updateDoc(lobbyRef, {
-        status:'countdown',
-        countdownEndsAt: Date.now()+10000,
-        round:1,
-        winner:"",
-        winnerPoints:0,
-        finishers:[],
-        ...actors
-      });
-      $('playAgainBtn').disabled = false;
-      $('playAgainBtn').style.display='none';
-      setText('scoreboardTitle','Round Over');
-    });
-
-    // go!
-    joinLobby();
-  </script>
+  <script src="multiplayer.js?v=alpha7"></script>
 </body>
 </html>
