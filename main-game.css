@@ -317,3 +317,49 @@ body {
   border-radius: 999px;
   padding: 4px 10px;
 }
+/* ---------- End Popup Enhancements ---------- */
+#popup .page-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  margin-bottom: 10px;
+}
+
+.popup-movie {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.popup-stats {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.mini-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.popup-poster {
+  width: 160px;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+
+.share-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+}

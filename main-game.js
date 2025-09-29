@@ -234,18 +234,27 @@ function endGame(win) {
   ended = true;
   stopTimer();
   els.movieInput.disabled = true;
-  els.submitBtn.disabled = false; 
-  els.hintSkipBtn.disabled = false; 
-  if (win) {
-    lastPopupTitle = "You got it! 🎉";
-    lastPopupMsg = `The movie was <strong>${targetMovie.title}</strong>. You solved it in <strong>${6 - triesLeft}</strong> tries and <strong>${formatTime(seconds)}</strong>.`;
-  } else {
-    lastPopupTitle = "Out of tries!";
-    lastPopupMsg = `The correct movie was <strong>${targetMovie.title}</strong>.`;
-  }
-  showPopup(lastPopupTitle, lastPopupMsg);
+
+  // Build popup content
+  const title = win ? "Nice" : "Better Luck Next Time!";
+  const movieTitle = targetMovie.title;
+  const year = targetMovie.release_date ? targetMovie.release_date.slice(0,4) : "—";
+  const tries = 6 - triesLeft;
+  const timeTaken = formatTime(seconds);
+  const points = win ? 100 : 0;
+  const posterUrl = targetMovie.poster_path ? IMAGE_URL + targetMovie.poster_path : "";
+
+  document.getElementById("popupTitle").textContent = title;
+  document.getElementById("popupMovie").textContent = `${movieTitle} | ${year}`;
+  document.getElementById("popupTries").textContent = tries;
+  document.getElementById("popupTime").textContent = timeTaken;
+  document.getElementById("popupPoints").textContent = `${points} pts`;
+  if (posterUrl) document.getElementById("popupPoster").src = posterUrl;
+
+  els.popup.style.display = "block";
   saveDailyState();
 }
+
 function consumeTry() {
   triesLeft--;
   updateCounter();
@@ -373,3 +382,16 @@ els.movieInput.addEventListener("blur", () => {
     suggestionsBox.innerHTML = "";
   }, 200);
 });
+function shareResult() {
+  const dateStr = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit", month: "2-digit", year: "2-digit"
+  });
+  const tries = document.getElementById("popupTries").textContent;
+  const time = document.getElementById("popupTime").textContent;
+  const points = document.getElementById("popupPoints").textContent;
+
+  const text = `Movie.Link ${dateStr} | Tries: ${tries} | Time: ${time} | ${points}`;
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Result copied to clipboard!");
+  });
+}
