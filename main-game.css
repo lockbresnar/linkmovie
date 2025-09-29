@@ -1,36 +1,33 @@
-:root {
-  --bg: #f4f4f4;
-  --black: #161616;
-  --grey: #cdcdcd;
-  --blue: #4fa7ff;
-  --orange: #fa8b48;
-  --green: #4edd00;
-  --red: #e53935;
-}
-
-* {
-  box-sizing: border-box;
-}
+/* ===================== */
+/*  Main Game Styles     */
+/* ===================== */
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--black);
-  font-family: Arial, sans-serif;
+  font-family: "Inter", sans-serif;
+  background: #111;
+  color: #fff;
+  text-align: center;
 }
 
-/* ---------------- Header ---------------- */
 .topbar {
-  background: #000;
-  padding: 10px 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   position: relative;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logo {
-  height: 40px;
+  height: 36px;
+}
+
+.topbar-left {
+  position: absolute;
+  left: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 
 .topbar-right {
@@ -44,213 +41,170 @@ body {
 .nav-link {
   color: #fff;
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 600;
+}
+
+.nav-link.active {
+  border: 2px solid #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
 }
 
 .help-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
   cursor: pointer;
 }
 
-/* ---------------- Stats ---------------- */
 .stats {
+  margin-top: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 18px;
-  margin: 18px 0 8px;
-}
-
-.condensed {
-  font-family: "Helvetica Neue", "Arial Narrow", Arial, sans-serif;
-  letter-spacing: -0.05em;
+  gap: 20px;
 }
 
 .page-title {
-  margin: 0;
-  font-weight: 800;
   font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
 }
 
 .counter-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  background: var(--green);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--green, #4caf50);
   color: #fff;
   display: grid;
   place-items: center;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 18px;
 }
 
 .timer {
-  font-weight: 800;
-  font-size: 22px;
+  font-size: 20px;
+  font-weight: 600;
 }
 
-/* ---------------- Layout ---------------- */
 .layout {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 0 16px;
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 40px;
-}
-
-.left-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.right-col {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-/* ---------------- Actors ---------------- */
-.actors-row {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 60px;
-  margin: 12px 0 8px;
+  gap: 40px;
+  margin-top: 30px;
+}
+
+.left-col,
+.right-col {
+  flex: 1;
+  max-width: 400px;
+}
+
+.actors-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.actor-card {
+  text-align: center;
 }
 
 .actor-card img {
-  width: 180px;
-  border-radius: 16px;
-  object-fit: cover;
+  width: 100px;
+  border-radius: 12px;
+  margin-bottom: 6px;
 }
 
 .actor-name {
-  margin: 8px 0 0;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-/* ---------------- Controls ---------------- */
 .controls {
-  width: 100%;
-  max-width: 520px;
+  margin-top: 20px;
 }
 
-.controls input {
+#movieInput {
   width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
   font-size: 16px;
+  margin-bottom: 10px;
 }
 
 .suggestions {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  margin-top: 8px;
-  max-height: 220px;
-  overflow: auto;
-}
-
-.suggestions div {
-  padding: 8px 10px;
-  cursor: pointer;
-}
-
-.suggestions div:hover {
-  background: #eee;
+  margin-bottom: 10px;
 }
 
 .button-row {
-  margin-top: 10px;
   display: flex;
   gap: 10px;
   justify-content: center;
 }
 
-/* ---------------- Buttons ---------------- */
 .btn {
+  padding: 8px 14px;
+  border-radius: 8px;
   border: none;
-  border-radius: 999px;
-  padding: 12px 28px;
-  color: #fff;
   cursor: pointer;
-  font-family: "Helvetica Neue", Arial, sans-serif;
   font-weight: 600;
-  font-size: 16px;
 }
 
 .btn-submit {
-  background: var(--orange);
-}
-
-.btn-red {
-  background: var(--red);
+  background: var(--green, #4caf50);
+  color: #fff;
 }
 
 .btn-blue {
-  background: var(--blue);
+  background: #2196f3;
+  color: #fff;
 }
 
-/* ---------------- Guesses (Chain) ---------------- */
+.btn-red {
+  background: #f44336;
+  color: #fff;
+}
+
 .chain-box {
-  background: var(--grey);
+  background: #222;
+  padding: 12px;
   border-radius: 12px;
-  padding: 12px 14px;
+  text-align: left;
 }
 
 .chain-box h3 {
-  margin: 6px 0 10px;
+  margin-top: 0;
 }
 
 #chainList {
   list-style: none;
-  margin: 0;
   padding: 0;
+  margin: 0;
 }
 
 #chainList li {
-  margin: 8px 0;
-  padding: 8px 14px;
-  border-radius: 999px;
+  margin: 6px 0;
+}
+
+.status {
+  margin-top: 12px;
   font-weight: 600;
 }
 
-#chainList li.grey {
-  background: #ddd;
-}
-
-#chainList li.blue {
-  background: var(--blue);
-  color: #fff;
-}
-
-#chainList li.orange {
-  background: var(--orange);
-  color: #fff;
-}
-
-#chainList li.green {
-  background: var(--green);
-  color: #fff;
-}
-
-/* Status under guesses */
-.status {
-  min-height: 22px;
-}
-
-/* ---------------- Overlays / Popups ---------------- */
+/* Overlays */
 .overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.6);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
   display: none;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 10;
 }
 
 .overlay.visible {
@@ -258,62 +212,96 @@ body {
 }
 
 .overlay-card {
-  background: #fff;
-  border: 2px solid #444;
-  border-radius: 10px;
-  width: 320px;
+  background: #222;
   padding: 20px;
+  border-radius: 12px;
   text-align: center;
+  max-width: 400px;
 }
 
 .popup {
   display: none;
   position: fixed;
-  top: 50%;
+  top: 20%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: #fff;
-  border: 2px solid #444;
-  border-radius: 10px;
-  width: 320px;
-  padding: 16px;
-  z-index: 1000;
+  transform: translateX(-50%);
+  background: #222;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  z-index: 20;
+  max-width: 400px;
 }
 
 .popup-close {
   position: absolute;
-  top: 6px;
-  right: 8px;
+  top: 8px;
+  right: 12px;
+  background: none;
   border: none;
-  background: transparent;
+  color: #fff;
   font-size: 18px;
   cursor: pointer;
 }
 
-/* ---------------- Footer ---------------- */
 .footer {
-  margin: 28px 0;
+  margin-top: 40px;
   font-size: 12px;
-  color: #555;
-  text-align: center;
+  opacity: 0.6;
 }
 
-.footer img {
-  display: block;
-  margin: 8px auto 0;
+/* ===================== */
+/* New Popup Enhancements */
+/* ===================== */
+
+/* Title styled same as main title */
+#popup .page-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  margin-bottom: 10px;
 }
-/* Left-aligned nav for topbar */
-.topbar-left {
-  position: absolute;
-  left: 20px;
+
+/* Movie title + year */
+.popup-movie {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Stats row */
+.popup-stats {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
 }
 
-/* Active pill outline */
-.nav-link.active {
-  border: 2px solid #fff;
-  border-radius: 999px;
-  padding: 4px 10px;
+/* Smaller counter circle */
+.mini-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--green, #4caf50);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Poster */
+.popup-poster {
+  width: 160px;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+
+/* Share button */
+.share-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
 }
