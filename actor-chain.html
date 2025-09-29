@@ -8,16 +8,20 @@
 <body>
   <!-- Header -->
   <header class="topbar">
+  <div class="topbar-left">
     <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
-    <nav class="topbar-right">
-      <a href="index.html" class="nav-link">Main Game</a>
-      <!-- ✅ Added links -->
-      <a href="actor-chain.html" id="dailyLink" class="nav-link">Daily</a>
-      <a href="actor-chain.html" id="infiniteLink" class="nav-link">Infinite</a>
-      <!-- End added links -->
-      <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
+    <nav class="nav-group">
+      <a href="index.html" class="nav-pill">Link Movie</a>
+      <a href="actor-chain.html" class="nav-pill is-active">Actor Chain</a>
+      <a href="multiplayer.html" class="nav-pill">Multiplayer</a>
     </nav>
-  </header>
+  </div>
+  <nav class="topbar-right nav-group">
+    <a href="actor-chain.html?mode=daily" id="dailyLink" class="nav-pill">Daily</a>
+    <a href="actor-chain.html?mode=infinite" id="infiniteLink" class="nav-pill">Infinite</a>
+    <img src="assets/help-icon.svg" alt="Help" class="help-icon" onclick="openHelp()" />
+  </nav>
+</header>
 
   <!-- Stats -->
   <div class="stats">
@@ -42,60 +46,56 @@
       </div>
 
       <div class="controls">
-        <input id="movieInput" placeholder="Enter a movie..." />
+        <input id="guessInput" placeholder="Enter a movie..." autocomplete="off" />
         <div id="suggestions" class="suggestions"></div>
         <div class="button-row">
-          <button class="btn btn-submit">Submit</button>
-          <button class="btn btn-red">Reset</button>
+          <button id="submitGuess" class="btn btn-submit">Submit</button>
+          <button id="resetChain" class="btn btn-red">Reset</button>
         </div>
+        <p id="status" class="status"></p>
       </div>
     </div>
 
-    <!-- RIGHT: chain -->
+    <!-- RIGHT: chain + modes -->
     <aside class="right-col">
       <div class="chain-box">
-        <h3>Current Chain:</h3>
-        <ul id="chainList"></ul>
+        <h3>Current Chain</h3>
+        <ul id="guessLog"></ul>
       </div>
-      <p id="status" class="status"></p>
+
+      <div class="chain-box" style="margin-top:12px;">
+        <h3>Players</h3>
+        <ul id="players"></ul>
+      </div>
     </aside>
   </div>
 
-  <!-- Intro overlay -->
-  <div id="introOverlay" class="overlay visible">
+  <!-- Overlay -->
+  <div id="overlay" class="overlay">
     <div class="overlay-card">
-      <h2>🎬 Actor Chain Challenge</h2>
-      <p>Connect the two actors through movies. Press Start to begin.</p>
-      <button class="btn btn-submit" onclick="startGame()">Start</button>
+      <button class="popup-close" onclick="closeOverlay()">✕</button>
+      <h2>How it works</h2>
+      <p>Connect movies by shared actors to reach the target actor.</p>
     </div>
   </div>
 
-  <!-- Popups -->
-  <div id="popup" class="popup">
-    <button class="popup-close" onclick="closePopup()">✕</button>
-    <h2 id="popupTitle"></h2>
-    <p id="popupMsg"></p>
-  </div>
-
-  <div id="helpPopup" class="popup">
-    <button class="popup-close" onclick="closeHelp()">✕</button>
-    <h2>How to Play</h2>
-    <p>
-      1) First movie must include the start actor (blue).<br/>
-      2) Each next movie must share any actor with the previous accepted movie (follows the chain).<br/>
-      3) If it also includes the target actor, you win (green).<br/>
-      4) If it follows the chain but has neither start nor target actor, it’s orange.<br/>
-      5) Wrong guesses (no link) are grey and don’t increment the counter.
-    </p>
-  </div>
-
-  <!-- Footer -->
   <footer class="footer">
     This product uses the TMDb API but is not endorsed or certified by TMDb.<br/>
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <script src="actors.js?v=alpha1"></script>
   <script src="actor-chain.js?v=alpha1"></script>
+
+<script>
+(function () {
+  const p = new URLSearchParams(location.search);
+  const m = p.get('mode');
+  const d = document.getElementById('dailyLink');
+  const i = document.getElementById('infiniteLink');
+  if (m === 'daily' && d) d.classList.add('is-active');
+  else if (m === 'infinite' && i) i.classList.add('is-active');
+})();
+</script>
+
 </body>
 </html>
