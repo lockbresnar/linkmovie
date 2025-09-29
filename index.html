@@ -76,29 +76,13 @@
     </div>
   </div>
 
-  <!-- Enhanced Win / Fail popup -->
+  <!-- Popups -->
   <div id="popup" class="popup">
     <button class="popup-close" onclick="closePopup()">✕</button>
-
-    <!-- Title -->
-    <h2 id="popupTitle" class="page-title condensed"></h2>
-
-    <!-- Correct Movie -->
-    <p id="popupMovie" class="popup-movie"></p>
-
-    <!-- Stats row -->
-    <div class="popup-stats">
-      <div class="mini-circle" id="popupTries">0</div>
-      <span id="popupTime">00:00</span>
-      <span id="popupPoints">0 pts</span>
-      <button class="share-btn" onclick="shareResult()">🔗</button>
-    </div>
-
-    <!-- Poster -->
-    <img id="popupPoster" class="popup-poster" alt="Movie Poster" />
+    <h2 id="popupTitle"></h2>
+    <p id="popupMsg"></p>
   </div>
 
-  <!-- Help popup -->
   <div id="helpPopup" class="popup">
     <button class="popup-close" onclick="closeHelp()">✕</button>
     <h2>How to Play</h2>
