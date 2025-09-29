@@ -302,3 +302,18 @@ body {
   display: block;
   margin: 8px auto 0;
 }
+/* Left-aligned nav for topbar */
+.topbar-left {
+  position: absolute;
+  left: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+/* Active pill outline */
+.nav-link.active {
+  border: 2px solid #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
