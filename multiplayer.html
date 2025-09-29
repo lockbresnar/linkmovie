@@ -2,127 +2,117 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LinkMovie Multiplayer</title>
+  <title>LinkMovie — Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, Arial, sans-serif; text-align:center; margin: 40px; }
-    #countdown { font-size: 48px; margin: 20px 0; }
-    #gameArea { display:none; }
-    ul { list-style:none; padding:0; }
-    li { margin:4px 0; }
-    #overlay, #scoreboardPopup {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.85); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1000;
-    }
-    #scoreboardPopup { display:none; }
-    .popup {
-      background: #111; padding: 20px; border-radius: 10px; width: 360px;
-      border: 2px solid #fff;
-    }
-    .small { font-size: 12px; color: #ddd; margin-top:8px; }
-    .btn {
-      display:inline-block; margin: 6px 4px; padding: 10px 16px; border-radius: 999px;
-      border: none; cursor: pointer; font-weight: 700; color: #fff;
-    }
-    .btn-blue { background:#4fa7ff; }
-    .btn-red { background:#e53935; }
-    .btn-green { background:#2ea44f; }
-    .row { display:flex; gap:18px; justify-content:center; align-items:stretch; margin: 14px 0; }
-    .card {
-      background:#f9f9f9; border:1px solid #ddd; border-radius: 12px; padding:12px 16px;
-      text-align:left; color:#111; min-width: 260px;
-    }
-    .actors { display:flex; gap:14px; justify-content:center; align-items:center; }
-    .actors .a { width: 120px; }
-    .actors img { width:100%; border-radius: 10px; border: 2px solid #ddd; background:#f1f1f1; }
-    .timer { font-weight: 800; margin-top: 6px; }
-    .steps { display:inline-grid; place-items:center; width:36px; height:36px; border-radius:999px; background:#4edd00; color:#fff; font-weight:800;}
-    .players li { display:flex; justify-content:space-between; align-items:center; }
-    .points { background:#edcf07; color:#222121; padding:3px 8px; border-radius:999px; font-weight:800; }
-    #guessLog li { padding:8px 14px; border-radius:999px; font-weight:600; margin:6px 0; }
-    #guessLog li.blue { background:#4fa7ff; color:#fff; }
-    #guessLog li.orange { background:#fa8b48; color:#fff; }
-    #guessLog li.green { background:#4edd00; color:#fff; }
-  </style>
+  <link rel="stylesheet" href="styles.css?v=alpha7" />
+  <link rel="stylesheet" href="multiplayer.css?v=alpha7" />
 </head>
 <body>
   <!-- Header -->
   <header class="topbar">
-  <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
-  <nav class="topbar-right">
-    <!-- Game group (right) -->
-    <a href="index.html" class="nav-pill">Link Movie</a>
-    <a href="actor-chain.html" class="nav-pill">Link Actor</a>
-    <a href="multiplayer.html" class="nav-pill is-active">Multiplayer</a>
+    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+    <nav class="topbar-right">
+      <a href="index.html" class="nav-link">Main Game</a>
+      <a href="actor-chain.html" class="nav-link">Actor Chain</a>
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon"
+           onclick="document.getElementById('mpHelp').classList.add('visible')" />
+    </nav>
+  </header>
 
-    <img src="assets/help-icon.svg" alt="Help" class="help-icon"
-         onclick="document.getElementById('mpHelp')?.classList.add('visible')" />
-  </nav>
-</header>
-
-  <h1>Multiplayer</h1>
-
-  <div id="overlay">
-    <div class="popup">
-      <h2 id="overlayTitle">Joining Lobby…</h2>
-      <div id="countdown">—</div>
-      <div class="small" id="overlayMsg">Setting things up</div>
-    </div>
+  <!-- Stats (Steps badge) -->
+  <div class="stats">
+    <h1 class="page-title condensed">Multiplayer</h1>
+    <div class="counter-circle" id="stepBadge"><span id="stepNum">0</span></div>
+    <div class="timer condensed" id="roundTimer">03:00</div>
   </div>
 
-  <div id="scoreboardPopup">
-    <div class="popup">
-      <h2 id="scoreboardTitle">Round Over</h2>
-      <ul id="scoreList"></ul>
-      <div id="scoreCountdown" class="small">Next round starts shortly…</div>
-      <p id="winnerLine" style="display:none; font-weight:800; margin-top:8px;"></p>
-      <button id="playAgainBtn" class="btn btn-blue" style="display:none;">🔁 Play Again</button>
-    </div>
-  </div>
-
-  <div id="gameArea">
-    <div class="row">
-      <div class="card" style="text-align:center">
-        <div class="actors">
-          <div class="a">
-            <img id="actor1Img" alt="Start Actor">
-            <div id="actor1" style="font-weight:800; margin-top:6px;">—</div>
-          </div>
-          <div class="a">
-            <img id="actor2Img" alt="Target Actor">
-            <div id="actor2" style="font-weight:800; margin-top:6px;">—</div>
-          </div>
+  <!-- Layout -->
+  <div class="layout">
+    <div class="left-col">
+      <div class="actors-row">
+        <div class="actor-card">
+          <img id="actor1Img" alt="Start Actor" />
+          <p id="actor1" class="actor-name"></p>
         </div>
-        <div class="timer" id="roundTimer">03:00</div>
+        <div class="actor-card">
+          <img id="actor2Img" alt="Target Actor" />
+          <p id="actor2" class="actor-name"></p>
+        </div>
       </div>
 
-      <div class="card" style="min-width: 320px;">
-        <h3 style="margin:6px 0 10px;">Current Chain</h3>
+      <div class="controls">
+        <input id="guessInput" placeholder="Enter a movie..." autocomplete="off" />
+        <div id="suggestions" class="suggestions"></div>
+        <div class="button-row">
+          <button id="submitGuess" class="btn btn-submit">Submit</button>
+          <!-- Reset now matches other game style -->
+          <button id="resetChain" class="btn btn-red" title="Clear your current chain">Reset</button>
+        </div>
+        <p id="status" class="status"></p>
+      </div>
+    </div>
+
+    <aside class="right-col">
+      <div class="chain-box">
+        <h3>
+          Current Chain
+          <span class="round-sep">|</span>
+          <span id="roundPill" class="round-pill">Round <span id="roundPillNum">1</span></span>
+        </h3>
         <ul id="guessLog"></ul>
-        <input id="guessInput" placeholder="Enter a movie..." autocomplete="off" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:10px;">
-        <div id="suggestions" style="display:none; text-align:left; border:1px solid #eee; background:#fff; border-radius:10px; margin-top:6px;"></div>
-        <div style="margin-top:10px; text-align:center;">
-          <button id="submitGuess" class="btn btn-blue">Submit</button>
-          <button id="resetChain" class="btn btn-red">Reset</button>
-        </div>
-        <div id="status" style="min-height:20px; margin-top:6px;"></div>
       </div>
 
-      <div class="card" style="min-width: 280px;">
-        <h3 style="margin:6px 0 10px;">Players</h3>
-        <ul id="players" class="players"></ul>
+      <div class="chain-box" style="margin-top:12px;">
+        <h3>Players</h3>
+        <ul id="players"></ul>
       </div>
+    </aside>
+  </div>
+
+  <!-- Countdown overlay -->
+  <div id="overlay" class="overlay visible">
+    <div class="overlay-card">
+      <h2 id="overlayTitle">Joining Lobby…</h2>
+      <p id="overlayMsg">Setting things up</p>
+      <div id="countdown" class="mp-big-count">—</div>
     </div>
   </div>
 
-  <div id="mpHelp" style="display:none;"></div>
+  <!-- Scoreboard popup -->
+  <div id="scoreboardPopup" class="overlay">
+    <div class="overlay-card">
+      <!-- Title uses site title styling -->
+      <h2 id="scoreboardTitle" class="page-title condensed">Round Over</h2>
+      <ul id="scoreList" class="mp-score-list"></ul>
+      <p id="scoreCountdown" class="mp-muted">Next round starts shortly…</p>
+      <p id="winnerLine" class="mp-winner" style="display:none;"></p>
+      <button id="playAgainBtn" class="btn btn-submit" style="display:none;">🔁 Play Again</button>
+    </div>
+  </div>
 
-  <footer style="margin-top:30px; color:#666;">
+  <!-- Help -->
+  <div id="mpHelp" class="overlay">
+    <div class="overlay-card">
+      <button class="popup-close" onclick="document.getElementById('mpHelp').classList.remove('visible')">✕</button>
+      <h2>How it works</h2>
+      <p style="text-align:left">
+        • Join a lobby (up to 4 players).<br/>
+        • First movie must include the start actor.<br/>
+        • Each next movie must share any actor with the previous movie.<br/>
+        • Include the target actor to finish — others have 10s grace.<br/>
+        • Each round lasts up to 3 minutes; 3 rounds total.<br/>
+        • First to 200 points instantly wins.<br/>
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
     This product uses the TMDb API but is not endorsed or certified by TMDb.<br/>
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
+
+  <script src="actors.js?v=alpha7"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -131,6 +121,7 @@
       doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    // ===== Config / Constants =====
     const firebaseConfig = {
       apiKey: "AIzaSyCmRoskgYR0pjs4VIEtViohhLDcJUfk62Y",
       authDomain: "linkmovie-ef911.firebaseapp.com",
@@ -140,23 +131,28 @@
       appId: "1:523659305871:web:129810d281b5cf9b33a1fa",
       measurementId: "G-ZEW051T33S"
     };
+    const ROUND_MS = 3 * 60 * 1000; // 3 minutes
+    const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
+    const IMG = "https://image.tmdb.org/t/p/w200";
+
+    // ===== App =====
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const TMDB_API_KEY = "455bd5e0331130bf58534b98e8c2b901";
-    const IMG = "https://image.tmdb.org/t/p/w200";
-    const ROUND_MS = 3 * 60 * 1000;
-
+    // ===== DOM helpers =====
     const $ = (id) => document.getElementById(id);
+    function ms(v){ if(v==null) return 0; if(typeof v==="object"&&typeof v.toMillis==="function") return v.toMillis(); const n=Number(v); return Number.isFinite(n)?n:0; }
+    function setText(id,v){ const el=$(id); if(el) el.textContent=v; }
+    function setStyle(id,p,v){ const el=$(id); if(el&&el.style) el.style[p]=v; }
+
+    // ===== State =====
     const username = "Player-" + Math.floor(Math.random()*10000);
     let currentLobby = null, playerRef = null, isHost = false;
     let currentStart = null, currentTarget = null;
     let lastMovieCast = []; let timerInterval = null, graceInterval = null;
     window._scheduledNext = false; window._roundEndInterval = null;
 
-    function ms(v){ if(v==null) return 0; if(typeof v==="object"&&typeof v.toMillis==="function") return v.toMillis(); const n=Number(v); return Number.isFinite(n)?n:0; }
-    function setText(id,v){ const el=$(id); if(el) el.textContent=v; }
-
+    // ===== TMDB helpers =====
     async function searchMovie(title){
       const r = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
       const d = await r.json(); return d.results || [];
@@ -190,8 +186,10 @@
       setText('actor1', a1?.name || '—'); setText('actor2', a2?.name || '—');
     }
 
+    // ===== Round timers =====
     function startRoundCountdown(endTime){
       if (timerInterval) clearInterval(timerInterval);
+      setStyle('roundTimer','color','#111');
       timerInterval = setInterval(()=>{
         const rem = Math.max(0, Math.ceil((endTime - Date.now())/1000));
         const m = String(Math.floor(rem/60)).padStart(2,'0');
@@ -203,6 +201,7 @@
     function startGraceCountdown(endTime){
       if (timerInterval) clearInterval(timerInterval);
       if (graceInterval) clearInterval(graceInterval);
+      setStyle('roundTimer','color','red');
       graceInterval = setInterval(()=>{
         const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
         setText('roundTimer', `00:${String(secs).padStart(2,'0')}`);
@@ -210,6 +209,7 @@
       }, 500);
     }
 
+    // ===== Validation =====
     async function validateMovieGuess(title, isFirst){
       const results = await searchMovie(title);
       if (!results.length) return { valid:false, reason:"Movie not found" };
@@ -228,12 +228,16 @@
       return { valid:true, reachedTarget, movieTitle: movie.title };
     }
 
+    // ===== Utility =====
     async function resetAllPlayerSteps(lobbyId){
       const ps = await getDocs(collection(db,'lobbies',lobbyId,'players'));
       await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',lobbyId,'players',d.id), { steps:0 })));
     }
+    function setMyStepsBadge(n){ setText('stepNum', String(n)); }
 
+    // ===== Lobby flow =====
     async function joinLobby(){
+      setText('overlayTitle','Joining Lobby…'); setText('overlayMsg',`Hello ${username}, searching…`);
       const snaps = await getDocs(collection(db,'lobbies'));
       let chosen = null;
       for (const s of snaps.docs){
@@ -264,25 +268,38 @@
         if (!snap.exists()) return;
         const data = snap.data();
 
+        // Clear max-round watcher when not playing
+        if (data.status !== 'playing' && window._roundEndInterval){
+          clearInterval(window._roundEndInterval); window._roundEndInterval=null;
+        }
+
+        // COUNTDOWN
         if (data.status === 'countdown' && data.countdownEndsAt){
-          document.getElementById('overlay').style.display='flex';
-          document.getElementById('scoreboardPopup').style.display='none';
+          window._scheduledNext=false;
+          $('overlay').classList.add('visible');
+          $('scoreboardPopup').classList.remove('visible');
           startCountdown(ms(data.countdownEndsAt));
         }
 
+        // PLAYING
         if (data.status === 'playing'){
-          document.getElementById('overlay').style.display='none';
-          document.getElementById('scoreboardPopup').style.display='none';
-          document.getElementById('gameArea').style.display='block';
+          window._scheduledNext=false;
+          $('overlay').classList.remove('visible');
+          $('scoreboardPopup').classList.remove('visible');
+          $('gameArea')?.classList.add('visible-game');
+
+          // Round pill
+          setText('roundPillNum', data.round || 1);
 
           currentStart = data.startActor; currentTarget = data.endActor;
           setActorsOnUI(currentStart, currentTarget);
-          document.getElementById('guessLog').innerHTML = "";
+          $('guessLog').innerHTML = "";
           lastMovieCast = [];
 
           const endMs = ms(data.roundEndsAt) || (ms(data.startTime) + ROUND_MS);
           startRoundCountdown(endMs);
 
+          // host: auto end when timer hits 0 → scoreboard immediately
           if (isHost && endMs){
             if (window._roundEndInterval) clearInterval(window._roundEndInterval);
             window._roundEndInterval = setInterval(async ()=>{
@@ -297,7 +314,9 @@
           }
         }
 
+        // GRACE (10s), then scoreboard
         if (data.status === 'grace'){
+          if (window._roundEndInterval){ clearInterval(window._roundEndInterval); window._roundEndInterval=null; }
           startGraceCountdown(data.graceEndsAt);
           if (isHost && data.graceEndsAt){
             const t = setInterval(async ()=>{
@@ -309,10 +328,11 @@
           }
         }
 
+        // POST-ROUND
         if (data.status === 'postRound'){
-          document.getElementById('gameArea').style.display='none';
-          document.getElementById('overlay').style.display='none';
-          document.getElementById('scoreboardPopup').style.display='flex';
+          $('gameArea')?.classList.remove('visible-game');
+          $('overlay').classList.remove('visible');
+          $('scoreboardPopup').classList.add('visible');
 
           if (data.round >= 3){
             await showFinalScores();
@@ -350,36 +370,47 @@
           }
         }
 
+        // FINAL — winner + replay for everyone
         if (data.status === 'final'){
-          document.getElementById('gameArea').style.display='none';
-          document.getElementById('overlay').style.display='none';
-          document.getElementById('scoreboardPopup').style.display='flex';
+          $('gameArea')?.classList.remove('visible-game');
+          $('overlay').classList.remove('visible');
+          $('scoreboardPopup').classList.add('visible');
           await showFinalScores();
           window._scheduledNext=false;
         }
       });
 
+      // players list + host detection + badges
       const playersRef = collection(db,'lobbies',currentLobby,'players');
       onSnapshot(playersRef, async (ps)=>{
         const names=[]; ps.forEach(d=>names.push(d.id)); names.sort();
         isHost = (names[0] === username);
 
         const ul=$('players'); ul.innerHTML="";
+        let mySteps = 0;
         ps.forEach(d=>{
           const p=d.data();
+          const isMe = p.name === username;
+          if (isMe) mySteps = p.steps || 0;
+
+          const nameHtml = `<span class="name-pill">${p.name}</span>`;
           const li=document.createElement('li');
           li.innerHTML = `
-            <span style="display:inline-block;background:#2f2f2f;color:#fff;padding:3px 10px;border-radius:999px;font-weight:800;font-size:12px;line-height:1;">${p.name}</span>
-            <span class="steps" title="Steps">${p.steps||0}</span>
-            <span class="points" title="Points">${p.score||0} pts</span>`;
+            ${isMe ? '<strong>'+nameHtml+'</strong>' : nameHtml}
+            <span class="counter-circle counter-sm">${p.steps||0}</span>
+            <span class="points-pill">${p.score||0} pts</span>`;
+          if (isMe) li.classList.add('me');    // show a single bullet only for yourself
           ul.appendChild(li);
         });
+        setMyStepsBadge(mySteps);
 
+        // start first round when ready
         if (isHost && ps.size >= 2){
           const lobbyRef = doc(db,'lobbies',currentLobby);
           const lobbySnap = await getDoc(lobbyRef);
           const data = lobbySnap.data();
           if (data.status === 'waiting'){
+            setText('overlayTitle','Get Ready…'); setText('overlayMsg','Round starts soon');
             await updateDoc(lobbyRef, {
               status:'countdown',
               countdownEndsAt: Date.now() + 10000,
@@ -389,6 +420,7 @@
           }
         }
 
+        // cleanup empty lobby
         if (ps.size===0){
           const lobbyRef = doc(db,'lobbies',currentLobby);
           await deleteDoc(lobbyRef);
@@ -396,6 +428,7 @@
       });
     }
 
+    // lobby countdown
     function startCountdown(endTime){
       const iv = setInterval(async ()=>{
         const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
@@ -403,11 +436,12 @@
         if (secs<=0){
           clearInterval(iv);
           setText('countdown','');
-          document.getElementById('overlay').style.display='none';
+          $('overlay').classList.remove('visible');
           if (isHost){
             const lobbyRef = doc(db,'lobbies',currentLobby);
             const snap = await getDoc(lobbyRef);
             const curRound = (snap.data()?.round)||1;
+            await resetAllPlayerSteps(currentLobby);
             const actors = await pickAndHydrateActors();
             await updateDoc(lobbyRef,{
               status:'playing',
@@ -421,61 +455,71 @@
       }, 200);
     }
 
+    // scoreboard render (inter-round)
     async function showScoreboard(endTime){
       const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
       const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
-      document.getElementById('scoreList').innerHTML = arr.map((p,i)=>{
-        return `<li><strong>${i+1}.</strong> <span style="display:inline-block;background:#2f2f2f;color:#fff;padding:3px 10px;border-radius:999px;font-weight:800;font-size:12px;line-height:1;">${p.name}</span> <span class="points">${p.score||0} pts</span></li>`;
+      $('scoreList').innerHTML = arr.map((p,i)=>{
+        const name = p.name === username ? `<strong><span class="name-pill">${p.name}</span></strong>` : `<span class="name-pill">${p.name}</span>`;
+        return `<li><strong>${i+1}.</strong> ${name} <span class="points-pill">${p.score||0} pts</span></li>`;
       }).join('');
-      document.getElementById('winnerLine').style.display='none';
-      document.getElementById('playAgainBtn').style.display='none';
-      document.getElementById('scoreboardTitle').textContent='Round Over';
+      $('winnerLine').style.display='none';
+      $('playAgainBtn').style.display='none';
+      setText('scoreboardTitle','Round Over');
 
       const iv = setInterval(()=>{
         const secs = Math.max(0, Math.ceil((endTime - Date.now())/1000));
-        document.getElementById('scoreCountdown').textContent = `Next round in ${secs}s`;
+        setText('scoreCountdown', `Next round in ${secs}s`);
         if (secs<=0) clearInterval(iv);
       }, 500);
     }
 
+    // final scoreboard
     async function showFinalScores(){
       const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
       const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
-      document.getElementById('scoreList').innerHTML = arr.map((p,i)=>{
-        return `<li><strong>${i+1}.</strong> <span style="display:inline-block;background:#2f2f2f;color:#fff;padding:3px 10px;border-radius:999px;font-weight:800;font-size:12px;line-height:1;">${p.name}</span> <span class="points">${p.score||0} pts</span></li>`;
+      $('scoreList').innerHTML = arr.map((p,i)=>{
+        const name = p.name === username ? `<strong><span class="name-pill">${p.name}</span></strong>` : `<span class="name-pill">${p.name}</span>`;
+        return `<li><strong>${i+1}.</strong> ${name} <span class="points-pill">${p.score||0} pts</span></li>`;
       }).join('');
 
       const winner = arr[0];
+      const youWon = winner && (winner.name === username);
+      setText('scoreboardTitle', youWon ? 'Nice!' : 'Unlucky!');
       if (winner){
-        document.getElementById('winnerLine').style.display='block';
-        document.getElementById('winnerLine').textContent = `🏆 Winner: ${winner.name} — ${winner.score||0} pts`;
+        const line = `🏆 Winner: ${winner.name} — ${winner.score||0} pts`;
+        $('winnerLine').style.display='block';
+        setText('winnerLine', line);
       }
-      document.getElementById('scoreboardTitle').textContent='Final Scores';
-      document.getElementById('scoreCountdown').textContent='🏁 Game Over';
-      document.getElementById('playAgainBtn').style.display = 'inline-block';
+      setText('scoreCountdown','🏁 Game Over (3 rounds)');
+      $('playAgainBtn').style.display = 'inline-block'; // everyone can replay
     }
 
+    // teardown
     window.addEventListener('beforeunload', async ()=>{ if (playerRef) await deleteDoc(playerRef); });
 
-    document.getElementById('submitGuess').addEventListener('click', async ()=>{
-      const guess = document.getElementById('guessInput').value.trim(); if (!guess) return;
+    // submit guess
+    $('submitGuess').addEventListener('click', async ()=>{
+      const guess = $('guessInput').value.trim(); if (!guess) return;
       const snap = await getDoc(playerRef); const me = snap.data();
       const isFirst = (me.steps||0)===0;
       const result = await validateMovieGuess(guess, isFirst);
       if (!result.valid){ alert("❌ "+result.reason); return; }
 
       const newSteps = (me.steps||0)+1; await updateDoc(playerRef,{ steps:newSteps });
+      setMyStepsBadge(newSteps);
 
       const li = document.createElement('li');
+      // Colour to match other game: first = blue, middle = orange; final turns green
       li.className = isFirst ? 'blue' : 'orange';
       li.textContent = result.movieTitle;
-      document.getElementById('guessLog').appendChild(li);
+      $('guessLog').appendChild(li);
 
       const lobbyRef = doc(db,'lobbies',currentLobby);
       const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
 
       if (result.reachedTarget){
-        li.className = 'green';
+        li.className = 'green'; // winner stays green with white text
         const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime)/1000);
         const pts = Math.max(10, 100 - newSteps*10 - Math.floor(elapsedSecs/10));
         const newScore = (me.score||0) + pts; await updateDoc(playerRef,{ score:newScore });
@@ -483,6 +527,7 @@
         let finishers = lobbyData.finishers || [];
         if (!finishers.find(f=>f.name===username)) finishers.push({ name:username, points:pts });
 
+        // instant win at 200+
         if (newScore >= 200){
           await updateDoc(lobbyRef, { winner: username, winnerPoints: newScore, finishers, status:'final' });
           return;
@@ -501,29 +546,59 @@
         }
       }
 
-      document.getElementById('guessInput').value=""; document.getElementById('suggestions').style.display='none';
+      $('guessInput').value=""; $('suggestions').style.display='none';
     });
 
-    document.getElementById('resetChain').addEventListener('click', async ()=>{
-      document.getElementById('guessLog').innerHTML = "";
+    // RESET chain (like other game)
+    $('resetChain').addEventListener('click', async ()=>{
+      $('guessLog').innerHTML = "";
       lastMovieCast = [];
       try {
-        if (playerRef) await updateDoc(playerRef, { steps: 0 });
-      } catch {}
+        if (playerRef) {
+          await updateDoc(playerRef, { steps: 0 });
+          setMyStepsBadge(0);
+        }
+      } catch (e) {
+        console.warn('Reset failed:', e);
+      }
     });
 
-    document.getElementById('guessInput').addEventListener('input', async (e)=>{
-      const q = e.target.value.trim(); const box = document.getElementById('suggestions'); box.innerHTML="";
-      if (q.length < 2) { box.style.display = "none"; return; }
+    // autocomplete
+    $('guessInput').addEventListener('input', async (e)=>{
+      const q = e.target.value.trim(); const box = $('suggestions'); box.innerHTML="";
+      if (q.length < 2){ box.style.display='none'; return; }
       const results = await searchMovie(q);
-      results.slice(0, 5).forEach(movie => {
-        const div = document.createElement("div"); div.textContent = movie.title;
-        div.onclick = () => { $('guessInput').value = movie.title; box.style.display = "none"; };
+      results.slice(0,5).forEach(m=>{
+        const div=document.createElement('div');
+        div.textContent=m.title;
+        div.onclick=()=>{ $('guessInput').value=m.title; box.style.display='none'; };
         box.appendChild(div);
       });
-      box.style.display = results.length ? "block" : "none";
+      box.style.display = results.length?'block':'none';
     });
 
+    // play again — anyone can trigger
+    $('playAgainBtn').addEventListener('click', async ()=>{
+      const lobbyRef = doc(db,'lobbies',currentLobby);
+      $('playAgainBtn').disabled = true;
+      const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
+      await Promise.all(ps.docs.map(d => updateDoc(doc(db,'lobbies',currentLobby,'players',d.id), { score:0, steps:0 })));
+      const actors = await pickAndHydrateActors();
+      await updateDoc(lobbyRef, {
+        status:'countdown',
+        countdownEndsAt: Date.now()+10000,
+        round:1,
+        winner:"",
+        winnerPoints:0,
+        finishers:[],
+        ...actors
+      });
+      $('playAgainBtn').disabled = false;
+      $('playAgainBtn').style.display='none';
+      setText('scoreboardTitle','Round Over');
+    });
+
+    // go!
     joinLobby();
   </script>
 </body>
