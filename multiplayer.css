@@ -2,12 +2,14 @@
 
 .visible-game { display: block; }
 
+/* Big overlay count */
 .mp-big-count {
   font-size: 56px;
   font-weight: 900;
   margin-top: 8px;
 }
 
+/* Scoreboard */
 .mp-score-list {
   list-style: none;
   margin: 0;
@@ -15,7 +17,7 @@
   text-align: left;
 }
 .mp-score-list li {
-  padding: 6px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #eee;
 }
 .mp-score-list li:last-child { border-bottom: 0; }
@@ -23,8 +25,10 @@
 .mp-muted { color: #555; }
 .mp-winner { margin-top: 8px; font-weight: 800; }
 
+/* Show overlays */
 .overlay.visible { display: flex; }
 
+/* Actor images */
 .actor-card img {
   width: 96px;
   height: 96px;
@@ -37,16 +41,16 @@
 /* Suggestions keep site look */
 #suggestions { position: relative; z-index: 10; }
 
-/* Ensure scoreboard popup sizes nicely */
+/* Scoreboard popup sizing */
 #scoreboardPopup .overlay-card {
-  width: 360px;
+  width: 420px;
   max-width: calc(100vw - 40px);
 }
 
 /* Status alignment */
 .status { margin-top: 8px; min-height: 22px; }
 
-/* Chain answers: same pill feel as other game */
+/* Chain answers: match other game pills; keep green with white text for win */
 #guessLog { list-style: none; margin: 0; padding: 0; }
 #guessLog li {
   margin: 8px 0;
@@ -54,12 +58,12 @@
   border-radius: 999px;
   font-weight: 600;
 }
-#guessLog li.grey { background: #ddd; }
-#guessLog li.blue { background: var(--blue); color: #fff; }
+#guessLog li.grey   { background: #ddd; }
+#guessLog li.blue   { background: var(--blue);   color: #fff; }
 #guessLog li.orange { background: var(--orange); color: #fff; }
-#guessLog li.green { background: var(--green); color: #fff; }
+#guessLog li.green  { background: var(--green);  color: #fff; } /* winner */
 
-/* Mini steps badge for player list: same circle, just smaller */
+/* Mini steps badge for player list */
 .counter-sm {
   transform: scale(0.8);
   display: inline-grid;
@@ -69,10 +73,7 @@
 }
 
 /* Round pill next to Current Chain */
-.round-sep {
-  opacity: 0.6;
-  margin: 0 8px;
-}
+.round-sep { opacity: 0.6; margin: 0 8px; }
 .round-pill {
   display: inline-block;
   background: #2f2f2f;
@@ -84,6 +85,29 @@
   line-height: 1;
 }
 
+/* Player name pill (same look as round pill) */
+.name-pill {
+  display: inline-block;
+  background: #2f2f2f;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Points pill */
+.points-pill {
+  display: inline-block;
+  background: #edcf07;
+  color: #222121;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 800;
+  margin-left: 8px;
+}
+
 /* Reset button look (neutral) */
 .btn-reset {
   background: transparent;
@@ -92,6 +116,4 @@
   font-weight: 600;
   margin-left: 8px;
 }
-.btn-reset:hover {
-  filter: brightness(0.9);
-}
+.btn-reset:hover { filter: brightness(0.9); }

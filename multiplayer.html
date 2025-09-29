@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <title>LinkMovie — Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css?v=alpha5" />
-  <link rel="stylesheet" href="multiplayer.css?v=alpha5" />
+  <link rel="stylesheet" href="styles.css?v=alpha6" />
+  <link rel="stylesheet" href="multiplayer.css?v=alpha6" />
 </head>
 <body>
   <!-- Header -->
@@ -80,7 +80,7 @@
   <!-- Scoreboard popup -->
   <div id="scoreboardPopup" class="overlay">
     <div class="overlay-card">
-      <h2 id="scoreboardTitle">Round Over</h2>
+      <h2 id="scoreboardTitle" class="page-title condensed">Round Over</h2>
       <ul id="scoreList" class="mp-score-list"></ul>
       <p id="scoreCountdown" class="mp-muted">Next round starts shortly…</p>
       <p id="winnerLine" class="mp-winner" style="display:none;"></p>
@@ -110,7 +110,7 @@
     <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 
-  <script src="actors.js?v=alpha5"></script>
+  <script src="actors.js?v=alpha6"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -392,11 +392,12 @@
           const p=d.data();
           const isMe = p.name === username;
           if (isMe) mySteps = p.steps || 0;
+          const nameHtml = `<span class="name-pill">${p.name}</span>`;
           const li=document.createElement('li');
           li.innerHTML = `
-            ${isMe ? '<strong>'+p.name+'</strong>' : p.name}
+            ${isMe ? '<strong>'+nameHtml+'</strong>' : nameHtml}
             <span class="counter-circle counter-sm">${p.steps||0}</span>
-            — ${p.score||0} pts`;
+            <span class="points-pill">${p.score||0} pts</span>`;
           ul.appendChild(li);
         });
         setMyStepsBadge(mySteps);
@@ -457,8 +458,8 @@
       const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
       const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
       $('scoreList').innerHTML = arr.map((p,i)=>{
-        const name = p.name === username ? `<strong>${p.name}</strong>` : p.name;
-        return `<li><strong>${i+1}.</strong> ${name} — ${p.score||0} pts</li>`;
+        const name = p.name === username ? `<strong><span class="name-pill">${p.name}</span></strong>` : `<span class="name-pill">${p.name}</span>`;
+        return `<li><strong>${i+1}.</strong> ${name} <span class="points-pill">${p.score||0} pts</span></li>`;
       }).join('');
       $('winnerLine').style.display='none';
       $('playAgainBtn').style.display='none';
@@ -476,8 +477,8 @@
       const ps = await getDocs(collection(db,'lobbies',currentLobby,'players'));
       const arr = ps.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));
       $('scoreList').innerHTML = arr.map((p,i)=>{
-        const name = p.name === username ? `<strong>${p.name}</strong>` : p.name;
-        return `<li><strong>${i+1}.</strong> ${name} — ${p.score||0} pts</li>`;
+        const name = p.name === username ? `<strong><span class="name-pill">${p.name}</span></strong>` : `<span class="name-pill">${p.name}</span>`;
+        return `<li><strong>${i+1}.</strong> ${name} <span class="points-pill">${p.score||0} pts</span></li>`;
       }).join('');
 
       const winner = arr[0];
@@ -515,7 +516,7 @@
       const lobbySnap = await getDoc(lobbyRef); const lobbyData = lobbySnap.data();
 
       if (result.reachedTarget){
-        li.className = 'green';
+        li.className = 'green'; // keep winner as green with white text
         const elapsedSecs = Math.floor((Date.now() - lobbyData.startTime)/1000);
         const pts = Math.max(10, 100 - newSteps*10 - Math.floor(elapsedSecs/10));
         const newScore = (me.score||0) + pts; await updateDoc(playerRef,{ score:newScore });
@@ -545,7 +546,7 @@
       $('guessInput').value=""; $('suggestions').style.display='none';
     });
 
-    // RESET chain (like other game): clear UI, steps=0, next guess becomes first
+    // RESET chain (like other game)
     $('resetChain').addEventListener('click', async ()=>{
       $('guessLog').innerHTML = "";
       lastMovieCast = [];
