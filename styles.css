@@ -73,16 +73,3 @@ body{margin:0;background:var(--bg);color:var(--black);font-family:Arial, sans-se
   display: block;
   margin: 8px auto 0;      /* center image */
 }
-
-/* ---------- New pill navigation ---------- */
-.nav-pill {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 2px solid transparent;
-  color: #fff;
-  font-weight: 700;
-  text-decoration: none;
-}
-.nav-pill.active {
-  border-color: #fff;   /* outline current */
-}
