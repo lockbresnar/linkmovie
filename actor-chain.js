@@ -20,7 +20,6 @@ const LS_AC_STARTED     = "ac_started";
 const LS_AC_START_TS    = "ac_dailyStart";
 const LS_AC_CHAIN_HTML  = "ac_chain_html";
 const LS_AC_STEPS       = "ac_steps";
-const LS_AC_DAYKEY = "ac_dayKey";
 
 // ===== Helpers =====
 function setCounter(val) {
@@ -56,10 +55,6 @@ function closeHelp(){ document.getElementById("helpPopup").style.display = "none
 window.closePopup = closePopup;
 window.openHelp = openHelp;
 window.closeHelp = closeHelp;
-
-function getAcDayKey() {
-  return new Date().toDateString();
-}
 
 // ===== Actor pool =====
 function todaySeed() {
@@ -118,38 +113,32 @@ async function initActors() {
 
 // ===== Timer =====
 function startDailyTimer() {
-  // Seed keys if missing
   if (!localStorage.getItem(LS_AC_START_TS)) {
     localStorage.setItem(LS_AC_START_TS, Date.now().toString());
   }
-  if (!localStorage.getItem(LS_AC_DAYKEY)) {
-    localStorage.setItem(LS_AC_DAYKEY, getAcDayKey());
-  }
-
   const tick = () => {
-    // Rollover check
-    const today = getAcDayKey();
-    const savedDay = localStorage.getItem(LS_AC_DAYKEY);
-    if (savedDay !== today) {
-      localStorage.setItem(LS_AC_DAYKEY, today);
-      localStorage.setItem(LS_AC_START_TS, Date.now().toString());
-
-      // (optional) clear stale chain
-      // localStorage.setItem(LS_AC_CHAIN_HTML, "");
-      // localStorage.setItem(LS_AC_STEPS, "0");
-    }
-
     const start = parseInt(localStorage.getItem(LS_AC_START_TS), 10);
     const now = Date.now();
     const seconds = Math.max(0, Math.floor((now - start) / 1000));
     setTimerFromSeconds(seconds);
   };
-
   tick();
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(tick, 1000);
 }
-
+function startInfiniteTimer() {
+  const t0 = Date.now();
+  setTimerFromSeconds(0);
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const seconds = Math.floor((Date.now() - t0) / 1000);
+    setTimerFromSeconds(seconds);
+  }, 1000);
+}
+function stopTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+}
 
 // ===== Controls =====
 let wired = false;
