@@ -20,7 +20,7 @@ const LS_AC_STARTED     = "ac_started";
 const LS_AC_START_TS    = "ac_dailyStart";
 const LS_AC_CHAIN_HTML  = "ac_chain_html";
 const LS_AC_STEPS       = "ac_steps";
-const LS_AC_DAYKEY      = "ac_dayKey";
+const LS_AC_DAYKEY      = "ac_dayKey";          // <-- added: track local calendar day
 
 // ===== Helpers =====
 function setCounter(val) {
@@ -113,41 +113,40 @@ async function initActors() {
 }
 
 // ===== Timer =====
-// ===== Timer =====
 function startDailyTimer() {
-  // Seed the start timestamp and a human-readable day key (local time) if missing
   if (!localStorage.getItem(LS_AC_START_TS)) {
     localStorage.setItem(LS_AC_START_TS, Date.now().toString());
   }
   if (!localStorage.getItem(LS_AC_DAYKEY)) {
     localStorage.setItem(LS_AC_DAYKEY, new Date().toDateString());
   }
-
   const tick = () => {
-    // If the calendar day flipped while the tab was open, reset the timer base
+    // Day rollover: if calendar day changed, reset base timestamp and update day key
     const todayKey = new Date().toDateString();
     const savedKey = localStorage.getItem(LS_AC_DAYKEY);
     if (savedKey !== todayKey) {
       localStorage.setItem(LS_AC_DAYKEY, todayKey);
       localStorage.setItem(LS_AC_START_TS, Date.now().toString());
-
-      // (optional) also clear the visible chain on new day:
-      // localStorage.setItem(LS_AC_CHAIN_HTML, "");
-      // localStorage.setItem(LS_AC_STEPS, "0");
     }
 
-    const start = parseInt(localStorage.getItem(LS_AC_START_TS), 10) || Date.now();
+    const start = parseInt(localStorage.getItem(LS_AC_START_TS), 10);
     const now = Date.now();
     const seconds = Math.max(0, Math.floor((now - start) / 1000));
     setTimerFromSeconds(seconds);
   };
-
-  // Kick once, then every second
   tick();
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(tick, 1000);
 }
-
+function startInfiniteTimer() {
+  const t0 = Date.now();
+  setTimerFromSeconds(0);
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const seconds = Math.floor((Date.now() - t0) / 1000);
+    setTimerFromSeconds(seconds);
+  }, 1000);
+}
 function stopTimer() {
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = null;
