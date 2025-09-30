@@ -65,6 +65,20 @@ function formatTime(secTotal) {
 window.closePopup = () => { els.popup.style.display = "none"; };
 window.openHelp = () => { document.getElementById("helpPopup").style.display = "block"; };
 window.closeHelp = () => { document.getElementById("helpPopup").style.display = "none"; };
+// --- Daily timer helpers ---
+function getDayKey() {
+  return new Date().toDateString(); // e.g., "Tue Oct 01 2025"
+}
+function ensureDailyTimerFreshness() {
+  const today = getDayKey();
+  const savedDay = localStorage.getItem("dailyDayKey");
+  if (savedDay !== today) {
+    // New day → reset timer
+    localStorage.setItem("dailyDayKey", today);
+    localStorage.setItem("dailyStart", Date.now().toString());
+    seconds = 0;
+  }
+}
 
 // ---------- Timer ----------
 function startTimer() {
@@ -72,15 +86,20 @@ function startTimer() {
     if (!localStorage.getItem("dailyStart")) {
       localStorage.setItem("dailyStart", Date.now().toString());
     }
+    if (!localStorage.getItem("dailyDayKey")) {
+      localStorage.setItem("dailyDayKey", getDayKey());
+    }
   }
   timerId = setInterval(updateTimer, 1000);
 }
+
 function stopTimer() {
   if (timerId) clearInterval(timerId);
   timerId = null;
 }
 function updateTimer() {
   if (dailyMode) {
+    ensureDailyTimerFreshness();
     const start = parseInt(localStorage.getItem("dailyStart"), 10);
     const now = Date.now();
     seconds = Math.floor((now - start) / 1000);
@@ -90,6 +109,7 @@ function updateTimer() {
     els.timer.textContent = formatTime(seconds);
   }
 }
+
 
 // ---------- State save/load (Daily only) ----------
 function saveDailyState() {
@@ -328,10 +348,13 @@ window.startGame = async function() {
   if (dailyMode) {
     const todaySeed = getTodaySeed();
     const lastSeed = localStorage.getItem("lastSeed");
-    if (lastSeed !== String(todaySeed)) {
-      localStorage.removeItem("dailyState");
-      localStorage.setItem("lastSeed", todaySeed);
-    }
+  if (lastSeed !== String(todaySeed)) {
+  localStorage.removeItem("dailyState");
+  localStorage.setItem("lastSeed", todaySeed);
+  localStorage.setItem("dailyStart", Date.now().toString());
+  localStorage.setItem("dailyDayKey", getDayKey());
+}
+
   }
 
   updateCounter();
