@@ -11,16 +11,16 @@ let steps = 0;
 let timerInterval = null;
 let lastCastIds = null;
 let dailyMode = true;
-let ended = false;                 // <-- added: prevent re-trigger after completion
-let _acFirstMovie = null;          // <-- first accepted film
-let _acLastMovie = null;           // <-- last accepted film (updates each step)
+let ended = false;                 // prevent re-trigger after completion
+let _acFirstMovie = null;          // first accepted film
+let _acLastMovie = null;           // last accepted film (updates each step)
 
 const LS_MODE_KEY       = "mode";                // "daily" | "infinite"
 const LS_AC_STARTED     = "ac_started";
 const LS_AC_START_TS    = "ac_dailyStart";
 const LS_AC_CHAIN_HTML  = "ac_chain_html";
 const LS_AC_STEPS       = "ac_steps";
-const LS_AC_DAYKEY      = "ac_dayKey";          // <-- added: track local calendar day
+const LS_AC_DAYKEY      = "ac_dayKey";          // track local calendar day
 
 // ===== Helpers =====
 function setCounter(val) {
@@ -76,11 +76,12 @@ async function pickRandomActor() {
   return pickActorByName(name);
 }
 function pickTwoDeterministicNames() {
+  // Both actors change daily (fixes the “second actor sticks for a week” issue).
   const N = ACTOR_POOL.length;
   const seed = todaySeed();
   const i1 = seed % N;
-  const i2raw = Math.floor(seed / 7) + 13;
-  const i2 = (i2raw % N === i1) ? (i2raw+1) % N : (i2raw % N);
+  let i2 = ((seed * 97 + 23) % N);  // mixes the day seed so it varies every day
+  if (i2 === i1) i2 = (i2 + 1) % N;
   return [ACTOR_POOL[i1], ACTOR_POOL[i2]];
 }
 
@@ -121,12 +122,24 @@ function startDailyTimer() {
     localStorage.setItem(LS_AC_DAYKEY, new Date().toDateString());
   }
   const tick = () => {
-    // Day rollover: if calendar day changed, reset base timestamp and update day key
+    // Day rollover: if calendar day changed, reset base timestamp AND clear chain/steps.
     const todayKey = new Date().toDateString();
     const savedKey = localStorage.getItem(LS_AC_DAYKEY);
     if (savedKey !== todayKey) {
       localStorage.setItem(LS_AC_DAYKEY, todayKey);
       localStorage.setItem(LS_AC_START_TS, Date.now().toString());
+
+      // Clear daily chain & steps automatically (no manual Reset needed)
+      localStorage.removeItem(LS_AC_CHAIN_HTML);
+      localStorage.removeItem(LS_AC_STEPS);
+
+      const list = document.getElementById("chainList");
+      if (list) list.innerHTML = "";
+      steps = 0; setCounter(0);
+      lastCastIds = null;
+      ended = false;
+      const p = document.getElementById("popup");
+      if (p) p.style.display = "none";
     }
 
     const start = parseInt(localStorage.getItem(LS_AC_START_TS), 10);
@@ -182,7 +195,7 @@ function wireControls() {
 
 // ===== Game logic =====
 async function submitGuess() {
-  if (ended) return; // don't process after completion
+  if (ended) { reopenWinPopup(); return; } // re-open popup after win
   const q = document.getElementById("movieInput").value.trim();
   if (!q) return;
 
@@ -258,6 +271,7 @@ function clearInput() {
   document.getElementById("suggestions").innerHTML = "";
 }
 function resetChain() {
+  if (ended) { reopenWinPopup(); return; } // re-open popup after win
   document.getElementById("chainList").innerHTML = "";
   steps = 0; setCounter(steps);
   lastCastIds = null;
@@ -317,6 +331,40 @@ function winNow() {
   document.getElementById("popup").style.display = "block";
 }
 
+// Re-open the same win popup without changing state/timer
+function reopenWinPopup() {
+  const timeStr = document.getElementById("timer").textContent;
+  const timeSecs = timeStr.split(":").reduce((m, s) => m * 60 + +s, 0);
+
+  let title;
+  if (steps === 1 && timeSecs < 60) title = "Perfect!";
+  else if (steps === 2) title = "Excellent!";
+  else if (steps <= 5) title = "Nice!";
+  else if (steps <= 9) title = "Not Bad!";
+  else title = "You Got There!";
+
+  const points = Math.max(0, 200 - steps * 10);
+
+  document.getElementById("popupTitle").textContent = title;
+  document.getElementById("popupMovie").textContent = `${startActor.name} → ${endActor.name}`;
+  document.getElementById("popupSteps").textContent = steps;
+  document.getElementById("popupTime").textContent = timeStr;
+  document.getElementById("popupPoints").textContent = `${points} pts`;
+
+  let c = "#2ecc71";
+  if (steps >= 4 && steps <= 6) c = "#f39c12";
+  else if (steps > 6) c = "#e74c3c";
+  document.getElementById("popupSteps").style.backgroundColor = c;
+
+  const ps = document.getElementById("popupPosterStart");
+  const pe = document.getElementById("popupPosterEnd");
+  if (_acFirstMovie && _acFirstMovie.poster_path) ps.src = IMG + _acFirstMovie.poster_path;
+  if (_acLastMovie  && _acLastMovie.poster_path)  pe.src = IMG + _acLastMovie.poster_path;
+
+  document.querySelector(".share-btn").style.display = dailyMode ? "inline-block" : "none";
+  document.getElementById("popup").style.display = "block";
+}
+
 function shareActorResult() {
   const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit",year:"2-digit"});
   const stepsStr = document.getElementById("popupSteps").textContent;
@@ -349,6 +397,22 @@ window.startGame = startGame;
   await initActors();
 
   if (dailyMode) {
+    // Clear previous-day state BEFORE restoring any saved chain
+    const todayKey = new Date().toDateString();
+    const savedKey = localStorage.getItem(LS_AC_DAYKEY);
+    if (savedKey !== todayKey) {
+      localStorage.setItem(LS_AC_DAYKEY, todayKey);
+      localStorage.removeItem(LS_AC_CHAIN_HTML);
+      localStorage.removeItem(LS_AC_STEPS);
+      localStorage.removeItem(LS_AC_START_TS);
+      document.getElementById("chainList").innerHTML = "";
+      steps = 0; setCounter(0);
+      lastCastIds = null;
+      ended = false;
+      const p = document.getElementById("popup"); if (p) p.style.display = "none";
+    }
+
+    // Restore chain/steps if any (same-day only)
     const savedHTML  = localStorage.getItem(LS_AC_CHAIN_HTML);
     const savedSteps = localStorage.getItem(LS_AC_STEPS);
     if (savedHTML != null)  document.getElementById("chainList").innerHTML = savedHTML;
@@ -367,7 +431,7 @@ window.startGame = startGame;
     }
   } else {
     document.getElementById("introOverlay").classList.add("visible");
-    // no daily-state clearing here (preserve your original behaviour)
+    // no daily-state clearing here (preserve original behaviour)
   }
 
   // Highlight active mode
