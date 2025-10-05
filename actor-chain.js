@@ -21,6 +21,8 @@ const LS_AC_START_TS    = "ac_dailyStart";
 const LS_AC_CHAIN_HTML  = "ac_chain_html";
 const LS_AC_STEPS       = "ac_steps";
 const LS_AC_DAYKEY      = "ac_dayKey";          // track local calendar day
+const LS_AC_WON         = "ac_won";             // NEW: has the user won today?
+const LS_AC_WIN_TIME    = "ac_winTime";         // NEW: mm:ss at win
 
 // ===== Helpers =====
 function setCounter(val) {
@@ -132,6 +134,10 @@ function startDailyTimer() {
       // Clear daily chain & steps automatically (no manual Reset needed)
       localStorage.removeItem(LS_AC_CHAIN_HTML);
       localStorage.removeItem(LS_AC_STEPS);
+
+      // Also clear win lock for the new day
+      localStorage.removeItem(LS_AC_WON);
+      localStorage.removeItem(LS_AC_WIN_TIME);
 
       const list = document.getElementById("chainList");
       if (list) list.innerHTML = "";
@@ -329,6 +335,10 @@ function winNow() {
   document.querySelector(".share-btn").style.display = dailyMode ? "inline-block" : "none";
 
   document.getElementById("popup").style.display = "block";
+
+  // NEW: persist win lock + freeze time across refresh
+  localStorage.setItem(LS_AC_WON, "true");
+  localStorage.setItem(LS_AC_WIN_TIME, timeStr);
 }
 
 // Re-open the same win popup without changing state/timer
@@ -405,6 +415,8 @@ window.startGame = startGame;
       localStorage.removeItem(LS_AC_CHAIN_HTML);
       localStorage.removeItem(LS_AC_STEPS);
       localStorage.removeItem(LS_AC_START_TS);
+      localStorage.removeItem(LS_AC_WON);       // NEW: clear stale win lock
+      localStorage.removeItem(LS_AC_WIN_TIME);  // NEW: clear stale win time
       document.getElementById("chainList").innerHTML = "";
       steps = 0; setCounter(0);
       lastCastIds = null;
@@ -418,7 +430,17 @@ window.startGame = startGame;
     if (savedHTML != null)  document.getElementById("chainList").innerHTML = savedHTML;
     if (savedSteps != null) { steps = parseInt(savedSteps, 10) || 0; setCounter(steps); }
 
-    if (localStorage.getItem(LS_AC_STARTED) === "true") {
+    // NEW: if already won today, freeze timer and disallow playing again
+    const wonToday = localStorage.getItem(LS_AC_WON) === "true";
+    if (wonToday) {
+      ended = true;
+      stopTimer();
+      const winTime = localStorage.getItem(LS_AC_WIN_TIME);
+      if (winTime) document.getElementById("timer").textContent = winTime;
+      const ov = document.getElementById("introOverlay");
+      if (ov) ov.classList.remove("visible");
+      wireControls(); // keep handlers so Submit/Reset reopen win popup
+    } else if (localStorage.getItem(LS_AC_STARTED) === "true") {
       const ov = document.getElementById("introOverlay");
       if (ov) ov.classList.remove("visible");
       if (!localStorage.getItem(LS_AC_START_TS)) {
