@@ -1,69 +1,83 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>About & Contact • Movie.Link</title>
-  <!-- use only your existing styles -->
-  <link rel="stylesheet" href="styles.css" />
-  <!-- if your other pages include page-specific CSS here, include them too to keep the look consistent -->
-  <!-- <link rel="stylesheet" href="main-game.css"> -->
+  <meta charset="UTF-8" />
+  <title>LinkMovie — About & Contact</title>
+
+  <!-- Load the same styles used by your pages -->
+  <link rel="stylesheet" href="styles.css?v=alpha1" />
+  <link rel="stylesheet" href="main-game.css?v=14" />
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-3R8XZZN7DQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-3R8XZZN7DQ');
+  </script>
+
+  <!-- Ads (kept consistent with other pages) -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4167317642333676" crossorigin="anonymous"></script>
 </head>
 <body>
-  <!-- Header/nav: copy the same markup you use on other pages -->
-  <header class="site-header">
-    <nav class="nav">
-      <div class="nav-left">
-        <a class="nav-link" href="index.html">Link Movie</a>
-        <a class="nav-link" href="actor-chain.html">Link Actor</a>
-        <a class="nav-link" href="multiplayer.html">Multiplayer</a>
-      </div>
-      <div class="logo">Movie.Link</div>
-      <div class="nav-right">
-        <a class="nav-link" href="index.html#daily">Daily</a>
-        <a class="nav-link" href="index.html#infinite">Infinite</a>
-        <!-- Add Help here if your other pages show it in the header -->
-      </div>
+  <!-- Header (same structure as other pages) -->
+  <header class="topbar">
+    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+
+    <!-- Left nav -->
+    <nav class="topbar-left">
+      <a href="index.html" class="nav-link">Link Movie</a>
+      <a href="actor-chain.html" class="nav-link">Link Actor</a>
+      <a href="multiplayer.html" class="nav-link">Multiplayer</a>
+    </nav>
+
+    <!-- Right nav -->
+    <nav class="topbar-right">
+      <a href="index.html#daily" class="nav-link">Daily</a>
+      <a href="index.html#infinite" class="nav-link">Infinite</a>
+      <!-- Help icon optional on About page; omit or add if you like:
+      <img src="assets/help-icon.svg" alt="Help" class="help-icon" />
+      -->
     </nav>
   </header>
 
-  <main class="container">
-    <h1>About & Contact</h1>
+  <!-- Main content (uses the same container / typography styles) -->
+  <div class="layout" style="grid-template-columns: 1fr; max-width: 800px;">
+    <main class="left-col" style="align-items: flex-start;">
+      <h1 class="page-title condensed" style="margin-top:16px;">About & Contact</h1>
 
-    <p>Questions or feedback? Email <a href="mailto:andy@giantdodo.com">andy@giantdodo.com</a>.</p>
+      <p style="margin-top:10px;">
+        Questions, feedback, or press? Email
+        <a href="mailto:andy@giantdodo.com">andy@giantdodo.com</a>.
+      </p>
 
-    <h2>What is Movie.Link?</h2>
-    <p>Movie.Link is a set of quick film trivia games you can play in your browser.</p>
+      <h2 style="margin-top:20px;">What is LinkMovie?</h2>
+      <p>LinkMovie is a pair of quick film games you can play in your browser, with optional multiplayer.</p>
 
-    <h3>Movie Link</h3>
-    <p>Find the correct movie. You’ll see stats like tries, time, and points. Daily mode supports sharing.</p>
+      <h3 style="margin-top:14px;">Movie Link</h3>
+      <p>Guess the correct movie. You’ll see stats like tries, time, and points. Daily mode supports sharing.</p>
 
-    <h3>Actor Chain</h3>
-    <p>Connect the start actor to the target actor through movies that share cast members. Your score is based on steps and time. Daily mode supports sharing.</p>
+      <h3 style="margin-top:14px;">Actor Chain</h3>
+      <p>Connect the start actor to the target actor through movies that share cast members. Your score is based on steps and time. Daily mode supports sharing.</p>
 
-    <h3>Multiplayer</h3>
-    <p>Optional timed rounds with a lobby, countdown, and scoreboard.</p>
+      <h3 style="margin-top:14px;">Multiplayer</h3>
+      <p>Play short timed rounds with friends: lobby → countdown → play → scoreboard.</p>
 
-    <h2>Credits</h2>
-    <p>Data provided by TMDB’s API.</p>
-    <p>
-      <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
-        <img src="assets/tmdb.svg" alt="TMDB" style="height:22px;vertical-align:middle;">
-      </a>
-    </p>
-  </main>
+      <h2 style="margin-top:20px;">Credits</h2>
+      <p>We use the TMDB API for data.</p>
+      <p>
+        <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
+          <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
+        </a>
+      </p>
+    </main>
+  </div>
 
-  <!-- Footer: same structure as your other pages -->
-  <footer class="site-footer">
-    <div>
-      <!-- keep your existing TMDB logo image here -->
-      <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
-        <img src="assets/tmdb.svg" alt="TMDB" style="height:22px;vertical-align:middle;">
-      </a>
-    </div>
-    <div>
-      <a href="about.html">About/Contact</a>
-    </div>
+  <!-- Footer (same as other pages: logo + About/Contact link) -->
+  <footer class="footer">
+    <a href="about.html">About/Contact</a><br/>
+    <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
   </footer>
 </body>
 </html>
