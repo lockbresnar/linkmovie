@@ -36,48 +36,57 @@
     <nav class="topbar-right">
       <a href="index.html#daily" class="nav-link">Daily</a>
       <a href="index.html#infinite" class="nav-link">Infinite</a>
-      <!-- Help icon optional on About page; omit or add if you like:
-      <img src="assets/help-icon.svg" alt="Help" class="help-icon" />
-      -->
     </nav>
   </header>
 
-  <!-- Main content (uses the same container / typography styles) -->
+  <!-- Main content -->
   <div class="layout" style="grid-template-columns: 1fr; max-width: 800px;">
     <main class="left-col" style="align-items: flex-start;">
       <h1 class="page-title condensed" style="margin-top:16px;">About & Contact</h1>
 
-      <p style="margin-top:10px;">
-        Questions, feedback, or press? Email
-        <a href="mailto:andy@giantdodo.com">andy@giantdodo.com</a>.
-      </p>
+      <section style="margin-top:10px;">
+        <h2>Contact</h2>
+        <p>For any enquires or feedback please email: <a href="mailto:andy@giantdodo.com">andy@giantdodo.com</a>.</p>
+      </section>
 
-      <h2 style="margin-top:20px;">What is LinkMovie?</h2>
-      <p>LinkMovie is a pair of quick film games you can play in your browser, with optional multiplayer.</p>
+      <section style="margin-top:20px;">
+        <h2>What is LinkMovie?</h2>
+        <p>LinkMovie is a pair of quick film games you can play in your browser, with optional multiplayer.</p>
+      </section>
 
-      <h3 style="margin-top:14px;">Movie Link</h3>
-      <p>Guess the correct movie. You’ll see stats like tries, time, and points. Daily mode supports sharing.</p>
+      <section style="margin-top:14px;">
+        <h3>Movie Link</h3>
+        <p>2 actors are connected by the same movie. Guess the correct movie.</p>
+      </section>
 
-      <h3 style="margin-top:14px;">Actor Chain</h3>
-      <p>Connect the start actor to the target actor through movies that share cast members. Your score is based on steps and time. Daily mode supports sharing.</p>
+      <section style="margin-top:14px;">
+        <h3>Actor Chain</h3>
+        <p>Connect the start actor to the target actor through movies that share cast members. Your score is based on steps and time.</p>
+      </section>
 
-      <h3 style="margin-top:14px;">Multiplayer</h3>
-      <p>Play short timed rounds with friends: lobby → countdown → play → scoreboard.</p>
+      <section style="margin-top:14px;">
+        <h3>Multiplayer</h3>
+        <p>Play short timed rounds with friends.</p>
+      </section>
 
-      <h2 style="margin-top:20px;">Credits</h2>
-      <p>We use the TMDB API for data.</p>
-      <p>
-        <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
-          <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
-        </a>
-      </p>
+      <section style="margin-top:20px;">
+        <h2>Credits</h2>
+        <p>We use the TMDB API for data.</p>
+        <p>
+          <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
+            <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
+          </a>
+        </p>
+      </section>
     </main>
   </div>
 
-  <!-- Footer (same as other pages: logo + About/Contact link) -->
+  <!-- Footer (logo + About link) -->
   <footer class="footer">
     <a href="about.html">About/Contact</a><br/>
-    <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
+    <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
+      <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
+    </a>
   </footer>
 </body>
 </html>
