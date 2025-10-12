@@ -4,10 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>About & Contact • Movie.Link</title>
+  <!-- use only your existing styles -->
   <link rel="stylesheet" href="styles.css" />
+  <!-- if your other pages include page-specific CSS here, include them too to keep the look consistent -->
+  <!-- <link rel="stylesheet" href="main-game.css"> -->
 </head>
 <body>
-  <!-- Header (matches your existing layout) -->
+  <!-- Header/nav: copy the same markup you use on other pages -->
   <header class="site-header">
     <nav class="nav">
       <div class="nav-left">
@@ -17,55 +20,49 @@
       </div>
       <div class="logo">Movie.Link</div>
       <div class="nav-right">
-        <a class="nav-link" href="index.html#daily" id="dailyLinkHeader">Daily</a>
-        <a class="nav-link" href="index.html#infinite" id="infiniteLinkHeader">Infinite</a>
+        <a class="nav-link" href="index.html#daily">Daily</a>
+        <a class="nav-link" href="index.html#infinite">Infinite</a>
+        <!-- Add Help here if your other pages show it in the header -->
       </div>
     </nav>
   </header>
 
-  <main class="container about">
+  <main class="container">
     <h1>About & Contact</h1>
 
-    <p>Questions, feedback, or press? Email <a href="mailto:andy@giantdodo.com">andy@giantdodo.com</a>.</p>
+    <p>Questions or feedback? Email <a href="mailto:andy@giantdodo.com">andy@giantdodo.com</a>.</p>
 
-    <hr>
+    <h2>What is Movie.Link?</h2>
+    <p>Movie.Link is a set of quick film trivia games you can play in your browser.</p>
 
-    <section>
-      <h2>What is Movie.Link?</h2>
-      <p>Movie.Link is a set of quick film trivia games for browsers. We currently have two core games, plus an optional multiplayer mode.</p>
-    </section>
+    <h3>Movie Link</h3>
+    <p>Find the correct movie. You’ll see stats like tries, time, and points. Daily mode supports sharing.</p>
 
-    <section>
-      <h3>Movie Link</h3>
-      <p>Find the correct movie. You’ll see stats like tries, time, and points. In Daily mode you can share your result.</p>
-    </section>
+    <h3>Actor Chain</h3>
+    <p>Connect the start actor to the target actor through movies that share cast members. Your score is based on steps and time. Daily mode supports sharing.</p>
 
-    <section>
-      <h3>Actor Chain</h3>
-      <p>Connect the start actor to the target actor through movies that share cast members. Your score is based on steps and time. In Daily mode you can share your result.</p>
-    </section>
+    <h3>Multiplayer</h3>
+    <p>Optional timed rounds with a lobby, countdown, and scoreboard.</p>
 
-    <section>
-      <h3>Multiplayer (optional)</h3>
-      <p>Play short rounds with friends. A lobby, a countdown, timed play, and a scoreboard decide the winner.</p>
-    </section>
-
-    <section>
-      <h2>Credits</h2>
-      <p>We use the TMDB API for data. <strong>TMDB does not endorse or certify Movie.Link.</strong></p>
-      <p><a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
-        <img src="assets/tmdb.svg" alt="TMDB" class="tmdb-logo" />
-      </a></p>
-    </section>
+    <h2>Credits</h2>
+    <p>Data provided by TMDB’s API.</p>
+    <p>
+      <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
+        <img src="assets/tmdb.svg" alt="TMDB" style="height:22px;vertical-align:middle;">
+      </a>
+    </p>
   </main>
 
-  <!-- Shared footer -->
+  <!-- Footer: same structure as your other pages -->
   <footer class="site-footer">
-    <div class="footer-left">
-      <img src="assets/tmdb-black.svg" alt="TMDB" class="tmdb-logo" loading="lazy">
+    <div>
+      <!-- keep your existing TMDB logo image here -->
+      <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
+        <img src="assets/tmdb.svg" alt="TMDB" style="height:22px;vertical-align:middle;">
+      </a>
     </div>
-    <div class="footer-right">
-      <a href="about.html" class="footer-link">About & Contact</a>
+    <div>
+      <a href="about.html">About/Contact</a>
     </div>
   </footer>
 </body>
