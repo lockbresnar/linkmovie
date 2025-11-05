@@ -370,3 +370,70 @@ body {
   cursor: pointer;
   font-size: 20px;
 }
+
+/* ====================================================================== */
+/* =================== iPhone / iPad compatibility (append) ============= */
+/* ====================================================================== */
+
+/* Respect iPhone notch safe areas */
+.topbar,
+.footer {
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
+}
+.footer {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+/* Mobile layout fixes (match Actor Chain & Multiplayer behaviour) */
+@media (max-width: 820px) {
+  /* Prevent header overlap; allow wrapping under logo */
+  .topbar {
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+
+  /* Let nav bars flow naturally under the logo on mobile */
+  .topbar-left,
+  .topbar-right {
+    position: static;              /* override absolute on small screens */
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 14px;
+    margin-top: 8px;
+  }
+
+  .logo { height: 32px; }
+  .nav-link { font-size: 14px; }
+
+  /* Stack columns so guesses & chain are visible immediately */
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  /* Avoid horizontal scroll */
+  html, body { overflow-x: hidden; }
+
+  /* Actor images scale sensibly on phones */
+  .actors-row { gap: 16px; }
+  .actor-card img {
+    width: 42vw;
+    max-width: 160px;
+  }
+
+  /* Inputs/suggestions fill viewport comfortably */
+  .controls { max-width: 100%; }
+  .suggestions { max-height: 50vh; }
+
+  /* Comfortable touch targets */
+  .btn { min-height: 44px; }
+}
+
+@media (max-width: 420px) {
+  .nav-link { font-size: 13px; }
+  .page-title { font-size: 24px; }
+}
