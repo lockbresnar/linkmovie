@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>LinkMovie — Movie Link</title>
   <link rel="stylesheet" href="main-game.css?v=14" />
   <!-- Google tag (gtag.js) -->
@@ -131,5 +132,21 @@
   </footer>
 
   <script src="main-game.js?v=14"></script>
+
+  <!-- iOS 100vh fix -->
+  <script>
+    (function() {
+      function setVhUnit() {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', vh + 'px');
+      }
+      setVhUnit();
+      window.addEventListener('resize', setVhUnit);
+      window.addEventListener('orientationchange', setVhUnit, { passive: true });
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) setVhUnit();
+      });
+    })();
+  </script>
 </body>
 </html>
