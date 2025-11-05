@@ -122,3 +122,60 @@
 }
 
 /* Reset button now uses .btn-red from styles.css; no extra overrides here */
+/* ===== iOS safe areas (Multiplayer) ===== */
+.topbar,
+.footer,
+.site-footer {
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
+}
+.footer,
+.site-footer {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+/* ===== Mobile layout fixes (Multiplayer) ===== */
+@media (max-width: 820px) {
+  .topbar {
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+  .topbar-left,
+  .topbar-right {
+    position: static;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 14px;
+    margin-top: 8px;
+  }
+  .logo { height: 32px; }
+  .nav-link { font-size: 14px; }
+
+  /* Ensure main area stacks; scoreboard and chain stay visible */
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  html, body { overflow-x: hidden; }
+
+  .actors-row { gap: 16px; }
+  .actor-card img {
+    width: 42vw;       /* scale up from the default 96px on small screens */
+    max-width: 140px;
+    height: auto;      /* keep aspect ratio */
+  }
+
+  .controls { max-width: 100%; }
+  #suggestions { max-height: 50vh; }
+
+  .btn { min-height: 44px; }
+}
+
+@media (max-width: 420px) {
+  .nav-link { font-size: 13px; }
+  .page-title { font-size: 24px; }
+}

@@ -382,3 +382,63 @@ body {
   width: 100px;      /* smaller than default poster */
   border-radius: 8px;
 }
+/* ===== iOS safe areas (Actor Chain) ===== */
+.topbar,
+.footer {
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
+}
+.footer {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+/* ===== Mobile layout fixes (Actor Chain) ===== */
+@media (max-width: 820px) {
+  /* Prevent header overlap; allow wrapping */
+  .topbar {
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+  /* Make both nav bars flow naturally under the logo */
+  .topbar-left,
+  .topbar-right {
+    position: static;              /* was absolute on desktop */
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 14px;
+    margin-top: 8px;
+  }
+  .logo { height: 32px; }
+  .nav-link { font-size: 14px; }
+
+  /* Stack columns so the chain is visible without panning */
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  /* Make sure nothing creates horizontal scrolling */
+  html, body { overflow-x: hidden; }
+
+  /* Actor images scale sensibly on phones */
+  .actors-row { gap: 16px; }
+  .actor-card img {
+    width: 42vw;
+    max-width: 160px;
+  }
+
+  /* Inputs and suggestions fit the viewport nicely */
+  .controls { max-width: 100%; }
+  .suggestions { max-height: 50vh; }
+
+  /* Comfortable touch targets */
+  .btn { min-height: 44px; }
+}
+
+@media (max-width: 420px) {
+  .nav-link { font-size: 13px; }
+  .page-title { font-size: 24px; }
+}
