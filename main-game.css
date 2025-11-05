@@ -163,214 +163,11 @@ body {
   background: #eee;
 }
 
-.button-row {
-  margin-top: 10px;
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-}
+/* ====================================================================== */
+/* =================== iPhone / iPad compatibility (append) ============= */
+/* ====================================================================== */
 
-/* ---------------- Buttons ---------------- */
-.btn {
-  border: none;
-  border-radius: 999px;
-  padding: 12px 28px;
-  color: #fff;
-  cursor: pointer;
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.btn-submit {
-  background: var(--orange);
-}
-
-.btn-red {
-  background: var(--red);
-}
-
-.btn-blue {
-  background: var(--blue);
-}
-
-/* ---------------- Guesses (Chain) ---------------- */
-.chain-box {
-  background: var(--grey);
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-
-.chain-box h3 {
-  margin: 6px 0 10px;
-}
-
-#chainList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-#chainList li {
-  margin: 8px 0;
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-weight: 600;
-}
-
-#chainList li.grey {
-  background: #ddd;
-}
-
-#chainList li.blue {
-  background: var(--blue);
-  color: #fff;
-}
-
-#chainList li.orange {
-  background: var(--orange);
-  color: #fff;
-}
-
-#chainList li.green {
-  background: var(--green);
-  color: #fff;
-}
-
-/* Status under guesses */
-.status {
-  min-height: 22px;
-}
-
-/* ---------------- Overlays / Popups ---------------- */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.6);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.overlay.visible {
-  display: flex;
-}
-
-.overlay-card {
-  background: #fff;
-  border: 2px solid #444;
-  border-radius: 10px;
-  width: 320px;
-  padding: 20px;
-  text-align: center;
-}
-
-.popup {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #111;   /* dark popup */
-  color: #fff;        /* white text */
-  border: 2px solid #444;
-  border-radius: 10px;
-  width: 320px;
-  padding: 16px;
-  z-index: 1000;
-}
-
-.popup-close {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-  color: #fff; /* white close button */
-}
-
-/* ---------------- Footer ---------------- */
-.footer {
-  margin: 28px 0;
-  font-size: 12px;
-  color: #555;
-  text-align: center;
-}
-
-.footer img {
-  display: block;
-  margin: 8px auto 0;
-}
-
-/* Left-aligned nav for topbar */
-.topbar-left {
-  position: absolute;
-  left: 20px;
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-/* Active pill outline */
-.nav-link.active {
-  border: 2px solid #fff;
-  border-radius: 999px;
-  padding: 4px 10px;
-}
-
-/* ---------- End Popup Enhancements ---------- */
-#popup .page-title {
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.05em;
-  margin-bottom: 10px;
-  text-align: center; /* center title */
-}
-
-.popup-movie {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  text-align: center; /* center film | year */
-}
-
-.popup-stats {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-
-.mini-circle {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--green);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.popup-poster {
-  width: 160px;
-  border-radius: 12px;
-  display: block;
-  margin: 12px auto 0; /* center poster */
-}
-
-.share-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 20px;
-}
-/* ===== iOS safe areas (Movie Link) ===== */
+/* Respect iPhone notch safe areas */
 .topbar,
 .footer {
   padding-left: calc(16px + env(safe-area-inset-left));
@@ -380,8 +177,9 @@ body {
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
 }
 
-/* ===== Mobile layout fixes (Movie Link) ===== */
+/* Mobile layout fixes (keep desktop unchanged) */
 @media (max-width: 820px) {
+  /* Prevent header overlap; allow wrapping under logo */
   .topbar {
     justify-content: center;
     flex-wrap: wrap;
@@ -389,7 +187,7 @@ body {
   }
   .topbar-left,
   .topbar-right {
-    position: static;
+    position: static;              /* remove absolute on small screens */
     width: 100%;
     display: flex;
     flex-wrap: wrap;
@@ -400,23 +198,27 @@ body {
   .logo { height: 32px; }
   .nav-link { font-size: 14px; }
 
-  /* Stack the main grid so guesses/chain are visible immediately */
+  /* Stack columns so guesses are visible without panning */
   .layout {
     grid-template-columns: 1fr;
     gap: 18px;
   }
 
+  /* Avoid accidental horizontal scroll */
   html, body { overflow-x: hidden; }
 
+  /* Actor images scale sensibly on phones */
   .actors-row { gap: 16px; }
   .actor-card img {
     width: 42vw;
     max-width: 160px;
   }
 
+  /* Inputs/suggestions fill viewport comfortably */
   .controls { max-width: 100%; }
   .suggestions { max-height: 50vh; }
 
+  /* Comfortable touch targets */
   .btn { min-height: 44px; }
 }
 
