@@ -437,3 +437,29 @@ body {
   .nav-link { font-size: 13px; }
   .page-title { font-size: 24px; }
 }
+/* --- How to Play (Movie Link only) --- */
+.howto-box {
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 10px;       /* requested size */
+  line-height: 1.4;
+  color: #222;
+}
+
+.howto-title {
+  font-weight: 700;
+  margin: 0 0 6px;
+  font-size: 11px;       /* tiny heading */
+}
+
+.howto-list {
+  margin: 0;
+  padding-left: 16px;    /* bullets nicely indented */
+}
+
+.howto-list li {
+  margin: 2px 0;
+}
