@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>LinkMovie — About & Contact</title>
 
   <!-- Load the same styles used by your pages -->
@@ -55,13 +56,13 @@
       </section>
 
       <section style="margin-top:14px;">
-        <h3>Link Movie</h3>
+        <h3>Movie Link</h3>
         <p>2 actors are connected by the same movie. Guess the correct movie.</p>
       </section>
 
       <section style="margin-top:14px;">
-        <h3>Link Actor</h3>
-        <p>Connect the start actor to the target actor through movies that share cast members. Your score is based on steps and time.</p>
+        <h3>Actor Chain</h3>
+        <p>Connect the start actor to the target actor through movies that share cast members. Your score is based on steps and time,</p>
       </section>
 
       <section style="margin-top:14px;">
@@ -88,5 +89,21 @@
       <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
     </a>
   </footer>
+
+  <!-- iOS 100vh fix -->
+  <script>
+    (function() {
+      function setVhUnit() {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', vh + 'px');
+      }
+      setVhUnit();
+      window.addEventListener('resize', setVhUnit);
+      window.addEventListener('orientationchange', setVhUnit, { passive: true });
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) setVhUnit();
+      });
+    })();
+  </script>
 </body>
 </html>
