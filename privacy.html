@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Privacy Policy • LinkMovie</title>
+
+  <!-- Use the same styles as your other pages -->
+  <link rel="stylesheet" href="styles.css?v=alpha1" />
+  <link rel="stylesheet" href="main-game.css?v=14" />
+</head>
+<body>
+  <!-- Header (matches other pages) -->
+  <header class="topbar">
+    <img src="assets/logo.svg" alt="LinkMovie" class="logo" />
+
+    <nav class="topbar-left">
+      <a href="index.html" class="nav-link">Link Movie</a>
+      <a href="actor-chain.html" class="nav-link">Link Actor</a>
+      <a href="multiplayer.html" class="nav-link">Multiplayer</a>
+    </nav>
+
+    <nav class="topbar-right">
+      <a href="index.html#daily" class="nav-link">Daily</a>
+      <a href="index.html#infinite" class="nav-link">Infinite</a>
+    </nav>
+  </header>
+
+  <main class="layout" style="max-width:900px;margin:28px auto;padding:0 16px;">
+    <article class="left-col" style="align-items:flex-start;">
+      <h1 class="page-title condensed">Privacy Policy</h1>
+      <p style="margin-top:8px;color:#555;font-size:14px;">
+        <strong>Effective Date:</strong> November 2025
+      </p>
+
+      <section style="margin-top:18px;">
+        <h2>Overview</h2>
+        <p>
+          Welcome to <strong>LinkMovie</strong> (the “Site”), a set of browser-based movie connection
+          games created by Giant Dodo. Your privacy matters. This policy explains what information
+          we collect, how we use it, and the choices you have.
+        </p>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>1. What we collect</h2>
+        <p>
+          LinkMovie is designed to be simple and privacy-friendly. We do <strong>not</strong> require
+          registration, and we do not collect personal information such as your name or email address
+          unless you choose to contact us directly.
+        </p>
+        <ul>
+          <li><strong>Local data:</strong> Game state (daily progress, selected mode, and similar) may be stored locally in your browser (localStorage). This data stays on your device.</li>
+          <li><strong>Anonymous analytics (optional):</strong> We may use anonymous analytics to learn how people use the site (page views, number of players, popular pages). These analytics do not identify individuals.</li>
+        </ul>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>2. How we use information</h2>
+        <p>
+          Any non-identifying information we collect is used to:
+        </p>
+        <ul>
+          <li>Maintain and improve the games and site performance.</li>
+          <li>Diagnose and fix bugs or technical issues.</li>
+          <li>Understand general usage patterns so we can prioritize improvements.</li>
+        </ul>
+        <p>We do <strong>not</strong> sell, rent, or otherwise monetise personal information.</p>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>3. Third-party services</h2>
+        <p>
+          We rely on a small number of third-party services to provide content or infrastructure:
+        </p>
+        <ul>
+          <li><strong>TMDb (The Movie Database)</strong> — used to fetch movie and actor information and posters. We use TMDb’s public API; LinkMovie is not endorsed or certified by TMDb.</li>
+          <li><strong>Analytics / Ads (optional)</strong> — services like Google Analytics or Ad networks may be used; when enabled they are configured to collect only non-identifying, aggregate data. Please refer to each provider’s privacy policy for details.</li>
+        </ul>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>4. Cookies and local storage</h2>
+        <p>
+          We use <strong>localStorage</strong> and/or small cookies only to remember game-related settings and daily progress
+          on your device. You can clear this data at any time through your browser settings — doing so will reset your saved progress.
+        </p>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>5. Children’s privacy</h2>
+        <p>
+          LinkMovie is intended for a general audience. We do not knowingly collect personal information from children.
+        </p>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>6. Data retention & security</h2>
+        <p>
+          Data stored locally in your browser remains there until you clear it. We take reasonable steps to protect any server-side data and follow standard security practices, but no online service can be 100% secure.
+        </p>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>7. Changes to this policy</h2>
+        <p>
+          We may update this policy from time to time. If we make material changes, we will update the effective date at the top of the page.
+        </p>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>8. Contact</h2>
+        <p>
+          If you have questions about this policy or our practices, please contact:
+        </p>
+        <p><a href="mailto:andy@giantdodo.com">andy@giantdodo.com</a></p>
+      </section>
+
+      <section style="margin-top:14px;">
+        <h2>9. Credits</h2>
+        <p>
+          LinkMovie uses data provided by <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">The Movie Database (TMDb)</a>.
+          TMDb is a third-party data provider; LinkMovie is not endorsed or certified by TMDb.
+        </p>
+      </section>
+
+      <section style="margin-top:18px;">
+        <strong>Short summary:</strong> We don’t collect personal data for gameplay. Game progress is saved locally on your device. If you email us, that message will contain the contact information you choose to provide.
+      </section>
+    </article>
+  </main>
+
+  <!-- Footer (same as other pages) -->
+  <footer class="footer">
+    <a href="about.html">About/Contact</a><br/>
+    <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer noopener">
+      <img src="assets/tmdb-black.svg" alt="TMDb" width="90" />
+    </a>
+  </footer>
+
+  <!-- iOS 100vh fix (keeps pages consistent on iPhone/iPad) -->
+  <script>
+    (function() {
+      function setVhUnit() {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', vh + 'px');
+      }
+      setVhUnit();
+      window.addEventListener('resize', setVhUnit);
+      window.addEventListener('orientationchange', setVhUnit, { passive: true });
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) setVhUnit();
+      });
+    })();
+  </script>
+</body>
+</html>
