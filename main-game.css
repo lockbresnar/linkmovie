@@ -463,3 +463,18 @@ body {
 .howto-list li {
   margin: 2px 0;
 }
+/* Link.Movie info box below footer */
+.aboutbox {
+  margin: 20px auto;
+  max-width: 900px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 9px;            /* requested size */
+  line-height: 1.45;
+  color: #222;
+}
+.aboutbox p {
+  margin: 8px 0;
+}
