@@ -447,3 +447,25 @@ body {
 .howto-title{font-weight:700;margin:0 0 6px;font-size:11px}
 .howto-list{margin:0;padding-left:16px}
 .howto-list li{margin:2px 0}
+/* Footer info box (Actor Chain – small text) */
+.info-footer-box {
+  max-width: 900px;
+  margin: 24px auto 32px;
+  padding: 10px 14px;
+  font-size: 9px;
+  line-height: 1.45;
+  color: #444;
+  background: #f7f7f7;
+  border-radius: 8px;
+}
+
+.info-footer-box h4 {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #222;
+}
+
+.info-footer-box p {
+  margin: 6px 0;
+}
