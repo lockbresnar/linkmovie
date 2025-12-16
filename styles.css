@@ -469,3 +469,13 @@ body {
 .info-footer-box p {
   margin: 6px 0;
 }
+/* Footer info box (Actor Chain only content) */
+.footer-info {
+  max-width: 900px;
+  margin: 14px auto 24px;
+  font-size: 9px;
+}
+
+.footer-info p {
+  margin: 6px 0;
+}
