@@ -420,12 +420,29 @@ function shareResult() {
   const dateStr = new Date().toLocaleDateString("en-GB", {
     day: "2-digit", month: "2-digit", year: "2-digit"
   });
+
   const tries = document.getElementById("popupTries").textContent;
   const time = document.getElementById("popupTime").textContent;
   const points = document.getElementById("popupPoints").textContent;
 
-  const text = `Movie.Link ${dateStr} | Tries: ${tries} | Time: ${time} | ${points}`;
+  // Create a stable daily link
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  const dailyLink = `https://www.link.movie/?day=${y}-${m}-${d}`;
+
+  const text =
+`Movie.Link ${dateStr}
+Tries: ${tries}
+Time: ${time}
+${points}
+
+Play this puzzle:
+${dailyLink}`;
+
   navigator.clipboard.writeText(text).then(() => {
     alert("Result copied to clipboard!");
   });
 }
+

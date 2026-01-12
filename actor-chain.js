@@ -376,13 +376,37 @@ function reopenWinPopup() {
 }
 
 function shareActorResult() {
-  const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit",year:"2-digit"});
+  const dateStr = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit"
+  });
+
   const stepsStr = document.getElementById("popupSteps").textContent;
   const timeStr = document.getElementById("popupTime").textContent;
   const pointsStr = document.getElementById("popupPoints").textContent;
-  const text = `Actor.Link ${dateStr} | Steps: ${stepsStr} | Time: ${timeStr} | ${pointsStr}`;
-  navigator.clipboard.writeText(text).then(()=>alert("Result copied to clipboard!"));
+
+  // Create stable daily link
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  const dailyLink = `https://www.link.movie/actor-chain.html?day=${y}-${m}-${d}`;
+
+  const text =
+`Actor.Link ${dateStr}
+Steps: ${stepsStr}
+Time: ${timeStr}
+${pointsStr}
+
+Play this puzzle:
+${dailyLink}`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Result copied to clipboard!");
+  });
 }
+
 
 // ===== Start & Bootstrap =====
 async function startGame() {
